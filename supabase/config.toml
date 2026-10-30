@@ -41,3 +41,6 @@ content_path = "./supabase/templates/recovery.html"
 
 [functions.delete-account]
 verify_jwt = true
+
+[functions.email-confirmed]
+verify_jwt = false

@@ -4,6 +4,10 @@
 # Secrets GitHub requis :
 #   SUPABASE_ACCESS_TOKEN  jeton personnel (supabase.com > Account > Access Tokens)
 #   SUPABASE_DB_PASSWORD   mot de passe de la base choisi à la création du projet
+# Facultatifs (envoi d'emails via un SMTP, ex. Brevo) : SMTP_USER, SMTP_PASS,
+#   SMTP_SENDER_EMAIL, et éventuellement SMTP_HOST / SMTP_PORT (défaut : Brevo, 587).
+#   Sans eux, Supabase n'envoie qu'aux membres de l'équipe, 2 emails/heure, avec un
+#   lien au lieu du code à 6 chiffres.
 name: Déployer Supabase
 
 on:
@@ -66,8 +70,15 @@ jobs:
           done
 
       - name: Réglages Auth (confirmation par code)
+        env:
+          SUPABASE_REF: ${{ steps.project.outputs.ref }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_SENDER_EMAIL: ${{ secrets.SMTP_SENDER_EMAIL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
         run: |
-          python3 scripts/supabase/auth_config.py > auth.json
+          python3 scripts/supabase/auth_config.py > auth.json 2> mode.txt
           status="$(curl -s -o response.json -w '%{http_code}' -X PATCH \
             "https://api.supabase.com/v1/projects/${{ steps.project.outputs.ref }}/config/auth" \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
@@ -77,7 +88,11 @@ jobs:
             echo "::error::Réglages Auth refusés (HTTP $status) : $(head -c 500 response.json)"
             exit 1
           fi
-          echo "::notice::Réglages Auth appliqués (codes à 6 chiffres, confirmation obligatoire)"
+          if grep -q smtp mode.txt; then
+            echo "::notice::Réglages Auth appliqués avec SMTP : emails en français avec code à 6 chiffres"
+          else
+            echo "::warning::Réglages Auth de base appliqués. Sans SMTP, Supabase envoie un lien (pas de code) et seulement aux membres de l'équipe."
+          fi
 
       - name: Vérification avec la clé publique
         run: bash scripts/supabase/smoke_test.sh app/env/prod.json

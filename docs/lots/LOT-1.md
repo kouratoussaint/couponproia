@@ -46,6 +46,10 @@ Statut au 30/10/2026 : **CI verte, APK de test v0.1.0-test.1 publié (signé ave
 - Un compte suspendu perd immédiatement toutes ses permissions.
 - Seul un super administrateur peut nommer, retirer ou suspendre un administrateur.
 - Aucune clé secrète dans l'app ; la suppression de compte s'exécute côté serveur.
+- L'analyse de sécurité Supabase signale 4 fonctions `SECURITY DEFINER` appelables par un
+  utilisateur connecté (`my_permissions`, `admin_set_user_role`, `admin_set_user_suspended`,
+  `admin_set_feature_flag`). C'est voulu : chacune vérifie la permission requise en premier,
+  ce que couvrent les tests 16, 18, 20 à 26.
 
 ## 5. Tests exécutés
 

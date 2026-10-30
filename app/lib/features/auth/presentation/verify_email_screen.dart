@@ -62,7 +62,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       title: 'Confirmez votre email',
       subtitle: missingEmail
           ? 'Adresse inconnue : recommencez depuis la connexion.'
-          : 'Saisissez le code à 6 chiffres envoyé à ${widget.email}. Pensez à vérifier les spams.',
+          : 'Saisissez le code à 6 chiffres envoyé à ${widget.email} (pensez aux spams). '
+              'Si l’email contient un lien au lieu d’un code, ouvrez-le, puis revenez vous connecter.',
       child: Form(
         key: _formKey,
         child: Column(
@@ -87,9 +88,9 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               onPressed: missingEmail || _resending ? null : _resend,
               child: Text(_resending ? 'Envoi…' : 'Renvoyer le code'),
             ),
-            TextButton(
+            OutlinedButton(
               onPressed: () => context.go(AppRoutes.signIn),
-              child: const Text('Retour à la connexion'),
+              child: const Text('J’ai confirmé par le lien : me connecter'),
             ),
           ],
         ),
