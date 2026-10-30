@@ -61,7 +61,7 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.122.0  # épinglée : « latest » interroge l'API GitHub et peut échouer (limite de requêtes)
 
       - name: Lier le projet
         run: supabase link --project-ref "${{ steps.project.outputs.ref }}" --password "$SUPABASE_DB_PASSWORD"
