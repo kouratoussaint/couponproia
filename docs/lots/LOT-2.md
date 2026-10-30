@@ -1,6 +1,15 @@
 # LOT 2 — Données football (+ menu latéral et balayage)
 
-Statut au 30/10/2026 : **livré et déployé ; en attente de la clé API-Football pour les premières données réelles.**
+Statut au 30/10/2026 : **livré, déployé et alimenté en mode archive (saison 2024/25).**
+
+L'offre gratuite d'API-Football ne couvre que les saisons 2022 à 2024 et limite le débit à
+10 requêtes par minute. Décision du 30/10/2026 : charger la saison **2024/25 en archive**
+(réglage public `sports.archive_season = 2024`) en attendant l'offre Pro. Résultat : 2 452 matchs
+réels, 251 équipes, 184 lignes de classement sur 8 compétitions (la CAN n'a pas d'édition 2024).
+Une fois chargée, l'archive ne consomme plus de requêtes. Les cotes, elles, ne sont proposées
+par le fournisseur que pour les matchs à venir : aucune en archive.
+
+Passage à l'offre Pro : `sports.archive_season` à `null` et `sports.min_request_interval_ms` à 250.
 
 ## 1. Résumé
 
@@ -57,7 +66,8 @@ l'app l'indique.
 
 ## 6. Configuration restante (propriétaire)
 
-- [ ] Clé API-Football dans le secret GitHub `API_FOOTBALL_KEY`, puis redéploiement avec `sync = daily`.
+- [x] Clé API-Football (offre gratuite) ajoutée le 30/10/2026.
+- [ ] Offre Pro API-Football pour la saison en cours, les cotes et le direct.
 
 ## 7. Prochaine étape
 
