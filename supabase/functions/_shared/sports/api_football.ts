@@ -51,6 +51,8 @@ export function parseFixture(r: Json): ProviderFixture {
     awayGoals: numOrNull(r.goals?.away),
     htHomeGoals: numOrNull(r.score?.halftime?.home),
     htAwayGoals: numOrNull(r.score?.halftime?.away),
+    ftHomeGoals: numOrNull(r.score?.fulltime?.home),
+    ftAwayGoals: numOrNull(r.score?.fulltime?.away),
     venue: strOrNull(r.fixture.venue?.name),
     referee: strOrNull(r.fixture.referee),
   };

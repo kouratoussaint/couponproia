@@ -42,6 +42,9 @@ export interface ProviderFixture {
   awayGoals: number | null;
   htHomeGoals: number | null;
   htAwayGoals: number | null;
+  /** Score à la fin du temps réglementaire (90 min), sans prolongation ni tirs au but. */
+  ftHomeGoals: number | null;
+  ftAwayGoals: number | null;
   venue: string | null;
   referee: string | null;
 }

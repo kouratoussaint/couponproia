@@ -50,7 +50,7 @@ const fixtureJson = {
   league: { id: 39, season: 2026, round: "Regular Season - 10" },
   teams: { home: { id: 1, name: "Alpha", logo: "https://x/1.png" }, away: { id: 2, name: "Beta", logo: null } },
   goals: { home: 2, away: 1 },
-  score: { halftime: { home: 1, away: 0 } },
+  score: { halftime: { home: 1, away: 0 }, fulltime: { home: 2, away: 1 } },
 };
 
 Deno.test("lecture d'un match API-Football", () => {
@@ -61,7 +61,7 @@ Deno.test("lecture d'un match API-Football", () => {
   assertEquals(f.elapsed, 67);
   assertEquals(f.home.name, "Alpha");
   assertEquals(f.away.logoUrl, null);
-  assertEquals([f.homeGoals, f.awayGoals, f.htHomeGoals, f.htAwayGoals], [2, 1, 1, 0]);
+  assertEquals([f.homeGoals, f.awayGoals, f.htHomeGoals, f.htAwayGoals, f.ftHomeGoals, f.ftAwayGoals], [2, 1, 1, 0, 2, 1]);
 });
 
 Deno.test("lecture d'un classement en groupes", () => {

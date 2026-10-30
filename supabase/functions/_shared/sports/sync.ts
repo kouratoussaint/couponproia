@@ -375,6 +375,8 @@ export class SportsSync {
         away_goals: f.awayGoals,
         ht_home_goals: f.htHomeGoals,
         ht_away_goals: f.htAwayGoals,
+        ft_home_goals: f.ftHomeGoals,
+        ft_away_goals: f.ftAwayGoals,
         venue: f.venue,
         referee: f.referee,
         source_updated_at: now,
