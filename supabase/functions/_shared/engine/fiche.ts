@@ -47,6 +47,14 @@ export interface FicheInput {
   headToHead: NamedMatch[];
   odds: OddsRow[];
   generatedAt: string;
+  /** Dernière évaluation : le moteur fait-il mieux que la référence, par famille de marchés ? */
+  quality?: { evaluatedMatches: number; beatsBaseline: Record<string, boolean> } | null;
+}
+
+/** Famille d'évaluation d'une issue : 1X2 (et double chance), OU, BTTS. */
+export function qualityGroup(key: string): string {
+  const market = key.split(".")[0];
+  return market === "DC" ? "1X2" : market;
 }
 
 export interface OddsLineFiche {
@@ -157,6 +165,10 @@ export function buildFiche(input: FicheInput) {
   }
   if (input.history.length < 20) missing.push("Début de saison : moyennes de la compétition encore peu stables");
   if (input.headToHead.length === 0) missing.push("Aucune confrontation directe dans les données disponibles");
+  const weak = Object.entries(input.quality?.beatsBaseline ?? {}).filter(([, ok]) => !ok).map(([g]) => g);
+  if (weak.length) {
+    missing.push(`Marchés où le moteur ne fait pas mieux qu'une simple fréquence sur l'historique : ${weak.join(", ")}`);
+  }
 
   return {
     engine_version: ENGINE_VERSION,
@@ -208,6 +220,9 @@ export function buildFiche(input: FicheInput) {
       lines: oddsLines,
     },
     goal_lines: GOAL_LINES,
+    engine_quality: input.quality
+      ? { evaluated_matches: input.quality.evaluatedMatches, beats_baseline: input.quality.beatsBaseline }
+      : null,
     missing,
   };
 }

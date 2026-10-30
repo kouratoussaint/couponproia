@@ -137,3 +137,13 @@ Deno.test("Gemini : modèle introuvable → choix du flash-lite disponible le pl
   assertEquals(r.inputTokens, 10);
   assert(urls.at(-1)!.includes("gemini-3.5-flash-lite:generateContent"));
 });
+
+Deno.test("validation : marché refusé si le moteur ne bat pas la référence sur l'historique", () => {
+  const withQuality = { ...fiche, engine_quality: { beats_baseline: { "1X2": true, OU: false, BTTS: false } } };
+  assert(validateAnalysis(good, withQuality).ok, "1X2 reste autorisé");
+  const r = validateAnalysis(
+    { ...good, marches_envisageables: [{ cle: "OU.OVER.2.5", probabilite_modele: 0.551, justification: "x" }] },
+    withQuality,
+  );
+  assert(!r.ok && r.errors.some((e) => e.includes("simple fréquence")));
+});

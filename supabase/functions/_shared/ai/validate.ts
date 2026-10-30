@@ -32,7 +32,10 @@ export interface FicheLike {
   reliability: string;
   model: { probabilities: Record<string, number> };
   market: { lines: { key: string; odd_median: number; implied_probability: number | null; edge: number | null }[] };
+  engine_quality?: { beats_baseline: Record<string, boolean> } | null;
 }
+
+const qualityGroupOf = (key: string) => (key.startsWith("DC.") ? "1X2" : key.split(".")[0]);
 
 const STRING_FIELDS = ["resume", "forme", "conclusion"] as const;
 const LIST_FIELDS = ["facteurs_domicile", "facteurs_exterieur", "tendances", "risques", "informations_manquantes"] as const;
@@ -123,6 +126,12 @@ export function validateAnalysis(raw: unknown, fiche: FicheLike): ValidationResu
     const given = Number(p.probabilite_modele);
     if (!Number.isFinite(given) || Math.abs(given - probs[key]) > 0.02) {
       errors.push(`Marché « ${key} » : probabilité ${p.probabilite_modele} au lieu de ${probs[key]}.`);
+      continue;
+    }
+    if (fiche.engine_quality?.beats_baseline?.[qualityGroupOf(key)] === false) {
+      errors.push(
+        `Marché « ${key} » : sur l'historique, le moteur ne fait pas mieux qu'une simple fréquence pour ce type de marché. Ne le propose pas.`,
+      );
       continue;
     }
     if (typeof p.justification !== "string" || !p.justification.trim()) {

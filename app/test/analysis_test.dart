@@ -52,6 +52,10 @@ Map<String, dynamic> _row({Map<String, dynamic>? analysis, String status = 'ok'}
             },
           ],
         },
+        'engine_quality': {
+          'evaluated_matches': 2210,
+          'beats_baseline': {'1X2': true, 'OU': false, 'BTTS': false},
+        },
         'missing': ['Compositions, blessures et suspensions : non fournies par la source de données'],
       },
       'analysis': analysis,
@@ -79,6 +83,7 @@ void main() {
     expect(a.fiche.p('1X2.HOME'), 0.532);
     expect(a.fiche.topScores.single.score, '1-0');
     expect(a.fiche.comparableLines.map((l) => l.key), ['1X2.HOME']);
+    expect(a.fiche.weakGroups, ['OU', 'BTTS']);
     expect(a.ai!.picks.single.edge, 0.042);
     // Doublon fiche / IA (casse différente) fusionné.
     expect(mergedMissing(a.fiche, a.ai), hasLength(1));

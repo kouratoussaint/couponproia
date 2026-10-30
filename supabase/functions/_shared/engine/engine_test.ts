@@ -165,3 +165,27 @@ Deno.test("évaluation : sur des forces réelles, le modèle bat la fréquence d
   assert(evaluation.calibration.length > 3);
   assertEquals(Object.keys(perCompetition), ["Synthétique"]);
 });
+
+Deno.test("fiche : qualité mesurée transmise, marchés faibles signalés", () => {
+  const fiche = buildFiche({
+    match: {
+      id: 1,
+      kickoffAt: "2024-09-10T15:00:00Z",
+      season: 2024,
+      round: null,
+      competition: { id: 1, name: "L", type: "cup" },
+      home: { id: 1, name: "A" },
+      away: { id: 2, name: "B" },
+    },
+    history: [],
+    recentHome: [],
+    recentAway: [],
+    headToHead: [],
+    odds: [],
+    generatedAt: "2024-09-09T00:00:00Z",
+    quality: { evaluatedMatches: 2210, beatsBaseline: { "1X2": true, OU: false, BTTS: false } },
+  });
+  assertEquals(fiche.engine_quality?.beats_baseline.OU, false);
+  assert(fiche.missing.some((s) => s.includes("OU, BTTS")));
+  assertEquals(fiche.teams.home.standing, null, "pas de classement recalculé en coupe");
+});

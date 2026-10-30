@@ -164,6 +164,19 @@ Deno.serve(async (req) => {
     }
 
     const inputs = await loadFicheInputs(db, m);
+    const { data: evaluation } = await db.from("engine_evaluations")
+      .select("matches_evaluated, brier_model, brier_baseline, details")
+      .eq("engine_version", ENGINE_VERSION).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const quality = evaluation
+      ? {
+        evaluatedMatches: evaluation.matches_evaluated,
+        beatsBaseline: {
+          "1X2": Number(evaluation.brier_model) < Number(evaluation.brier_baseline),
+          OU: Number(evaluation.details?.over_2_5?.brierModel) < Number(evaluation.details?.over_2_5?.brierBaseline),
+          BTTS: Number(evaluation.details?.btts?.brierModel) < Number(evaluation.details?.btts?.brierBaseline),
+        },
+      }
+      : null;
     const fiche = buildFiche({
       match: {
         id: m.id,
@@ -175,6 +188,7 @@ Deno.serve(async (req) => {
         away: m.away,
       },
       ...inputs,
+      quality,
       generatedAt: new Date().toISOString(),
     });
 

@@ -70,6 +70,7 @@ class AnalysisFiche {
     required this.awayForm,
     required this.marketLines,
     required this.missing,
+    this.beatsBaseline = const {},
   });
 
   factory AnalysisFiche.fromJson(Map<String, dynamic> j) {
@@ -97,6 +98,9 @@ class AnalysisFiche {
         for (final l in (market['lines'] as List? ?? const [])) FicheOddsLine.fromJson(_map(l)),
       ],
       missing: _strings(j['missing']),
+      beatsBaseline: {
+        for (final e in _map(_map(j['engine_quality'])['beats_baseline']).entries) e.key: e.value == true,
+      },
     );
   }
 
@@ -114,7 +118,13 @@ class AnalysisFiche {
   final List<FicheOddsLine> marketLines;
   final List<String> missing;
 
+  /// Par famille de marchés (1X2, OU, BTTS) : le moteur a-t-il battu la référence sur l'historique ?
+  final Map<String, bool> beatsBaseline;
+
   double? p(String key) => probabilities[key];
+
+  /// Familles où le moteur ne fait pas mieux qu'une simple fréquence.
+  List<String> get weakGroups => [for (final e in beatsBaseline.entries) if (!e.value) e.key];
 
   /// Lignes de cotes comparables au modèle (probabilité implicite connue).
   List<FicheOddsLine> get comparableLines =>

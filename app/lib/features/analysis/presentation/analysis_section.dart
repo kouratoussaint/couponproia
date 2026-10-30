@@ -321,6 +321,15 @@ class ProbabilitiesCard extends StatelessWidget {
                   if (f.p(k) != null) _Pill(label: outcomeKeyLabel(k, home, away), value: pct(f.p(k)!)),
               ],
             ),
+            if (f.weakGroups.any((g) => g == 'OU' || g == 'BTTS')) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Prudence : sur l’historique, le moteur ne fait pas mieux qu’une simple fréquence pour '
+                '${[if (f.weakGroups.contains('OU')) 'le nombre de buts', if (f.weakGroups.contains('BTTS')) '« les deux marquent »'].join(' et ')}. '
+                'Ces chiffres sont indicatifs.',
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+              ),
+            ],
             const SizedBox(height: 14),
             Text(
               'Buts attendus : $home ${decimal(f.expectedGoalsHome)} – ${decimal(f.expectedGoalsAway)} $away',

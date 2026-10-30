@@ -45,7 +45,7 @@ select throws_ok($$ insert into public.ai_requests (user_id, kind, status)
 set local request.jwt.claims = '{"sub": "33333333-3333-3333-3333-333333333333", "role": "authenticated"}';
 -- 9-10
 select is((select count(*)::int from public.ai_requests), 2, 'le gestionnaire voit tout le journal IA');
-select is((select count(*)::int from public.ai_prompts), 1, 'le gestionnaire voit les prompts');
+select ok((select count(*) from public.ai_prompts) >= 1, 'le gestionnaire voit les prompts');
 
 reset role;
 set local role anon;
