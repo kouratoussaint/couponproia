@@ -23,8 +23,20 @@ String dayLabel(DateTime day, DateTime today) {
   if (diff == 0) return 'Aujourd’hui';
   if (diff == 1) return 'Demain';
   if (diff == -1) return 'Hier';
-  return '${_weekdays[day.weekday - 1]} ${shortDate(day)}';
+  final year = day.year == today.year ? '' : '/${day.year}';
+  return '${_weekdays[day.weekday - 1]} ${shortDate(day)}$year';
 }
+
+/// Jour de départ du calendrier en mode archive : même jour et même mois dans la
+/// saison d'archive (une saison va de juillet à juin).
+DateTime archiveDay(DateTime today, int season) {
+  final year = today.month >= 7 ? season : season + 1;
+  final lastDay = DateTime(year, today.month + 1, 0).day;
+  return DateTime(year, today.month, today.day > lastDay ? lastDay : today.day);
+}
+
+/// « 2024/25 »
+String seasonLabel(int season) => '$season/${((season + 1) % 100).toString().padLeft(2, '0')}';
 
 String statusLabel(MatchSummary m) {
   switch (m.status) {

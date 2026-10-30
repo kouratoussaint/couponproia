@@ -101,3 +101,11 @@ final latestAndroidVersionProvider = FutureProvider<AppVersionInfo?>((ref) async
       .maybeSingle();
   return row == null ? null : AppVersionInfo.fromJson(row);
 });
+
+/// Saison d'archive affichée à la place de la saison en cours (offre gratuite du
+/// fournisseur), ou null.
+final archiveSeasonProvider = FutureProvider<int?>((ref) async {
+  final settings = await ref.watch(publicSettingsProvider.future);
+  final value = settings['sports.archive_season'];
+  return value is num ? value.toInt() : null;
+});

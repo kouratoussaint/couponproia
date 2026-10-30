@@ -11,6 +11,8 @@ export interface SyncSettings {
   oddsWindowHours: number;
   oddsMaxFixtures: number;
   liveLookbackHours: number;
+  /** Saison passée à charger à la place de la saison en cours (offre gratuite), ou null. */
+  archiveSeason: number | null;
 }
 
 const DEFAULTS: SyncSettings = {
@@ -18,6 +20,7 @@ const DEFAULTS: SyncSettings = {
   oddsWindowHours: 48,
   oddsMaxFixtures: 12,
   liveLookbackHours: 3,
+  archiveSeason: null,
 };
 
 export class BudgetExhausted extends Error {
@@ -56,6 +59,9 @@ export class SportsSync {
       oddsWindowHours: n("sports.odds_window_hours", DEFAULTS.oddsWindowHours),
       oddsMaxFixtures: n("sports.odds_max_fixtures_per_run", DEFAULTS.oddsMaxFixtures),
       liveLookbackHours: n("sports.live_lookback_hours", DEFAULTS.liveLookbackHours),
+      archiveSeason: Number.isInteger(Number(map.get("sports.archive_season"))) && map.get("sports.archive_season") !== null
+        ? Number(map.get("sports.archive_season"))
+        : null,
     };
     const since = new Date();
     since.setUTCHours(0, 0, 0, 0);
@@ -129,8 +135,21 @@ export class SportsSync {
     const problems: string[] = [];
     const done: string[] = [];
     try {
+      const archive = this.settings.archiveSeason;
       for (const c of comps ?? []) {
         try {
+          // Une saison d'archive est terminée : une fois chargée, inutile de la redemander.
+          if (archive !== null) {
+            const existing = await this.db
+              .from("matches")
+              .select("id", { count: "exact", head: true })
+              .eq("competition_id", c.id)
+              .eq("season", archive);
+            if ((existing.count ?? 0) > 0) {
+              done.push(`${c.name} (archive ${archive} déjà chargée)`);
+              continue;
+            }
+          }
           this.guard(2);
           const league = await this.provider.getLeague(c.provider_ref);
           if (!league) {
@@ -143,21 +162,22 @@ export class SportsSync {
             country_code: league.countryCode,
             logo_url: league.logoUrl,
             type: league.type,
-            current_season: league.currentSeason,
+            current_season: archive ?? league.currentSeason,
             verified_at: new Date().toISOString(),
           }).eq("id", c.id);
-          if (!league.currentSeason) {
+          const season = archive ?? league.currentSeason;
+          if (!season) {
             problems.push(`${league.name} : pas de saison en cours`);
             continue;
           }
 
           this.guard();
-          const fixtures = await this.provider.getFixtures(c.provider_ref, league.currentSeason);
+          const fixtures = await this.provider.getFixtures(c.provider_ref, season);
           items += await this.saveFixtures(c.id, fixtures);
 
           this.guard();
-          const table = await this.provider.getStandings(c.provider_ref, league.currentSeason);
-          items += await this.saveStandings(c.id, league.currentSeason, table);
+          const table = await this.provider.getStandings(c.provider_ref, season);
+          items += await this.saveStandings(c.id, season, table);
           done.push(league.name);
         } catch (e) {
           if (e instanceof BudgetExhausted) throw e;

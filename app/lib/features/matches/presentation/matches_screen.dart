@@ -20,7 +20,7 @@ class MatchesScreen extends ConsumerStatefulWidget {
 }
 
 class _MatchesScreenState extends ConsumerState<MatchesScreen> {
-  late DateTime _day = dateOnly(DateTime.now());
+  DateTime? _day;
   int? _competitionId;
   final _search = TextEditingController();
 
@@ -33,10 +33,34 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
   @override
   Widget build(BuildContext context) {
     final flags = ref.watch(featureFlagsProvider).valueOrNull;
+    final today = dateOnly(DateTime.now());
+    final archive = ref.watch(archiveSeasonProvider).valueOrNull;
+    final base = archive == null ? today : archiveDay(today, archive);
+    final day = _day ?? base;
     final appBar = AppBar(
       leading: const DrawerMenuButton(),
       title: const Text('Matchs'),
       actions: [
+        IconButton(
+          tooltip: 'Choisir une date',
+          icon: const Icon(Icons.calendar_month_outlined),
+          onPressed: () async {
+            final now = DateTime.now();
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: day,
+              firstDate: DateTime(2022, 7, 1),
+              lastDate: DateTime(now.year + 1, 12, 31),
+              helpText: 'Afficher les matchs du',
+            );
+            if (picked != null) {
+              setState(() {
+                _day = dateOnly(picked);
+                _competitionId = null;
+              });
+            }
+          },
+        ),
         IconButton(
           tooltip: 'Compétitions et classements',
           icon: const Icon(Icons.emoji_events_outlined),
@@ -57,14 +81,31 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
       );
     }
 
-    final today = dateOnly(DateTime.now());
-    final days = [for (var i = -1; i <= 6; i++) DateTime(today.year, today.month, today.day + i)];
-    final matches = ref.watch(matchesOfDayProvider(_day));
+    final days = [for (var i = -1; i <= 6; i++) DateTime(day.year, day.month, day.day + i)];
+    final matches = ref.watch(matchesOfDayProvider(day));
 
     return Scaffold(
       appBar: appBar,
       body: Column(
         children: [
+          if (archive != null)
+            MaterialBanner(
+              padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+              leading: const Icon(Icons.history_edu_outlined),
+              content: Text(
+                'Données d’archive : saison ${seasonLabel(archive)}. Ce sont de vrais matchs, déjà joués ; '
+                'la saison en cours sera disponible avec l’offre Pro du fournisseur.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => setState(() {
+                    _day = null;
+                    _competitionId = null;
+                  }),
+                  child: const Text('Revenir au jour'),
+                ),
+              ],
+            ),
           SizedBox(
             height: 48,
             child: ListView.separated(
@@ -74,7 +115,7 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (context, i) => ChoiceChip(
                 label: Text(dayLabel(days[i], today)),
-                selected: days[i] == _day,
+                selected: days[i] == day,
                 onSelected: (_) => setState(() {
                   _day = days[i];
                   _competitionId = null;
@@ -105,8 +146,8 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
-                ref.invalidate(matchesOfDayProvider(_day));
-                await ref.read(matchesOfDayProvider(_day).future);
+                ref.invalidate(matchesOfDayProvider(day));
+                await ref.read(matchesOfDayProvider(day).future);
               },
               child: matches.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -117,7 +158,7 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                       title: 'Impossible de charger les matchs',
                       body: userMessageFor(e),
                       action: OutlinedButton(
-                        onPressed: () => ref.invalidate(matchesOfDayProvider(_day)),
+                        onPressed: () => ref.invalidate(matchesOfDayProvider(day)),
                         child: const Text('Réessayer'),
                       ),
                     ),
@@ -164,9 +205,9 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                       if (all.isEmpty)
                         const InfoMessage(
                           icon: Icons.event_busy_outlined,
-                          title: 'Aucun match synchronisé pour ce jour',
-                          body: 'Les calendriers des compétitions suivies sont mis à jour chaque matin à 4 h. '
-                              'Tirez vers le bas pour actualiser.',
+                          title: 'Aucun match pour ce jour',
+                          body: 'Aucune des compétitions suivies ne joue ce jour-là, ou le calendrier n’est pas encore '
+                              'synchronisé (mise à jour chaque matin à 4 h). Essayez un autre jour.',
                         )
                       else if (filtered.isEmpty)
                         const InfoMessage(

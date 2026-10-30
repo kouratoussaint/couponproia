@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
 import '../../../core/router/app_routes.dart';
+import '../data/sports_format.dart';
 import '../data/sports_models.dart';
 import '../data/sports_repository.dart';
 import 'sports_widgets.dart';
@@ -33,7 +34,7 @@ class CompetitionsScreen extends ConsumerWidget {
                     title: Text(c.name),
                     subtitle: Text([
                       if (c.country != null) c.country!,
-                      c.currentSeason == null ? 'saison non synchronisée' : 'saison ${_season(c.currentSeason!)}',
+                      c.currentSeason == null ? 'saison non synchronisée' : 'saison ${seasonLabel(c.currentSeason!)}',
                     ].join(' · ')),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.standingsFor(c.id)),
@@ -45,7 +46,6 @@ class CompetitionsScreen extends ConsumerWidget {
   }
 }
 
-String _season(int year) => '$year/${((year + 1) % 100).toString().padLeft(2, '0')}';
 
 /// Classement d'une compétition (par groupe pour les phases de groupes).
 class StandingsScreen extends ConsumerWidget {

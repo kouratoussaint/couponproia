@@ -94,6 +94,14 @@ void main() {
       expect(dayLabel(DateTime(2026, 10, 31), today), 'Demain');
       expect(dayLabel(DateTime(2026, 10, 29), today), 'Hier');
       expect(dayLabel(DateTime(2026, 11, 2), today), 'lun. 02/11');
+      expect(dayLabel(DateTime(2024, 10, 30), today), 'mer. 30/10/2024');
+    });
+
+    test('jour équivalent dans une saison d’archive', () {
+      expect(archiveDay(DateTime(2026, 10, 30), 2024), DateTime(2024, 10, 30));
+      expect(archiveDay(DateTime(2027, 3, 15), 2024), DateTime(2025, 3, 15));
+      expect(archiveDay(DateTime(2028, 2, 29), 2024), DateTime(2025, 2, 28));
+      expect(seasonLabel(2024), '2024/25');
     });
 
     test('une journée locale couvre 24 h', () {
