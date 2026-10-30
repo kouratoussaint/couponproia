@@ -66,10 +66,11 @@ class _GenerationsAdminScreenState
       }
       _refresh();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         showMessage(
             context, e is AnalysisException ? e.message : userMessageFor(e),
             error: true);
+      }
     } finally {
       if (mounted) setState(() => _generating = null);
     }
@@ -89,12 +90,13 @@ class _GenerationsAdminScreenState
     try {
       await ref.read(couponRepositoryProvider).review(c.id, approve: approve);
       _refresh();
-      if (mounted)
+      if (mounted) {
         showMessage(
             context,
             approve
                 ? 'Coupon validé : il sera publié à son heure.'
                 : 'Coupon rejeté.');
+      }
     } catch (e) {
       if (mounted) showMessage(context, userMessageFor(e), error: true);
     }
@@ -161,8 +163,9 @@ class _GenerationsAdminScreenState
                           isScrollControlled: true,
                           builder: (_) => _ProfileEditor(profile: p),
                         );
-                        if (patch != null && patch.isNotEmpty)
+                        if (patch != null && patch.isNotEmpty) {
                           await _update(p, patch);
+                        }
                       },
                     ),
                 ],

@@ -23,8 +23,9 @@ class SportsLogo extends StatelessWidget {
     final placeholder = Icon(fallback,
         size: size * 0.9,
         color: Theme.of(context).colorScheme.onSurfaceVariant);
-    if (url == null || url!.isEmpty)
+    if (url == null || url!.isEmpty) {
       return SizedBox(width: size, height: size, child: placeholder);
+    }
     return CachedNetworkImage(
       imageUrl: url!,
       width: size,

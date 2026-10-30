@@ -42,10 +42,11 @@ class _AnalysisSectionState extends ConsumerState<AnalysisSection> {
           .analyze(match.id, force: force);
       if (mounted) setState(() => _fresh = result);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         showMessage(
             context, e is AnalysisException ? e.message : userMessageFor(e),
             error: true);
+      }
     } finally {
       if (mounted) setState(() => _running = false);
     }

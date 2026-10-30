@@ -59,8 +59,9 @@ class _SwipeBranchContainerState extends State<SwipeBranchContainer> {
     return PageView(
       controller: _controller,
       onPageChanged: (index) {
-        if (!_programmatic && index != widget.currentIndex)
+        if (!_programmatic && index != widget.currentIndex) {
           widget.onPageChanged(index);
+        }
       },
       children: [for (final child in widget.children) _KeepAlive(child: child)],
     );

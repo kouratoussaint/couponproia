@@ -76,9 +76,10 @@ class StandingsScreen extends ConsumerWidget {
             title: 'Indisponible',
             body: userMessageFor(e)),
         data: (c) {
-          if (c == null)
+          if (c == null) {
             return const InfoMessage(
                 icon: Icons.help_outline, title: 'Compétition introuvable');
+          }
           if (c.currentSeason == null) {
             return const InfoMessage(
               icon: Icons.hourglass_empty,

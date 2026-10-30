@@ -49,8 +49,9 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     setState(() => _resending = true);
     try {
       await ref.read(authRepositoryProvider).resendSignUpCode(widget.email);
-      if (mounted)
+      if (mounted) {
         showMessage(context, 'Nouveau code envoyé à ${widget.email}.');
+      }
     } catch (e) {
       if (mounted) showMessage(context, userMessageFor(e), error: true);
     } finally {

@@ -237,8 +237,9 @@ class _EditNameDialogState extends State<_EditNameDialog> {
   }
 
   void _save() {
-    if (_formKey.currentState!.validate())
+    if (_formKey.currentState!.validate()) {
       Navigator.of(context).pop(_controller.text.trim());
+    }
   }
 
   @override

@@ -29,10 +29,11 @@ class _EngineAdminScreenState extends ConsumerState<EngineAdminScreen> {
       ref.invalidate(latestEvaluationProvider);
       if (mounted) showMessage(context, 'Évaluation terminée.');
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         showMessage(
             context, e is AnalysisException ? e.message : userMessageFor(e),
             error: true);
+      }
     } finally {
       if (mounted) setState(() => _running = false);
     }
