@@ -175,6 +175,7 @@ class Coupon {
     this.settledAt,
     this.selections = const [],
     this.history = const [],
+    this.locked = false,
   });
 
   factory Coupon.fromJson(Map<String, dynamic> j) {
@@ -215,6 +216,7 @@ class Coupon {
       createdAt: _date(j['created_at']),
       selections: selections,
       history: history,
+      locked: j['locked'] == true,
     );
   }
 
@@ -245,6 +247,9 @@ class Coupon {
   final DateTime createdAt;
   final List<CouponSelection> selections;
   final List<StatusChange> history;
+
+  /// Coupon réservé aux forfaits payants : contenu masqué par le serveur jusqu'au coup d'envoi.
+  final bool locked;
 
   bool get isWithdrawn => status == 'withdrawn';
 

@@ -15,15 +15,34 @@ const _selectionColumns =
 const _couponColumns =
     'id, category, title, description, risk_level, total_odd, combined_probability, '
     'implied_probability, status, status_note, publish_at, published_at, first_kickoff_at, last_kickoff_at, '
-    'engine_version, data_source, analysis, result, settled_odd, settled_at, created_at, coupon_selections($_selectionColumns)';
+    'engine_version, data_source, result, settled_odd, settled_at, created_at, coupon_selections($_selectionColumns)';
 
 class CouponRepository {
   CouponRepository(this._client);
 
   final SupabaseClient _client;
 
-  List<Coupon> _coupons(List<dynamic> rows) =>
-      rows.map((r) => Coupon.fromJson(r as Map<String, dynamic>)).toList();
+  /// L'analyse est servie par coupon_analyses(), qui la masque (comme les sélections) pour un
+  /// coupon réservé tant que le premier match n'a pas commencé.
+  Future<List<Coupon>> _coupons(List<dynamic> rows) async {
+    final maps = [for (final r in rows) Map<String, dynamic>.from(r as Map)];
+    if (maps.isEmpty) return const [];
+    final res = await _client.rpc('coupon_analyses', params: {
+      'p_ids': [for (final m in maps) m['id']]
+    });
+    final byId = {
+      for (final a in res as List)
+        (a as Map)['id'] as String: Map<String, dynamic>.from(a),
+    };
+    return [
+      for (final m in maps)
+        Coupon.fromJson({
+          ...m,
+          'analysis': byId[m['id']]?['analysis'],
+          'locked': byId[m['id']]?['locked'] == true,
+        }),
+    ];
+  }
 
   /// Coupons publiés (et retirés, pour la transparence), les plus récents d'abord.
   Future<List<Coupon>> published() async {
@@ -33,7 +52,7 @@ class CouponRepository {
         .inFilter('status', ['published', 'withdrawn'])
         .order('published_at', ascending: false)
         .limit(100);
-    return _coupons(rows);
+    return await _coupons(rows);
   }
 
   Future<Coupon?> coupon(String id) async {
@@ -43,7 +62,7 @@ class CouponRepository {
             '$_couponColumns, coupon_status_history(from_status, to_status, reason, created_at)')
         .eq('id', id)
         .maybeSingle();
-    return row == null ? null : Coupon.fromJson(row);
+    return row == null ? null : (await _coupons([row])).first;
   }
 
   /// Cote médiane actuelle de chaque issue (« match:clé »), pour l'afficher à côté de la cote publiée.
@@ -91,7 +110,7 @@ class CouponRepository {
         .inFilter('status', ['pending_review', 'ready'])
         .order('publish_at')
         .limit(50);
-    return _coupons(rows);
+    return await _coupons(rows);
   }
 
   Future<Map<String, dynamic>> generateNow(int profileId) async {

@@ -128,6 +128,19 @@ class CouponCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text(c.title, style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
+              if (c.locked)
+                Row(
+                  children: [
+                    Icon(Icons.lock_outline,
+                        size: 16, color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                          'Réservé aux forfaits payants jusqu’au coup d’envoi',
+                          style: theme.textTheme.bodySmall),
+                    ),
+                  ],
+                ),
               for (final s in c.selections.take(4))
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2),
@@ -265,6 +278,54 @@ class SelectionCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Contenu d'un coupon réservé : visible avec un forfait payant, ou par tous au coup d'envoi.
+class LockedCouponNotice extends StatelessWidget {
+  const LockedCouponNotice({super.key, required this.firstKickoffAt});
+
+  final DateTime firstKickoffAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.lock_outline, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: Text('Coupon réservé',
+                        style: theme.textTheme.titleMedium)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Les sélections et l’analyse de ce coupon sont accessibles avec un forfait STARTER ou supérieur. '
+              'Elles deviennent visibles par tous au premier coup d’envoi '
+              '(${shortDate(firstKickoffAt)} à ${timeLabel(firstKickoffAt)}). Le coupon du jour reste gratuit.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: () => context.push(AppRoutes.billing),
+                icon: const Icon(Icons.workspace_premium_outlined),
+                label: const Text('Voir les forfaits'),
+              ),
+            ),
+          ],
         ),
       ),
     );

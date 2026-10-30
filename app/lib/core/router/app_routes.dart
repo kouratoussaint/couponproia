@@ -30,6 +30,7 @@ abstract final class AppRoutes {
   static String couponDetailFor(String id) => '/coupon/$id';
   static const lab = '/laboratoire';
   static const performance = '/performances';
+  static const billing = '/abonnement';
   static const myCoupons = '/mes-coupons';
   static const myCouponDetail = '/mes-coupons/:id';
 

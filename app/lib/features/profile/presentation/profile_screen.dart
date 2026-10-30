@@ -9,6 +9,7 @@ import '../../../core/theme/theme_mode_controller.dart';
 import '../../../core/validators.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../billing/billing_repository.dart';
 import '../../assistant/data/assistant_repository.dart';
 import '../../system/system_providers.dart';
 import '../data/profile_repository.dart';
@@ -91,10 +92,20 @@ class ProfileScreen extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
-                  const ListTile(
-                    leading: Icon(Icons.workspace_premium_outlined),
-                    title: Text('Abonnement'),
-                    subtitle: Text('FREE · les forfaits arrivent au LOT 9'),
+                  ListTile(
+                    leading: const Icon(Icons.workspace_premium_outlined),
+                    title: const Text('Abonnement'),
+                    subtitle: Text(
+                      ref.watch(entitlementsProvider).when(
+                            data: (e) => e.periodEnd == null
+                                ? 'Forfait ${e.plan.replaceAll('_', ' ')}'
+                                : 'Forfait ${e.plan.replaceAll('_', ' ')} · jusqu’au ${e.periodEnd!.day.toString().padLeft(2, '0')}/${e.periodEnd!.month.toString().padLeft(2, '0')}/${e.periodEnd!.year}',
+                            loading: () => '…',
+                            error: (_, __) => 'Forfait indisponible',
+                          ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.billing),
                   ),
                   ListTile(
                     leading: const Icon(Icons.bolt),

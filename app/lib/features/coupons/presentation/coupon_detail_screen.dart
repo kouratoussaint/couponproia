@@ -143,8 +143,9 @@ class _CouponBody extends ConsumerWidget {
                   runSpacing: 6,
                   children: [
                     RiskBadge(risk: c.riskLevel),
-                    Text('${c.selections.length} sélections',
-                        style: theme.textTheme.labelMedium),
+                    if (!c.locked)
+                      Text('${c.selections.length} sélections',
+                          style: theme.textTheme.labelMedium),
                   ],
                 ),
                 if (c.marketNote != null) ...[
@@ -156,6 +157,7 @@ class _CouponBody extends ConsumerWidget {
           ),
         ),
         const SectionTitle('Sélections'),
+        if (c.locked) LockedCouponNotice(firstKickoffAt: c.firstKickoffAt),
         for (final s in c.selections)
           SelectionCard(
               selection: s, currentOdd: current['${s.match.id}:${s.key}']),
