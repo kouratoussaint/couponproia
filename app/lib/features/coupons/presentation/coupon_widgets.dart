@@ -45,6 +45,44 @@ class RiskBadge extends StatelessWidget {
   }
 }
 
+/// Résultat réglé d'un coupon ou d'une sélection (gagné, perdu, annulé) ou « en cours ».
+class ResultBadge extends StatelessWidget {
+  const ResultBadge({super.key, required this.result, this.odd});
+
+  final String? result;
+  final double? odd;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final (color, icon) = switch (result) {
+      'won' => (scheme.primary, Icons.check_circle),
+      'lost' => (scheme.error, Icons.cancel),
+      'void' => (scheme.outline, Icons.remove_circle_outline),
+      _ => (scheme.tertiary, Icons.schedule),
+    };
+    final label = result == null
+        ? 'En cours'
+        : '${resultLabels[result] ?? result}${result == 'won' && odd != null ? ' · ${decimal(odd!)}' : ''}';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(20)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  color: color, fontWeight: FontWeight.w600, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
 String couponDateLabel(DateTime local, DateTime now) =>
     '${dayLabel(local, now)} ${shortDate(local)} · ${timeLabel(local)}';
 
@@ -77,7 +115,9 @@ class CouponCard extends StatelessWidget {
                         style: theme.textTheme.labelMedium
                             ?.copyWith(color: theme.colorScheme.primary)),
                   ),
-                  if (c.isWithdrawn)
+                  if (c.result != null && !c.isWithdrawn)
+                    ResultBadge(result: c.result, odd: c.settledOdd)
+                  else if (c.isWithdrawn)
                     Text('Retiré',
                         style: theme.textTheme.labelMedium
                             ?.copyWith(color: theme.colorScheme.error))
@@ -181,6 +221,10 @@ class SelectionCard extends StatelessWidget {
                         style: theme.textTheme.bodyLarge
                             ?.copyWith(fontWeight: FontWeight.w600)),
                   ),
+                  if (s.result != null) ...[
+                    ResultBadge(result: s.result),
+                    const SizedBox(width: 8),
+                  ],
                   Text(decimal(s.odd),
                       style: theme.textTheme.titleMedium
                           ?.copyWith(color: theme.colorScheme.primary)),

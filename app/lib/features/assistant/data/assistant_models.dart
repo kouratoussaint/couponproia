@@ -176,6 +176,8 @@ class UserCoupon {
     this.impliedProbability,
     this.conversationId,
     this.summaryFromAi = false,
+    this.result,
+    this.settledOdd,
   });
 
   factory UserCoupon.fromJson(Map<String, dynamic> j) {
@@ -199,6 +201,8 @@ class UserCoupon {
       vigilance: _strings(analysis['points_de_vigilance']),
       warnings: _strings(analysis['warnings']),
       summaryFromAi: analysis['source'] == 'ia',
+      result: j['result'] as String?,
+      settledOdd: _dn(j['settled_odd']),
     );
   }
 
@@ -217,6 +221,8 @@ class UserCoupon {
   final List<String> vigilance;
   final List<String> warnings;
   final bool summaryFromAi;
+  final String? result;
+  final double? settledOdd;
 
   bool get isSaved => status == 'saved';
 }

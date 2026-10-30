@@ -15,7 +15,7 @@ const _selectionColumns =
 const _couponColumns =
     'id, category, title, description, risk_level, total_odd, combined_probability, '
     'implied_probability, status, status_note, publish_at, published_at, first_kickoff_at, last_kickoff_at, '
-    'engine_version, data_source, analysis, result, created_at, coupon_selections($_selectionColumns)';
+    'engine_version, data_source, analysis, result, settled_odd, settled_at, created_at, coupon_selections($_selectionColumns)';
 
 class CouponRepository {
   CouponRepository(this._client);

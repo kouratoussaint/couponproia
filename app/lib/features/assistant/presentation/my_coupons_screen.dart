@@ -7,6 +7,7 @@ import '../../../core/errors/error_messages.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../analysis/data/analysis_format.dart';
+import '../../coupons/data/coupon_models.dart';
 import '../../coupons/presentation/coupon_widgets.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
@@ -48,7 +49,8 @@ class MyCouponsScreen extends ConsumerWidget {
                           title: Text(c.title),
                           subtitle: Text(
                             '${c.selections.map((s) => '${s.match.home} – ${s.match.away}').join(' · ')}\n'
-                            'Créé le ${shortDate(c.createdAt)} · probabilité estimée ${pct(c.combinedProbability)}',
+                            'Créé le ${shortDate(c.createdAt)} · probabilité estimée ${pct(c.combinedProbability)}'
+                            '${c.result == null ? '' : ' · ${resultLabels[c.result] ?? c.result}'}',
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                           ),

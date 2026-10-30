@@ -78,6 +78,21 @@ class _CouponBody extends ConsumerWidget {
               ),
             ),
           ),
+        if (c.result != null)
+          Card(
+            child: ListTile(
+              leading: ResultBadge(result: c.result, odd: c.settledOdd),
+              title: Text(c.result == 'won'
+                  ? 'Coupon gagnant${c.settledOdd != null && c.settledOdd != c.totalOdd ? ' (cote réglée ${decimal(c.settledOdd!)} après annulation d’une sélection)' : ''}'
+                  : c.result == 'lost'
+                      ? 'Coupon perdant'
+                      : 'Coupon annulé (toutes les sélections annulées)'),
+              subtitle: c.settledAt == null
+                  ? null
+                  : Text(
+                      'Réglé le ${shortDate(c.settledAt!)} à ${timeLabel(c.settledAt!)}, sur le score à 90 minutes'),
+            ),
+          ),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),

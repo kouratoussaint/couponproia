@@ -50,7 +50,9 @@ void main() {
       'source': 'ia',
       'ai_model': 'gemini-3.5-flash-lite',
     },
-    'result': null,
+    'result': 'won',
+    'settled_odd': 3.24,
+    'settled_at': '2026-11-02T21:00:00Z',
     'created_at': '2026-11-02T07:00:00Z',
     'coupon_selections': [
       _selection(2, 20, '2026-11-02T19:00:00Z'),
@@ -80,6 +82,9 @@ void main() {
     expect(c.totalOdd, 3.24);
     expect(c.selections.first.edge, 0.07);
     expect(categoryLabels[c.category], 'Coupon du jour');
+    expect(c.result, 'won');
+    expect(c.settledOdd, 3.24);
+    expect(resultLabels[c.result], 'Gagné');
   });
 
   test('un coupon reste « en cours » jusqu’à 3 h après le dernier coup d’envoi',

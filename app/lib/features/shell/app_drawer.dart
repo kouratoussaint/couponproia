@@ -121,8 +121,12 @@ class AppDrawer extends ConsumerWidget {
           title: const Text('Laboratoire IA'),
           onTap: () => open(AppRoutes.lab),
         ),
-        const _SoonTile(
-            icon: Icons.insights_outlined, label: 'Performances', lot: 'LOT 8'),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+          leading: const Icon(Icons.insights_outlined),
+          title: const Text('Performances'),
+          onTap: () => open(AppRoutes.performance),
+        ),
         const _SoonTile(
             icon: Icons.workspace_premium_outlined,
             label: 'Abonnement et crédits',

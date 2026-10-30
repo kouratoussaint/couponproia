@@ -29,6 +29,8 @@ const riskLabels = {
   'audacieux': 'Risque estimé : audacieux',
 };
 
+const resultLabels = {'won': 'Gagné', 'lost': 'Perdu', 'void': 'Annulé'};
+
 const statusLabels = {
   'pending_review': 'À valider',
   'ready': 'Prêt, publication programmée',
@@ -169,6 +171,8 @@ class Coupon {
     this.aiModel,
     this.marketNote,
     this.result,
+    this.settledOdd,
+    this.settledAt,
     this.selections = const [],
     this.history = const [],
   });
@@ -206,6 +210,8 @@ class Coupon {
       aiModel: analysis['ai_model'] as String?,
       marketNote: analysis['market_note'] as String?,
       result: j['result'] as String?,
+      settledOdd: j['settled_odd'] == null ? null : _d(j['settled_odd']),
+      settledAt: _dateOrNull(j['settled_at']),
       createdAt: _date(j['created_at']),
       selections: selections,
       history: history,
@@ -234,6 +240,8 @@ class Coupon {
   final String? aiModel;
   final String? marketNote;
   final String? result;
+  final double? settledOdd;
+  final DateTime? settledAt;
   final DateTime createdAt;
   final List<CouponSelection> selections;
   final List<StatusChange> history;

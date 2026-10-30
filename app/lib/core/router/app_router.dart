@@ -20,6 +20,7 @@ import '../../features/matches/presentation/competitions_screen.dart';
 import '../../features/matches/presentation/match_detail_screen.dart';
 import '../../features/matches/presentation/matches_screen.dart';
 import '../../features/matches/presentation/sports_admin_screen.dart';
+import '../../features/performance/performance_screen.dart';
 import '../../features/profile/presentation/legal_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/shell/home_shell.dart';
@@ -121,6 +122,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.generationsAdmin,
         builder: (context, state) => const GenerationsAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.performance,
+        builder: (context, state) => const PerformanceScreen(),
       ),
       GoRoute(
         path: AppRoutes.lab,
