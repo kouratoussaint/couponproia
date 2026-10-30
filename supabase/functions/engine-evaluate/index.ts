@@ -1,9 +1,11 @@
-// Edge Function : évaluation du moteur sur l'historique (réservée à ai.configure).
+// Edge Function : évaluation du moteur sur l'historique.
+// Appelée par un administrateur (JWT + ai.configure) ou par pg_cron (en-tête x-cron-secret).
 // Rejoue chaque match terminé de la saison avec les seuls matchs antérieurs, compare
 // au résultat réel et enregistre les scores dans engine_evaluations (lisibles par tous).
 import { evaluate } from "../_shared/engine/evaluate.ts";
 import { ENGINE_VERSION, type PlayedMatch } from "../_shared/engine/poisson.ts";
-import { callerFrom, corsHeaders, json, readSettings, serverContext } from "../_shared/http.ts";
+import { callerFrom, corsHeaders, env, json, readSettings, serverContext } from "../_shared/http.ts";
+import { safeEqual } from "../_shared/sports/normalize.ts";
 
 const PAGE = 1000;
 
@@ -12,9 +14,12 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   const ctx = serverContext();
   if (!ctx) return json({ error: "server_misconfigured" }, 500);
-  const caller = await callerFrom(req, ctx);
-  if (!caller) return json({ error: "unauthorized" }, 401);
-  if (!caller.permissions.includes("ai.configure")) return json({ error: "forbidden" }, 403);
+  const cronSecret = env("CRON_SECRET");
+  const header = req.headers.get("x-cron-secret");
+  const fromCron = Boolean(cronSecret && header && safeEqual(header, cronSecret));
+  const caller = fromCron ? null : await callerFrom(req, ctx);
+  if (!fromCron && !caller) return json({ error: "unauthorized" }, 401);
+  if (caller && !caller.permissions.includes("ai.configure")) return json({ error: "forbidden" }, 403);
 
   const body = await req.json().catch(() => ({}));
   const { db } = ctx;
@@ -79,11 +84,11 @@ Deno.serve(async (req) => {
     if (saveError) throw new Error(saveError.message);
 
     await db.from("audit_logs").insert({
-      actor_id: caller.id,
+      actor_id: caller?.id ?? null,
       action: "engine.evaluate",
       target_type: "engine_evaluation",
       target_id: String(saved.id),
-      details: { engine_version: ENGINE_VERSION, matches: e.matches },
+      details: { engine_version: ENGINE_VERSION, matches: e.matches, source: fromCron ? "cron" : "admin" },
     });
     return json(saved);
   } catch (err) {

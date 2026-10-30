@@ -1,0 +1,113 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../../core/providers.dart';
+import 'analysis_models.dart';
+
+const _analysisColumns = 'id, match_id, engine_version, provider, model, status, status_reason, '
+    'stats, analysis, created_at';
+
+/// Erreur métier renvoyée par la fonction d'analyse, déjà formulée pour l'utilisateur.
+class AnalysisException implements Exception {
+  const AnalysisException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+/// Message clair pour une réponse d'erreur des fonctions d'analyse.
+String analysisErrorMessage(int status, Object? details) {
+  final body = details is Map ? details : const {};
+  switch (body['error']) {
+    case 'daily_limit':
+      return 'Limite atteinte : ${body['limit'] ?? 20} nouvelles analyses par jour. '
+          'Les analyses déjà réalisées restent consultables.';
+    case 'feature_disabled':
+      return 'L’analyse IA est momentanément désactivée.';
+    case 'match_not_analyzable':
+      return 'Ce match est reporté ou annulé : pas d’analyse possible.';
+    case 'match_not_found':
+      return 'Match introuvable.';
+    case 'forbidden':
+      return 'Action réservée aux administrateurs.';
+    case 'unauthorized':
+      return 'Session expirée : reconnectez-vous.';
+  }
+  return 'L’analyse n’a pas pu être réalisée. Réessayez dans un instant.';
+}
+
+class AnalysisRepository {
+  AnalysisRepository(this._client);
+
+  final SupabaseClient _client;
+
+  /// Dernière analyse enregistrée pour un match (partagée entre utilisateurs).
+  Future<MatchAnalysis?> latest(int matchId) async {
+    final row = await _client
+        .from('match_analyses')
+        .select(_analysisColumns)
+        .eq('match_id', matchId)
+        .order('created_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+    return row == null ? null : MatchAnalysis.fromJson(row);
+  }
+
+  Future<Map<String, dynamic>> _invoke(String fn, Map<String, dynamic> body) async {
+    try {
+      final res = await _client.functions.invoke(fn, body: body);
+      return Map<String, dynamic>.from(res.data as Map);
+    } on FunctionException catch (e) {
+      throw AnalysisException(analysisErrorMessage(e.status, e.details));
+    }
+  }
+
+  /// Lance (ou récupère en cache) l'analyse d'un match. `force` : administrateurs.
+  Future<MatchAnalysis> analyze(int matchId, {bool force = false}) async {
+    final data = await _invoke('analyze-match', {'match_id': matchId, if (force) 'force': true});
+    return MatchAnalysis.fromJson(data);
+  }
+
+  Future<EngineEvaluation?> latestEvaluation() async {
+    final row = await _client
+        .from('engine_evaluations')
+        .select()
+        .order('created_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+    return row == null ? null : EngineEvaluation.fromJson(row);
+  }
+
+  Future<EngineEvaluation> evaluateEngine() async =>
+      EngineEvaluation.fromJson(await _invoke('engine-evaluate', const {}));
+
+  /// Journal IA des 7 derniers jours (administrateurs : toutes les requêtes).
+  Future<List<Map<String, dynamic>>> recentAiRequests() async {
+    final since = DateTime.now().toUtc().subtract(const Duration(days: 7));
+    final rows = await _client
+        .from('ai_requests')
+        .select('provider, model, status, input_tokens, output_tokens, cost_usd, latency_ms, error, created_at')
+        .gte('created_at', since.toIso8601String())
+        .order('created_at', ascending: false)
+        .limit(500);
+    return rows;
+  }
+}
+
+final analysisRepositoryProvider = Provider<AnalysisRepository>(
+  (ref) => AnalysisRepository(ref.watch(supabaseClientProvider)),
+);
+
+final storedAnalysisProvider = FutureProvider.autoDispose.family<MatchAnalysis?, int>(
+  (ref, matchId) => ref.watch(analysisRepositoryProvider).latest(matchId),
+);
+
+final latestEvaluationProvider = FutureProvider<EngineEvaluation?>(
+  (ref) => ref.watch(analysisRepositoryProvider).latestEvaluation(),
+);
+
+final recentAiRequestsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>(
+  (ref) => ref.watch(analysisRepositoryProvider).recentAiRequests(),
+);

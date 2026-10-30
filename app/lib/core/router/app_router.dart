@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/analysis/presentation/engine_admin_screen.dart';
 import '../../features/assistant/assistant_screen.dart';
 import '../../features/auth/presentation/password_reset_screens.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
@@ -112,6 +113,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.sportsAdmin,
         builder: (context, state) => const SportsAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.engineAdmin,
+        builder: (context, state) => const EngineAdminScreen(),
       ),
       StatefulShellRoute(
         builder: (context, state, navigationShell) =>

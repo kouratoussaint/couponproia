@@ -4,13 +4,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
 import '../../../core/router/app_routes.dart';
+import '../../analysis/data/analysis_repository.dart';
+import '../../analysis/presentation/analysis_section.dart';
 import '../data/sports_format.dart';
 import '../data/sports_models.dart';
 import '../data/sports_repository.dart';
 import 'sports_widgets.dart';
 
 /// Fiche d'un match : en-tête, cotes, forme récente, confrontations, classement.
-/// Chaque bloc indique sa source et ses limites ; aucune valeur n'est estimée ici.
+/// Chaque bloc indique sa source et ses limites ; les estimations viennent du moteur
+/// d'analyse (bloc « Analyse IA »), calculées côté serveur.
 class MatchDetailScreen extends ConsumerWidget {
   const MatchDetailScreen({super.key, required this.matchId});
 
@@ -30,6 +33,7 @@ class MatchDetailScreen extends ConsumerWidget {
                 onRefresh: () async {
                   ref.invalidate(matchProvider(matchId));
                   ref.invalidate(latestOddsProvider(matchId));
+                  ref.invalidate(storedAnalysisProvider(matchId));
                   await ref.read(matchProvider(matchId).future);
                 },
                 child: ListView(
@@ -37,10 +41,7 @@ class MatchDetailScreen extends ConsumerWidget {
                   children: [
                     _Header(match: m),
                     const SizedBox(height: 12),
-                    const FilledButton.tonal(
-                      onPressed: null,
-                      child: Text('Analyser avec l’IA · disponible au LOT 3'),
-                    ),
+                    AnalysisSection(match: m),
                     _OddsSection(match: m),
                     _FormSection(match: m),
                     _HeadToHeadSection(match: m),

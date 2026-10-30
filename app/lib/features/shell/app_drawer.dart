@@ -109,15 +109,23 @@ class AppDrawer extends ConsumerWidget {
         const _SoonTile(icon: Icons.insights_outlined, label: 'Performances', lot: 'LOT 8'),
         const _SoonTile(icon: Icons.workspace_premium_outlined, label: 'Abonnement et crédits', lot: 'LOT 9'),
         const _SoonTile(icon: Icons.palette_outlined, label: 'Studio graphique', lot: 'LOT 7'),
-        if (permissions.contains('sports.configure')) ...[
+        if (permissions.contains('sports.configure') || permissions.contains('ai.configure')) ...[
           const Divider(indent: 24, endIndent: 24),
           _SectionTitle('Administration'),
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 28),
-            leading: const Icon(Icons.sync_alt),
-            title: const Text('Données sportives'),
-            onTap: () => open(AppRoutes.sportsAdmin),
-          ),
+          if (permissions.contains('sports.configure'))
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+              leading: const Icon(Icons.sync_alt),
+              title: const Text('Données sportives'),
+              onTap: () => open(AppRoutes.sportsAdmin),
+            ),
+          if (permissions.contains('ai.configure'))
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+              leading: const Icon(Icons.psychology_outlined),
+              title: const Text('Moteur d’analyse'),
+              onTap: () => open(AppRoutes.engineAdmin),
+            ),
         ],
         const Divider(indent: 24, endIndent: 24),
         ListTile(

@@ -53,4 +53,5 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.engine-evaluate]
-verify_jwt = true
+# Appelée aussi par pg_cron sans JWT : la fonction vérifie le secret ou la permission ai.configure.
+verify_jwt = false
