@@ -3,7 +3,8 @@
 //  - « tick » (pg_cron, toutes les 15 min) : génère les créneaux programmés échus,
 //    les profils continus quand de nouvelles cotes sont arrivées, puis publie les coupons
 //    prêts dont l'heure est venue (avec un dernier contrôle).
-//  - « generate » (administrateur, generation.manage) : génère tout de suite pour un profil.
+//  - « generate » (administrateur generation.manage, ou exploitation via le secret) : génère
+//    tout de suite pour un profil.
 // Chaque génération est journalisée (generation_runs), y compris ses refus motivés.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { type AiResult, runValidated } from "../_shared/ai/analyst.ts";
@@ -450,15 +451,14 @@ Deno.serve(async (req) => {
       return json(await engine.tick());
     }
     if (job === "generate") {
-      if (!caller) return json({ error: "forbidden" }, 403);
       const profileId = Number(body?.profile_id);
       const { data: profile } = await ctx.db.from("coupon_profiles").select("*").eq("id", profileId).maybeSingle();
       if (!profile) return json({ error: "profile_not_found" }, 404);
       await engine.init();
-      const run = await engine.generate(profile as Profile, "manual", null, caller.id);
+      const run = await engine.generate(profile as Profile, "manual", null, caller?.id ?? null);
       const publication = await engine.publishDue();
       await ctx.db.from("audit_logs").insert({
-        actor_id: caller.id,
+        actor_id: caller?.id ?? null,
         action: "coupons.generate",
         target_type: "coupon_profile",
         target_id: String(profileId),
