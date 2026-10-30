@@ -6,7 +6,8 @@
 # Secrets GitHub requis (Settings > Secrets and variables > Actions) :
 #   ANDROID_KEYSTORE_BASE64   keystore de signature encodé en base64
 #   ANDROID_KEYSTORE_PASSWORD mot de passe du keystore (et de la clé « upload »)
-#   SUPABASE_URL / SUPABASE_ANON_KEY  (sans eux, l'APK affiche « configuration manquante »)
+# L'URL Supabase et la clé publique viennent de app/env/prod.json (valeurs publiques
+# par conception : la sécurité repose sur la RLS, pas sur le secret de cette clé).
 # Sans keystore, l'APK est signé avec une clé de debug, marqué TEST et publié en
 # pré-version : il faudra le désinstaller avant d'installer une version officielle.
 name: Release APK
@@ -89,17 +90,12 @@ jobs:
       - run: flutter test
 
       - name: Compiler les APK (un par architecture)
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           flutter build apk --release --split-per-abi \
             --obfuscate --split-debug-info=build/symbols \
             --build-name="${{ steps.version.outputs.name }}" \
             --build-number="${{ steps.version.outputs.build }}" \
-            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            --dart-define=APP_ENV=prod
+            --dart-define-from-file=env/prod.json
 
       - name: Renommer et calculer les empreintes
         run: |

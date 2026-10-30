@@ -2,6 +2,14 @@
 
 ## 1. Supabase (une fois par environnement : staging puis prod)
 
+**Méthode automatique (recommandée)** : renseigner `app/env/prod.json` et les secrets
+`SUPABASE_ACCESS_TOKEN` et `SUPABASE_DB_PASSWORD`, puis lancer Actions > « Déployer Supabase ».
+Le workflow applique les migrations, déploie les Edge Functions, règle Auth (codes à
+6 chiffres) et vérifie le résultat. Il se relance seul quand `supabase/` change.
+Seule l'étape 6 (premier super administrateur) reste manuelle.
+
+**Méthode manuelle** :
+
 1. Créer le projet sur supabase.com (région Europe ouest, la plus proche de l'Afrique de l'Ouest).
 2. **Authentication > Providers > Email** : activer « Confirm email ».
    Longueur minimale du mot de passe : 8.
@@ -30,8 +38,11 @@ Secrets GitHub (Settings > Secrets and variables > Actions) :
 | --- | --- |
 | `ANDROID_KEYSTORE_BASE64` | `base64 -w0 upload-keystore.jks` |
 | `ANDROID_KEYSTORE_PASSWORD` | mot de passe du keystore (le même protège la clé `upload`) |
-| `SUPABASE_URL` | URL du projet de production |
-| `SUPABASE_ANON_KEY` | clé publique du projet de production |
+| `SUPABASE_ACCESS_TOKEN` | jeton personnel Supabase (Account > Access Tokens), pour le workflow « Déployer Supabase » |
+| `SUPABASE_DB_PASSWORD` | mot de passe de la base du projet |
+
+L'URL du projet et sa clé publique (`sb_publishable_…`) ne sont pas des secrets :
+elles sont dans `app/env/prod.json` et intégrées à l'APK.
 
 ## 3. Premier build
 
