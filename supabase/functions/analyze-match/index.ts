@@ -5,8 +5,9 @@
 //    aucun mot de certitude) ; à défaut, la fiche seule est renvoyée (« stats_only »).
 // Une analyse est partagée entre utilisateurs et mise en cache : un match = un coût.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { analyzeWithAi, type Pricing, type ProviderChoice } from "../_shared/ai/analyst.ts";
-import { makeProvider } from "../_shared/ai/providers.ts";
+import { analyzeWithAi } from "../_shared/ai/analyst.ts";
+import { loadAiSetup } from "../_shared/ai/setup.ts";
+import { loadEngineQuality } from "../_shared/engine/quality.ts";
 import { buildFiche, type NamedMatch, type OddsRow } from "../_shared/engine/fiche.ts";
 import { ENGINE_VERSION, type PlayedMatch } from "../_shared/engine/poisson.ts";
 import { callerFrom, corsHeaders, env, json, readSettings, serverContext } from "../_shared/http.ts";
@@ -92,8 +93,15 @@ async function loadFicheInputs(db: SupabaseClient, m: MatchRow) {
   };
 }
 
-function isFresh(cached: { status: string; engine_version: string; created_at: string }, played: boolean, ttlHours: number) {
+function isFresh(
+  cached: { status: string; engine_version: string; prompt_version: number | null; created_at: string },
+  played: boolean,
+  ttlHours: number,
+  promptVersion: number | null,
+) {
   if (cached.engine_version !== ENGINE_VERSION) return false;
+  // Nouveau prompt (consignes corrigées) : l'ancien texte n'est plus servi.
+  if (cached.status === "ok" && promptVersion !== null && cached.prompt_version !== promptVersion) return false;
   const age = Date.now() - Date.parse(cached.created_at);
   if (cached.status === "stats_only") return age < STATS_ONLY_TTL_MS;
   return played || age < ttlHours * 3600_000;
@@ -136,20 +144,18 @@ Deno.serve(async (req) => {
     const played = PLAYED.includes(m.status);
 
     const settings = await readSettings(db, [
-      "ai.provider",
-      "ai.model",
-      "ai.fallback_providers",
-      "ai.models",
-      "ai.pricing_usd_per_mtok",
       "ai.max_new_analyses_per_user_day",
       "ai.analysis_ttl_hours",
     ]);
     const ttlHours = Number(settings["ai.analysis_ttl_hours"] ?? 12);
 
+    const { data: prompt } = await db.from("ai_prompts").select("key, version, system_prompt")
+      .eq("key", "match_analysis").eq("is_active", true).maybeSingle();
+
     if (!force) {
       const { data: cached } = await db.from("match_analyses").select(ANALYSIS_COLUMNS).eq("match_id", matchId)
         .order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (cached && isFresh(cached, played, ttlHours)) return json({ ...cached, cached: true });
+      if (cached && isFresh(cached, played, ttlHours, prompt?.version ?? null)) return json({ ...cached, cached: true });
     }
 
     // Quota : nouvelles analyses déclenchées par l'utilisateur aujourd'hui (UTC = heure de Ouagadougou).
@@ -164,19 +170,7 @@ Deno.serve(async (req) => {
     }
 
     const inputs = await loadFicheInputs(db, m);
-    const { data: evaluation } = await db.from("engine_evaluations")
-      .select("matches_evaluated, brier_model, brier_baseline, details")
-      .eq("engine_version", ENGINE_VERSION).order("created_at", { ascending: false }).limit(1).maybeSingle();
-    const quality = evaluation
-      ? {
-        evaluatedMatches: evaluation.matches_evaluated,
-        beatsBaseline: {
-          "1X2": Number(evaluation.brier_model) < Number(evaluation.brier_baseline),
-          OU: Number(evaluation.details?.over_2_5?.brierModel) < Number(evaluation.details?.over_2_5?.brierBaseline),
-          BTTS: Number(evaluation.details?.btts?.brierModel) < Number(evaluation.details?.btts?.brierBaseline),
-        },
-      }
-      : null;
+    const quality = await loadEngineQuality(db);
     const fiche = buildFiche({
       match: {
         id: m.id,
@@ -192,21 +186,11 @@ Deno.serve(async (req) => {
       generatedAt: new Date().toISOString(),
     });
 
-    const { data: prompt } = await db.from("ai_prompts").select("key, version, system_prompt")
-      .eq("key", "match_analysis").eq("is_active", true).maybeSingle();
 
-    const primary = String(settings["ai.provider"] ?? "gemini");
-    const fallbacks = Array.isArray(settings["ai.fallback_providers"]) ? settings["ai.fallback_providers"] as string[] : [];
-    const models = (settings["ai.models"] ?? {}) as Record<string, string>;
-    const choices: ProviderChoice[] = [];
-    for (const name of [primary, ...fallbacks.filter((f) => f !== primary)]) {
-      const provider = makeProvider(name, (k) => env(k));
-      const model = name === primary ? String(settings["ai.model"] ?? "") : models[name];
-      if (provider && model) choices.push({ provider, model });
-    }
+    const { choices, pricing } = await loadAiSetup(db, (k) => env(k));
 
     const result = prompt
-      ? await analyzeWithAi(fiche, prompt.system_prompt, choices, (settings["ai.pricing_usd_per_mtok"] ?? {}) as Pricing)
+      ? await analyzeWithAi(fiche, prompt.system_prompt, choices, pricing)
       : { status: "stats_only" as const, reason: "no_prompt", logs: [] };
 
     const sourceUpdatedAt = [inputs.history.at(-1)?.kickoffAt, fiche.market.captured_at].filter(Boolean).sort().at(-1) ??

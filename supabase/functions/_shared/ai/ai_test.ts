@@ -22,7 +22,7 @@ const good = {
   facteurs_domicile: ["Bon bilan à domicile (9 matchs)."],
   facteurs_exterieur: ["Défense fragile à l'extérieur."],
   tendances: ["Plus de 2,5 buts estimé à 55 %."],
-  marches_envisageables: [{ cle: "1X2.HOME", probabilite_modele: 0.53, justification: "Cote médiane 1,95 pour 53 %." }],
+  marches_envisageables: [{ cle: "1X2.HOME", probabilite_modele: 0.53, justification: "Cote médiane 1,95 pour 53 % ; Alpha est 4e avec 45 points." }],
   risques: ["Le nul reste possible (24 %)."],
   informations_manquantes: ["Compositions inconnues."],
   conclusion: "Avantage Alpha, à confirmer.",
@@ -43,9 +43,9 @@ Deno.test("validation : nombre inventé refusé", () => {
 });
 
 Deno.test("validation : marché inconnu ou probabilité modifiée refusés", () => {
-  const r1 = validateAnalysis({ ...good, marches_envisageables: [{ cle: "BTTS.YES", probabilite_modele: 0.6, justification: "x" }] }, fiche);
+  const r1 = validateAnalysis({ ...good, marches_envisageables: [{ cle: "BTTS.YES", probabilite_modele: 0.6, justification: "Bon bilan à domicile et attaque efficace cette saison." }] }, fiche);
   assert(!r1.ok);
-  const r2 = validateAnalysis({ ...good, marches_envisageables: [{ cle: "1X2.HOME", probabilite_modele: 0.7, justification: "x" }] }, fiche);
+  const r2 = validateAnalysis({ ...good, marches_envisageables: [{ cle: "1X2.HOME", probabilite_modele: 0.7, justification: "Bon bilan à domicile et attaque efficace cette saison." }] }, fiche);
   assert(!r2.ok);
 });
 
@@ -142,8 +142,24 @@ Deno.test("validation : marché refusé si le moteur ne bat pas la référence s
   const withQuality = { ...fiche, engine_quality: { beats_baseline: { "1X2": true, OU: false, BTTS: false } } };
   assert(validateAnalysis(good, withQuality).ok, "1X2 reste autorisé");
   const r = validateAnalysis(
-    { ...good, marches_envisageables: [{ cle: "OU.OVER.2.5", probabilite_modele: 0.551, justification: "x" }] },
+    { ...good, marches_envisageables: [{ cle: "OU.OVER.2.5", probabilite_modele: 0.551, justification: "Bon bilan à domicile et attaque efficace cette saison." }] },
     withQuality,
   );
   assert(!r.ok && r.errors.some((e) => e.includes("simple fréquence")));
+});
+
+Deno.test("validation : une seule issue par marché, justification fondée", () => {
+  const twoSides = validateAnalysis({
+    ...good,
+    marches_envisageables: [
+      good.marches_envisageables[0],
+      { cle: "1X2.DRAW", probabilite_modele: 0.241, justification: "Bilan à domicile solide mais nul possible au classement." },
+    ],
+  }, fiche);
+  assert(!twoSides.ok && twoSides.errors.some((e) => e.includes("même marché")));
+  const parrot = validateAnalysis({
+    ...good,
+    marches_envisageables: [{ cle: "1X2.HOME", probabilite_modele: 0.532, justification: "Le modèle estime la probabilité de la victoire de Alpha à 53 %." }],
+  }, fiche);
+  assert(!parrot.ok && parrot.errors.some((e) => e.includes("élément de la fiche")));
 });

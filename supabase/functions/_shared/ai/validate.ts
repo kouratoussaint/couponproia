@@ -37,6 +37,14 @@ export interface FicheLike {
 
 const qualityGroupOf = (key: string) => (key.startsWith("DC.") ? "1X2" : key.split(".")[0]);
 
+/** Indices qu'une justification s'appuie sur la fiche, pas seulement sur la probabilité. */
+const GROUNDING = /forme|domicile|extérieur|buts? attendus?|classement|points?|confrontation|série|encaiss|marqu|bilan|cote|marché|écart|défense|attaque|moyenne/iu;
+
+/** Une justification qui se contente de répéter la probabilité n'apporte rien. */
+export function isGrounded(justification: string): boolean {
+  return justification.trim().length >= 40 && GROUNDING.test(justification);
+}
+
 const STRING_FIELDS = ["resume", "forme", "conclusion"] as const;
 const LIST_FIELDS = ["facteurs_domicile", "facteurs_exterieur", "tendances", "risques", "informations_manquantes"] as const;
 const MAX_ITEMS = 4;
@@ -116,6 +124,7 @@ export function validateAnalysis(raw: unknown, fiche: FicheLike): ValidationResu
   const probs = fiche.model.probabilities;
   const lines = new Map(fiche.market.lines.map((l) => [l.key, l] as [string, typeof l]));
   const picks: MarketPick[] = [];
+  const families = new Map<string, string>();
   for (const item of (r.marches_envisageables as unknown[]).slice(0, 3)) {
     const p = item as Record<string, unknown>;
     const key = String(p?.cle ?? "");
@@ -134,10 +143,21 @@ export function validateAnalysis(raw: unknown, fiche: FicheLike): ValidationResu
       );
       continue;
     }
-    if (typeof p.justification !== "string" || !p.justification.trim()) {
-      errors.push(`Marché « ${key} » : justification manquante.`);
+    const family = qualityGroupOf(key);
+    const previous = families.get(family);
+    if (previous) {
+      errors.push(
+        `« ${previous} » et « ${key} » portent sur le même marché : une seule issue par marché. Garde la mieux étayée.`,
+      );
       continue;
     }
+    if (typeof p.justification !== "string" || !isGrounded(p.justification)) {
+      errors.push(
+        `Marché « ${key} » : la justification doit s'appuyer sur un élément de la fiche (forme, bilan domicile/extérieur, buts attendus, classement, confrontations, cote) et pas seulement répéter la probabilité.`,
+      );
+      continue;
+    }
+    families.set(family, key);
     const line = lines.get(key);
     picks.push({
       cle: key,
@@ -184,4 +204,31 @@ export function validateAnalysis(raw: unknown, fiche: FicheLike): ValidationResu
   }
 
   return errors.length ? { ok: false, errors } : { ok: true, analysis };
+}
+
+export interface CouponSummary {
+  analyse_generale: string;
+  points_de_vigilance: string[];
+}
+
+/** Analyse générale d'un coupon : structure, chiffres présents dans la fiche, aucun mot de certitude. */
+export function validateCouponSummary(raw: unknown, fiche: unknown): { ok: true; value: CouponSummary } | { ok: false; errors: string[] } {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return { ok: false, errors: ["La réponse n'est pas un objet JSON."] };
+  const r = raw as Record<string, unknown>;
+  const errors: string[] = [];
+  if (typeof r.analyse_generale !== "string" || r.analyse_generale.trim().length < 20) {
+    errors.push("Champ « analyse_generale » manquant ou trop court.");
+  }
+  if (!isStringList(r.points_de_vigilance)) errors.push("Champ « points_de_vigilance » : liste de textes attendue.");
+  if (errors.length) return { ok: false, errors };
+  const value: CouponSummary = {
+    analyse_generale: (r.analyse_generale as string).trim(),
+    points_de_vigilance: (r.points_de_vigilance as string[]).map((s) => s.trim()).filter(Boolean).slice(0, 4),
+  };
+  const text = [value.analyse_generale, ...value.points_de_vigilance].join("\n");
+  const forbidden = text.match(FORBIDDEN);
+  if (forbidden) errors.push(`Mot interdit : « ${forbidden[0]} ». Ce sont des estimations.`);
+  const unknown = unknownNumbers(text, allowedNumbers(fiche));
+  if (unknown.length) errors.push(`Nombres absents de la fiche : ${[...new Set(unknown)].slice(0, 6).join(", ")}.`);
+  return errors.length ? { ok: false, errors } : { ok: true, value };
 }

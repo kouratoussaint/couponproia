@@ -3,6 +3,8 @@
 import { type AiProvider, AiProviderError } from "./providers.ts";
 import { type Analysis, type FicheLike, parseJsonLoose, validateAnalysis } from "./validate.ts";
 
+export type Validator<T> = (raw: unknown) => { ok: true; value: T } | { ok: false; errors: string[] };
+
 export interface ProviderChoice {
   provider: AiProvider;
   model: string;
@@ -19,6 +21,10 @@ export interface AttemptLog {
   latencyMs: number;
   error: string | null;
 }
+
+export type AiResult<T> =
+  | { status: "ok"; value: T; provider: string; model: string; logs: AttemptLog[] }
+  | { status: "stats_only"; reason: string; logs: AttemptLog[] };
 
 export type AnalystResult =
   | { status: "ok"; analysis: Analysis; provider: string; model: string; logs: AttemptLog[] }
@@ -41,10 +47,28 @@ export async function analyzeWithAi(
   pricing: Pricing = {},
   now: () => number = Date.now,
 ): Promise<AnalystResult> {
+  const r = await runValidated(fiche, systemPrompt, choices, (raw) => {
+    const v = validateAnalysis(raw, fiche);
+    return v.ok ? { ok: true, value: v.analysis } : v;
+  }, pricing, now);
+  return r.status === "ok" ? { status: "ok", analysis: r.value, provider: r.provider, model: r.model, logs: r.logs } : r;
+}
+
+/**
+ * Appelle les fournisseurs dans l'ordre ; chaque réponse passe par `validate`. Une réponse
+ * refusée est redemandée une fois avec la liste des erreurs, puis on passe au suivant.
+ */
+export async function runValidated<T>(
+  fiche: unknown,
+  systemPrompt: string,
+  choices: ProviderChoice[],
+  validate: Validator<T>,
+  pricing: Pricing = {},
+  now: () => number = Date.now,
+): Promise<AiResult<T>> {
   if (choices.length === 0) return { status: "stats_only", reason: "no_provider", logs: [] };
   const logs: AttemptLog[] = [];
   const user = `FICHE :\n${JSON.stringify(fiche)}`;
-
   for (const { provider, model } of choices) {
     const started = now();
     const log: AttemptLog = {
@@ -69,12 +93,12 @@ export async function analyzeWithAi(
         log.outputTokens = add(log.outputTokens, res.outputTokens);
         let errors: string[];
         try {
-          const verdict = validateAnalysis(parseJsonLoose(res.text), fiche);
+          const verdict = validate(parseJsonLoose(res.text));
           if (verdict.ok) {
             log.status = "success";
             log.latencyMs = now() - started;
             log.costUsd = estimateCost(pricing, log.model, log.inputTokens, log.outputTokens);
-            return { status: "ok", analysis: verdict.analysis, provider: provider.name, model: log.model, logs };
+            return { status: "ok", value: verdict.value, provider: provider.name, model: log.model, logs };
           }
           errors = verdict.errors;
         } catch (e) {

@@ -55,3 +55,7 @@ verify_jwt = true
 [functions.engine-evaluate]
 # Appelée aussi par pg_cron sans JWT : la fonction vérifie le secret ou la permission ai.configure.
 verify_jwt = false
+
+[functions.coupon-engine]
+# Appelée par pg_cron sans JWT : la fonction vérifie le secret ou la permission generation.manage.
+verify_jwt = false
