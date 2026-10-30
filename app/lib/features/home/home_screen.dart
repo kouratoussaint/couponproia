@@ -13,7 +13,7 @@ import '../shell/app_drawer.dart';
 const _modules = [
   (flag: 'matches', title: 'Matchs, classements et cotes', lot: 'LOT 2', icon: Icons.sports_soccer),
   (flag: 'match_analysis', title: 'Analyses IA des matchs', lot: 'LOT 3', icon: Icons.psychology),
-  (flag: 'auto_generation_scheduled', title: 'Coupons IA de la plateforme', lot: 'LOT 4', icon: Icons.receipt_long),
+  (flag: 'platform_coupons', title: 'Coupons IA de la plateforme', lot: 'LOT 4', icon: Icons.receipt_long),
   (flag: 'assistant_ia', title: 'Mon Assistant IA', lot: 'LOT 5', icon: Icons.smart_toy),
   (flag: 'ai_lab', title: 'Laboratoire IA', lot: 'LOT 6', icon: Icons.science),
   (flag: 'results_tracking', title: 'Suivi des performances', lot: 'LOT 8', icon: Icons.insights),
@@ -62,8 +62,8 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Matchs, classements et cotes réels sont disponibles (LOT 2). '
-                        'Les analyses IA arrivent au LOT 3 ; aucune donnée affichée ici n’est fictive.',
+                        'Matchs, analyses IA et coupons de la plateforme sont disponibles. '
+                        'Aucune donnée affichée ici n’est fictive ; les probabilités restent des estimations.',
                         style: theme.textTheme.bodyMedium,
                       ),
                     ),

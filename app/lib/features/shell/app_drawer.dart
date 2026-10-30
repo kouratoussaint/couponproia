@@ -109,7 +109,9 @@ class AppDrawer extends ConsumerWidget {
         const _SoonTile(icon: Icons.insights_outlined, label: 'Performances', lot: 'LOT 8'),
         const _SoonTile(icon: Icons.workspace_premium_outlined, label: 'Abonnement et crédits', lot: 'LOT 9'),
         const _SoonTile(icon: Icons.palette_outlined, label: 'Studio graphique', lot: 'LOT 7'),
-        if (permissions.contains('sports.configure') || permissions.contains('ai.configure')) ...[
+        if (permissions.contains('sports.configure') ||
+            permissions.contains('ai.configure') ||
+            permissions.contains('generation.manage')) ...[
           const Divider(indent: 24, endIndent: 24),
           _SectionTitle('Administration'),
           if (permissions.contains('sports.configure'))
@@ -118,6 +120,13 @@ class AppDrawer extends ConsumerWidget {
               leading: const Icon(Icons.sync_alt),
               title: const Text('Données sportives'),
               onTap: () => open(AppRoutes.sportsAdmin),
+            ),
+          if (permissions.contains('generation.manage'))
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+              leading: const Icon(Icons.auto_mode),
+              title: const Text('Générations de coupons'),
+              onTap: () => open(AppRoutes.generationsAdmin),
             ),
           if (permissions.contains('ai.configure'))
             ListTile(

@@ -24,6 +24,10 @@ abstract final class AppRoutes {
   static const standings = '/competitions/:id';
   static const sportsAdmin = '/admin/donnees';
   static const engineAdmin = '/admin/moteur';
+  static const generationsAdmin = '/admin/generations';
+  static const couponDetail = '/coupon/:id';
+
+  static String couponDetailFor(String id) => '/coupon/$id';
 
   static String matchDetailFor(int id) => '/match/$id';
   static String standingsFor(int id) => '/competitions/$id';
