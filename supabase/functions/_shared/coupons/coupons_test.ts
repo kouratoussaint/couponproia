@@ -210,3 +210,15 @@ Deno.test("sélections imposées : conservées, complétées dans la fourchette"
     { ...keys, require_validated_markets: false }, NOW, VALID);
   assertEquals(kept.map((k) => k.key), ["OU.OVER.1.5"]);
 });
+
+Deno.test("recherche : une cote cible atteignable n'est pas manquée à cause des cotes basses", () => {
+  // 50 matchs : double chance à 1,20 (80 %) et victoire à 1,65 (55 %). Cible : 3 sélections, cote ≈ 4.
+  const pool: Candidate[] = [];
+  for (let i = 1; i <= 50; i++) {
+    pool.push(cand({ matchId: i, key: "DC.1X", odd: 1.2, modelProbability: 0.8 - i * 0.001 }));
+    pool.push(cand({ matchId: i, key: "1X2.HOME", odd: 1.62 + (i % 5) * 0.01, modelProbability: 0.55 - i * 0.001 }));
+  }
+  const [c] = buildCoupons(pool, parseCriteria({ min_selections: 3, max_selections: 3, min_total_odd: 3.4, max_total_odd: 4.6 }));
+  assert(c, "coupon trouvé");
+  assert(c.totalOdd >= 3.4 && c.totalOdd <= 4.6, `cote ${c.totalOdd}`);
+});

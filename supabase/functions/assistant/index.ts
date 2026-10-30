@@ -184,8 +184,8 @@ class Assistant {
       const relaxed = parseCriteria({
         ...criteria,
         min_model_probability: Math.max(0.25, criteria.min_model_probability - 0.1),
-        min_total_odd: criteria.min_total_odd * 0.8,
-        max_total_odd: criteria.max_total_odd * 1.25,
+        min_total_odd: criteria.min_total_odd * 0.9,
+        max_total_odd: criteria.max_total_odd * 1.15,
         min_edge: Math.min(criteria.min_edge, -0.08),
       });
       const again = filterCandidates(cands, relaxed, this.now, this.quality?.beatsBaseline ?? null, this.quality?.competitions ?? {});

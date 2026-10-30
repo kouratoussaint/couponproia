@@ -216,9 +216,7 @@ export function buildCoupons(
   fixed: Candidate[] = [],
 ): ProposedCoupon[] {
   const fixedMatches = new Set(fixed.map((f) => f.matchId));
-  const pool = [...candidates].filter((c) => !fixedMatches.has(c.matchId))
-    .sort((a, b) => b.modelProbability - a.modelProbability || (b.edge ?? 0) - (a.edge ?? 0))
-    .slice(0, 40);
+  const pool = searchPool(candidates.filter((c) => !fixedMatches.has(c.matchId)), criteria, fixed);
   const results: ProposedCoupon[] = [];
   const taken = new Set(takenFingerprints);
   const minLog = Math.log(criteria.min_total_odd);
@@ -276,6 +274,28 @@ export function buildCoupons(
     taken.add(proposal.fingerprint);
   }
   return results;
+}
+
+/**
+ * Candidats retenus pour la recherche. Les 40 plus probables ne suffisent pas : ce sont surtout
+ * des cotes basses (doubles chances à 1,20) qui n'atteignent jamais une cote totale de 4 en
+ * 3 sélections. On ajoute donc les plus proches de la cote « idéale » par sélection.
+ */
+export function searchPool(candidates: Candidate[], criteria: Criteria, fixed: Candidate[] = []): Candidate[] {
+  const byProbability = (a: Candidate, b: Candidate) =>
+    b.modelProbability - a.modelProbability || (b.edge ?? 0) - (a.edge ?? 0);
+  const free = Math.max(1, (criteria.min_selections + criteria.max_selections) / 2 - fixed.length);
+  const fixedLog = fixed.reduce((s, f) => s + Math.log(f.odd), 0);
+  const targetLog = (Math.log(Math.sqrt(criteria.min_total_odd * criteria.max_total_odd)) - fixedLog) / free;
+  const closeness = (c: Candidate) => Math.abs(Math.log(c.odd) - targetLog);
+  const chosen = new Map<Candidate, true>();
+  [...candidates].sort(byProbability).slice(0, 40).forEach((c) => chosen.set(c, true));
+  [...candidates]
+    .filter((c) => Math.abs(Math.log(c.odd) - targetLog) < 0.35)
+    .sort((a, b) => b.modelProbability - a.modelProbability || closeness(a) - closeness(b))
+    .slice(0, 60)
+    .forEach((c) => chosen.set(c, true));
+  return [...chosen.keys()].sort(byProbability);
 }
 
 export interface RiskThresholds {
