@@ -82,7 +82,10 @@ jobs:
           else
             echo "::warning::Secret API_FOOTBALL_KEY absent : les synchronisations seront ignorées."
           fi
-          supabase secrets set --project-ref "$REF" "${args[@]}"
+          if ! supabase secrets set --project-ref "$REF" "${args[@]}" > secrets.log 2>&1; then
+            echo "::error::supabase secrets set a échoué : $(tr '\n' ' ' < secrets.log | head -c 500)"
+            exit 1
+          fi
           # URL du projet et secret partagé dans Vault, lus par pg_cron (app_private.invoke_sports_sync)
           python3 - <<'PY' > vault.json
           import json, os
@@ -102,7 +105,7 @@ jobs:
           status="$(curl -s -o vault_response.json -w '%{http_code}' -X POST \
             "https://api.supabase.com/v1/projects/$REF/database/query" \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" \
-            --data @vault.json)"
+            --data @vault.json || true)"
           rm -f vault.json
           if [ "${status:0:1}" != "2" ]; then
             echo "::error::Écriture Vault refusée (HTTP $status) : $(head -c 300 vault_response.json)"; exit 1
