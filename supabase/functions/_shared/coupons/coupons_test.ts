@@ -170,3 +170,10 @@ Deno.test("créneaux : heure locale, rattrapage limité, passage de minuit", () 
   assertEquals(dueSlots(["23:50"], new Date("2026-11-03T00:20:00Z"), "UTC")[0].slotKey, "2026-11-02 23:50");
   assertEquals(localDate(new Date("2026-11-02T23:30:00Z"), "Europe/Paris"), "2026-11-03");
 });
+
+Deno.test("filtres : compétition où le moteur ne bat pas la référence exclue", () => {
+  const all = [cand({ matchId: 1 }), cand({ matchId: 2, competitionName: "UEFA Champions League", competitionId: 2 })];
+  const { kept, excluded } = filterCandidates(all, DEFAULT_CRITERIA, NOW, VALID, { "UEFA Champions League": false, "Premier League": true });
+  assertEquals(kept.map((c) => c.matchId), [1]);
+  assertEquals(excluded["compétition où le moteur ne bat pas la référence"], 1);
+});

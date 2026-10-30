@@ -6,6 +6,8 @@ import { ENGINE_VERSION } from "./poisson.ts";
 export interface EngineQuality {
   evaluatedMatches: number;
   beatsBaseline: Record<string, boolean>;
+  /** Par compétition (nom) : le moteur bat-il la référence sur 1/N/2 ? (≥ 100 matchs évalués) */
+  competitions?: Record<string, boolean>;
 }
 
 export async function loadEngineQuality(db: SupabaseClient): Promise<EngineQuality | null> {
@@ -20,5 +22,10 @@ export async function loadEngineQuality(db: SupabaseClient): Promise<EngineQuali
       OU: Number(e.details?.over_2_5?.brierModel) < Number(e.details?.over_2_5?.brierBaseline),
       BTTS: Number(e.details?.btts?.brierModel) < Number(e.details?.btts?.brierBaseline),
     },
+    competitions: Object.fromEntries(
+      Object.entries((e.details?.per_competition ?? {}) as Record<string, { matches: number; brierModel: number; brierBaseline: number }>)
+        .filter(([, m]) => m.matches >= 100)
+        .map(([key, m]) => [key.replace(/ \d{4}$/, ""), m.brierModel < m.brierBaseline] as [string, boolean]),
+    ),
   };
 }

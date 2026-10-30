@@ -128,6 +128,7 @@ export function filterCandidates(
   criteria: Criteria,
   now: Date,
   beatsBaseline: Record<string, boolean> | null,
+  competitionQuality: Record<string, boolean> = {},
 ): { kept: Candidate[]; excluded: Record<string, number> } {
   const excluded: Record<string, number> = {};
   const out = (reason: string) => {
@@ -145,6 +146,9 @@ export function filterCandidates(
     if (!criteria.markets.includes(familyOf(c.key))) return out("marché non retenu");
     if (criteria.require_validated_markets && beatsBaseline?.[qualityFamilyOf(c.key)] !== true) {
       return out("marché non validé par l'évaluation du moteur");
+    }
+    if (criteria.require_validated_markets && competitionQuality[c.competitionName] === false) {
+      return out("compétition où le moteur ne bat pas la référence");
     }
     if (t - Date.parse(c.oddsCapturedAt) > criteria.max_odds_age_hours * HOUR) return out("cote trop ancienne");
     if (c.odd < criteria.min_selection_odd || c.odd > criteria.max_selection_odd) return out("cote hors fourchette");

@@ -173,7 +173,13 @@ class CouponEngine {
       return 0;
     }
     if (!this.quality) reasons.push("Moteur jamais évalué : aucun marché n'est validé.");
-    const { kept, excluded } = filterCandidates(load.candidates, criteria, this.now, this.quality?.beatsBaseline ?? null);
+    const { kept, excluded } = filterCandidates(
+      load.candidates,
+      criteria,
+      this.now,
+      this.quality?.beatsBaseline ?? null,
+      this.quality?.competitions ?? {},
+    );
     details.excluded = excluded;
     details.kept = kept.length;
     if (new Set(kept.map((c) => c.matchId)).size < criteria.min_selections) {
