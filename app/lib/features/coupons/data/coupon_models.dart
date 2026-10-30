@@ -6,8 +6,10 @@ double? _dn(Object? v) => v == null ? null : (v as num).toDouble();
 int _i(Object? v) => (v as num).toInt();
 DateTime _date(Object? v) => DateTime.parse(v as String).toLocal();
 DateTime? _dateOrNull(Object? v) => v == null ? null : _date(v);
-Map<String, dynamic> _map(Object? v) => v is Map ? Map<String, dynamic>.from(v) : const {};
-List<String> _strings(Object? v) => v is List ? v.map((e) => e.toString()).toList() : const [];
+Map<String, dynamic> _map(Object? v) =>
+    v is Map ? Map<String, dynamic>.from(v) : const {};
+List<String> _strings(Object? v) =>
+    v is List ? v.map((e) => e.toString()).toList() : const [];
 
 const categoryLabels = {
   'du_jour': 'Coupon du jour',
@@ -126,7 +128,8 @@ class CouponSelection {
 }
 
 class StatusChange {
-  const StatusChange({required this.toStatus, required this.at, this.fromStatus, this.reason});
+  const StatusChange(
+      {required this.toStatus, required this.at, this.fromStatus, this.reason});
 
   factory StatusChange.fromJson(Map<String, dynamic> j) => StatusChange(
         fromStatus: j['from_status'] as String?,
@@ -173,10 +176,12 @@ class Coupon {
   factory Coupon.fromJson(Map<String, dynamic> j) {
     final analysis = _map(j['analysis']);
     final selections = [
-      for (final s in (j['coupon_selections'] as List? ?? const [])) CouponSelection.fromJson(_map(s)),
+      for (final s in (j['coupon_selections'] as List? ?? const []))
+        CouponSelection.fromJson(_map(s)),
     ]..sort((a, b) => a.position.compareTo(b.position));
     final history = [
-      for (final h in (j['coupon_status_history'] as List? ?? const [])) StatusChange.fromJson(_map(h)),
+      for (final h in (j['coupon_status_history'] as List? ?? const []))
+        StatusChange.fromJson(_map(h)),
     ]..sort((a, b) => a.at.compareTo(b.at));
     return Coupon(
       id: j['id'] as String,
@@ -236,7 +241,8 @@ class Coupon {
   bool get isWithdrawn => status == 'withdrawn';
 
   /// Encore « en jeu » : le dernier match n'est pas terminé depuis plus de 3 heures.
-  bool isOpen(DateTime now) => lastKickoffAt.add(const Duration(hours: 3)).isAfter(now);
+  bool isOpen(DateTime now) =>
+      lastKickoffAt.add(const Duration(hours: 3)).isAfter(now);
 }
 
 class CouponProfile {
@@ -280,7 +286,8 @@ class CouponProfile {
   final int publishDelayMinutes;
   final Map<String, dynamic> criteria;
 
-  double? num(String k) => criteria[k] is num ? (criteria[k] as num).toDouble() : null;
+  double? numberOf(String k) =>
+      criteria[k] is num ? (criteria[k] as num).toDouble() : null;
 }
 
 class GenerationRun {

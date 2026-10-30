@@ -52,10 +52,23 @@ void main() {
     },
     'result': null,
     'created_at': '2026-11-02T07:00:00Z',
-    'coupon_selections': [_selection(2, 20, '2026-11-02T19:00:00Z'), _selection(1, 10, '2026-11-02T15:00:00Z')],
+    'coupon_selections': [
+      _selection(2, 20, '2026-11-02T19:00:00Z'),
+      _selection(1, 10, '2026-11-02T15:00:00Z')
+    ],
     'coupon_status_history': [
-      {'from_status': 'ready', 'to_status': 'published', 'reason': 'Publié', 'created_at': '2026-11-02T08:05:00Z'},
-      {'from_status': null, 'to_status': 'ready', 'reason': 'Généré', 'created_at': '2026-11-02T07:00:00Z'},
+      {
+        'from_status': 'ready',
+        'to_status': 'published',
+        'reason': 'Publié',
+        'created_at': '2026-11-02T08:05:00Z'
+      },
+      {
+        'from_status': null,
+        'to_status': 'ready',
+        'reason': 'Généré',
+        'created_at': '2026-11-02T07:00:00Z'
+      },
     ],
   };
 
@@ -69,7 +82,8 @@ void main() {
     expect(categoryLabels[c.category], 'Coupon du jour');
   });
 
-  test('un coupon reste « en cours » jusqu’à 3 h après le dernier coup d’envoi', () {
+  test('un coupon reste « en cours » jusqu’à 3 h après le dernier coup d’envoi',
+      () {
     final c = Coupon.fromJson(json);
     expect(c.isOpen(DateTime.parse('2026-11-02T21:00:00Z')), isTrue);
     expect(c.isOpen(DateTime.parse('2026-11-02T22:30:00Z')), isFalse);
@@ -87,9 +101,12 @@ void main() {
       'publish_mode': 'auto',
       'generate_times': ['07:00'],
       'publish_delay_minutes': 60,
-      'criteria': {'min_total_odd': 2.5, 'markets': ['1X2']},
+      'criteria': {
+        'min_total_odd': 2.5,
+        'markets': ['1X2']
+      },
     });
-    expect(p.num('min_total_odd'), 2.5);
-    expect(p.num('markets'), isNull);
+    expect(p.numberOf('min_total_odd'), 2.5);
+    expect(p.numberOf('markets'), isNull);
   });
 }
