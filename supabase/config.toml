@@ -48,3 +48,9 @@ verify_jwt = false
 [functions.sports-sync]
 # Appelée par pg_cron sans JWT : la fonction vérifie elle-même le secret ou la permission.
 verify_jwt = false
+
+[functions.analyze-match]
+verify_jwt = true
+
+[functions.engine-evaluate]
+verify_jwt = true

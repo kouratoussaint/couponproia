@@ -6,6 +6,9 @@
 #   SUPABASE_DB_PASSWORD   mot de passe de la base choisi à la création du projet
 #   API_FOOTBALL_KEY       clé API-Football (dashboard.api-football.com) ; sans elle, la
 #                          synchronisation est journalisée « ignorée »
+#   GEMINI_API_KEY         clé Google AI Studio (aistudio.google.com) pour l'analyse IA ;
+#                          secours facultatifs : ANTHROPIC_API_KEY, GROQ_API_KEY. Sans clé,
+#                          l'analyse se limite à la fiche statistique.
 # Facultatifs (envoi d'emails via un SMTP, ex. Brevo) : SMTP_USER, SMTP_PASS,
 #   SMTP_SENDER_EMAIL, et éventuellement SMTP_HOST / SMTP_PORT (défaut : Brevo, 587).
 #   Sans eux, Supabase n'envoie qu'aux membres de l'équipe, 2 emails/heure, avec un
@@ -71,6 +74,9 @@ jobs:
       - name: Secrets des fonctions et de la planification
         env:
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           REF: ${{ steps.project.outputs.ref }}
         run: |
           export CRON_SECRET="$(openssl rand -hex 32)"
@@ -81,6 +87,13 @@ jobs:
             args+=("API_FOOTBALL_KEY=$API_FOOTBALL_KEY")
           else
             echo "::warning::Secret API_FOOTBALL_KEY absent : les synchronisations seront ignorées."
+          fi
+          ai_keys=0
+          for k in GEMINI_API_KEY ANTHROPIC_API_KEY GROQ_API_KEY; do
+            if [ -n "${!k}" ]; then args+=("$k=${!k}"); ai_keys=$((ai_keys + 1)); fi
+          done
+          if [ "$ai_keys" -eq 0 ]; then
+            echo "::warning::Aucune clé IA (GEMINI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY) : les analyses se limiteront à la fiche statistique."
           fi
           if ! supabase secrets set --project-ref "$REF" "${args[@]}" > secrets.log 2>&1; then
             echo "::error::supabase secrets set a échoué : $(tr '\n' ' ' < secrets.log | head -c 500)"
