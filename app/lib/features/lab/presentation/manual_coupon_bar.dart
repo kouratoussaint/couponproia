@@ -1,0 +1,47 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../core/router/app_routes.dart';
+import '../../analysis/data/analysis_format.dart';
+import '../data/lab_repository.dart';
+
+/// Barre du coupon en construction (générateur manuel), visible dès qu'une cote est choisie.
+class ManualCouponBar extends ConsumerWidget {
+  const ManualCouponBar({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final picks = ref.watch(manualCouponProvider);
+    if (picks.isEmpty) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: Material(
+        color: scheme.primaryContainer,
+        child: InkWell(
+          onTap: () => context.push(AppRoutes.lab),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(Icons.receipt_long, color: scheme.onPrimaryContainer),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Mon coupon : ${picks.length} sélection${picks.length > 1 ? 's' : ''} · cote indicative ${decimal(indicativeOdd(picks))}',
+                    style: TextStyle(
+                        color: scheme.onPrimaryContainer,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Text('Ouvrir',
+                    style: TextStyle(color: scheme.onPrimaryContainer)),
+                Icon(Icons.chevron_right, color: scheme.onPrimaryContainer),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

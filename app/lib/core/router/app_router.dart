@@ -15,6 +15,7 @@ import '../../features/coupons/coupons_screen.dart';
 import '../../features/coupons/presentation/coupon_detail_screen.dart';
 import '../../features/coupons/presentation/generations_admin_screen.dart';
 import '../../features/home/home_screen.dart';
+import '../../features/lab/presentation/lab_screen.dart';
 import '../../features/matches/presentation/competitions_screen.dart';
 import '../../features/matches/presentation/match_detail_screen.dart';
 import '../../features/matches/presentation/matches_screen.dart';
@@ -120,6 +121,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.generationsAdmin,
         builder: (context, state) => const GenerationsAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.lab,
+        builder: (context, state) =>
+            LabScreen(initialCouponId: state.uri.queryParameters['coupon']),
       ),
       GoRoute(
         path: AppRoutes.myCoupons,

@@ -155,6 +155,11 @@ class MyCouponDetailScreen extends ConsumerWidget {
                           label: const Text('Enregistrer'),
                         ),
                       OutlinedButton.icon(
+                        onPressed: () => context.push(AppRoutes.labFor(c.id)),
+                        icon: const Icon(Icons.science_outlined),
+                        label: const Text('Laboratoire'),
+                      ),
+                      OutlinedButton.icon(
                         onPressed: () async {
                           await Clipboard.setData(ClipboardData(
                             text: couponShareText(

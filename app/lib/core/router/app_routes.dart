@@ -28,10 +28,13 @@ abstract final class AppRoutes {
   static const couponDetail = '/coupon/:id';
 
   static String couponDetailFor(String id) => '/coupon/$id';
+  static const lab = '/laboratoire';
   static const myCoupons = '/mes-coupons';
   static const myCouponDetail = '/mes-coupons/:id';
 
   static String myCouponFor(String id) => '/mes-coupons/$id';
+  static String labFor(String couponId) =>
+      Uri(path: lab, queryParameters: {'coupon': couponId}).toString();
 
   static String matchDetailFor(int id) => '/match/$id';
   static String standingsFor(int id) => '/competitions/$id';

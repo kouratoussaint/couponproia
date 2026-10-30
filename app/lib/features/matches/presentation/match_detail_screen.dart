@@ -6,6 +6,8 @@ import '../../../core/errors/error_messages.dart';
 import '../../../core/router/app_routes.dart';
 import '../../analysis/data/analysis_repository.dart';
 import '../../analysis/presentation/analysis_section.dart';
+import '../../lab/data/lab_repository.dart';
+import '../../lab/presentation/manual_coupon_bar.dart';
 import '../data/sports_format.dart';
 import '../data/sports_models.dart';
 import '../data/sports_repository.dart';
@@ -23,6 +25,7 @@ class MatchDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final match = ref.watch(matchProvider(matchId));
     return Scaffold(
+      bottomNavigationBar: const ManualCouponBar(),
       appBar:
           AppBar(title: Text(match.valueOrNull?.competition.name ?? 'Match')),
       body: match.when(
@@ -160,6 +163,9 @@ class _OddsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final odds = ref.watch(latestOddsProvider(match.id));
+    final picks = ref.watch(manualCouponProvider);
+    final canPick = match.status == MatchStatus.scheduled &&
+        match.kickoffAt.isAfter(DateTime.now());
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -202,11 +208,38 @@ class _OddsSection extends ConsumerWidget {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          for (final o in entry.value) _OddTile(odd: o)
+                          for (final o in entry.value)
+                            _OddTile(
+                              odd: o,
+                              selected: picks.any((p) =>
+                                  p.matchId == match.id && p.key == oddsKey(o)),
+                              onTap: canPick
+                                  ? () => ref
+                                      .read(manualCouponProvider.notifier)
+                                      .toggle(ManualPick(
+                                        matchId: match.id,
+                                        key: oddsKey(o),
+                                        matchLabel:
+                                            '${match.home.name} – ${match.away.name}',
+                                        label:
+                                            '${marketTitles[o.marketCode] ?? o.marketCode} : ${outcomeLabel(o)}',
+                                        odd: o.median,
+                                      ))
+                                  : null,
+                            )
                         ],
                       ),
                     ],
                     const SizedBox(height: 12),
+                    if (canPick)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          'Touchez une cote pour l’ajouter à votre coupon (générateur manuel).',
+                          style: theme.textTheme.labelMedium
+                              ?.copyWith(color: theme.colorScheme.primary),
+                        ),
+                      ),
                     Text(
                       'Cote médiane de $books bookmakers au maximum (« max » = meilleure cote), '
                       'relevé du ${shortDate(latest)} à ${timeLabel(latest)}. '
@@ -226,31 +259,44 @@ class _OddsSection extends ConsumerWidget {
 }
 
 class _OddTile extends StatelessWidget {
-  const _OddTile({required this.odd});
+  const _OddTile({required this.odd, this.selected = false, this.onTap});
 
   final OddsLine odd;
+  final bool selected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      width: 104,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(outcomeLabel(odd),
-              style: theme.textTheme.labelMedium,
-              overflow: TextOverflow.ellipsis),
-          Text(formatOdd(odd.median),
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(color: theme.colorScheme.primary)),
-          Text('max ${formatOdd(odd.best)}', style: theme.textTheme.labelSmall),
-        ],
+    final scheme = theme.colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: 104,
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+        decoration: BoxDecoration(
+          color: selected
+              ? scheme.primary.withValues(alpha: 0.18)
+              : scheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: selected ? scheme.primary : Colors.transparent,
+              width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(outcomeLabel(odd),
+                style: theme.textTheme.labelMedium,
+                overflow: TextOverflow.ellipsis),
+            Text(formatOdd(odd.median),
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(color: scheme.primary)),
+            Text('max ${formatOdd(odd.best)}',
+                style: theme.textTheme.labelSmall),
+          ],
+        ),
       ),
     );
   }
