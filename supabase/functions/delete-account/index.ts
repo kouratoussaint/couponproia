@@ -68,6 +68,13 @@ Deno.serve(async (req) => {
     });
     if (auditError) console.error("audit", auditError.message);
 
+    // Logo et couverture du studio (dossier privé de l'utilisateur).
+    const { data: files } = await admin.storage.from("branding").list(userId, { limit: 100 });
+    if (files?.length) {
+      const { error: storageError } = await admin.storage.from("branding").remove(files.map((f) => `${userId}/${f.name}`));
+      if (storageError) console.error("storage", storageError.message);
+    }
+
     const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
     if (deleteError) {
       console.error("delete", deleteError.message);

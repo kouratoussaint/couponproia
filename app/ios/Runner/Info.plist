@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choisir un logo ou une image de couverture pour vos visuels.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Enregistrer vos visuels de coupons dans la galerie.</string>
 </dict>
 </plist>

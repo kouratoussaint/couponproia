@@ -31,6 +31,11 @@ abstract final class AppRoutes {
   static const lab = '/laboratoire';
   static const performance = '/performances';
   static const billing = '/abonnement';
+  static const studio = '/studio';
+  static const studioBranding = '/studio/identite';
+  static const studioEditor = '/studio/:kind/:id';
+
+  static String studioFor(String kind, String id) => '/studio/$kind/$id';
   static const myCoupons = '/mes-coupons';
   static const myCouponDetail = '/mes-coupons/:id';
 

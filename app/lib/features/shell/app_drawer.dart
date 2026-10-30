@@ -133,10 +133,12 @@ class AppDrawer extends ConsumerWidget {
           title: const Text('Abonnement et crédits'),
           onTap: () => open(AppRoutes.billing),
         ),
-        const _SoonTile(
-            icon: Icons.palette_outlined,
-            label: 'Studio graphique',
-            lot: 'LOT 7'),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+          leading: const Icon(Icons.palette_outlined),
+          title: const Text('Studio graphique'),
+          onTap: () => open(AppRoutes.studio),
+        ),
         if (permissions.contains('sports.configure') ||
             permissions.contains('ai.configure') ||
             permissions.contains('generation.manage')) ...[
@@ -212,25 +214,6 @@ class _SectionTitle extends StatelessWidget {
         style: theme.textTheme.labelLarge
             ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
       ),
-    );
-  }
-}
-
-class _SoonTile extends StatelessWidget {
-  const _SoonTile({required this.icon, required this.label, required this.lot});
-
-  final IconData icon;
-  final String label;
-  final String lot;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      enabled: false,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 28),
-      leading: Icon(icon),
-      title: Text(label),
-      trailing: Text(lot, style: Theme.of(context).textTheme.labelSmall),
     );
   }
 }

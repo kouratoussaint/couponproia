@@ -81,7 +81,17 @@ class MyCouponDetailScreen extends ConsumerWidget {
     final muted = theme.textTheme.bodySmall
         ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
     return Scaffold(
-      appBar: AppBar(title: const Text('Mon coupon')),
+      appBar: AppBar(
+        title: const Text('Mon coupon'),
+        actions: [
+          if (coupon.valueOrNull case final c? when c.selections.isNotEmpty)
+            IconButton(
+              tooltip: 'Créer un visuel',
+              icon: const Icon(Icons.palette_outlined),
+              onPressed: () => context.push(AppRoutes.studioFor('user', c.id)),
+            ),
+        ],
+      ),
       body: coupon.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(

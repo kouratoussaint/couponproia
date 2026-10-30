@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../analysis/data/analysis_format.dart';
 import '../../matches/data/sports_format.dart';
@@ -23,8 +25,18 @@ class CouponDetailScreen extends ConsumerWidget {
     final coupon = ref.watch(couponProvider(couponId));
     return Scaffold(
       appBar: AppBar(
-          title:
-              Text(categoryLabels[coupon.valueOrNull?.category] ?? 'Coupon')),
+        title: Text(categoryLabels[coupon.valueOrNull?.category] ?? 'Coupon'),
+        actions: [
+          if (coupon.valueOrNull case final c?
+              when !c.locked && !c.isWithdrawn && c.selections.isNotEmpty)
+            IconButton(
+              tooltip: 'Créer un visuel',
+              icon: const Icon(Icons.palette_outlined),
+              onPressed: () =>
+                  context.push(AppRoutes.studioFor('platform', c.id)),
+            ),
+        ],
+      ),
       body: coupon.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
