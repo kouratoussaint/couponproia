@@ -3,7 +3,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { buildFiche, type NamedMatch, type OddsRow } from "../engine/fiche.ts";
 import type { EngineQuality } from "../engine/quality.ts";
-import { outcomeKey } from "../engine/poisson.ts";
+import { outcomeKey, PRIOR_SEASON_WEIGHT, weighted } from "../engine/poisson.ts";
 import { type Candidate, justificationFor, type LiveCheck, type Reliability } from "./generator.ts";
 
 const PAGE = 1000;
@@ -118,7 +118,8 @@ export async function loadCandidates(
     });
   const columns =
     "id, competition_id, season, kickoff_at, home_team_id, away_team_id, home_goals, away_goals, home:teams!matches_home_team_fk(name), away:teams!matches_away_team_fk(name), competition:competitions(name)";
-  const pairs = [...new Set(withOdds.map((m) => `${m.competition!.id}:${m.season}`))];
+  // Saison en cours et précédente de chaque compétition (la précédente sert d'a priori pondéré).
+  const pairs = [...new Set(withOdds.flatMap((m) => [`${m.competition!.id}:${m.season}`, `${m.competition!.id}:${m.season - 1}`]))];
   for (const pair of pairs) {
     const [competitionId, season] = pair.split(":").map(Number);
     (await paged<PlayedRow>((from, to) =>
@@ -157,6 +158,10 @@ export async function loadCandidates(
         away: m.away!,
       },
       history: before.filter((p) => p.competitionId === m.competition!.id && p.season === m.season),
+      prior: weighted(
+        before.filter((p) => p.competitionId === m.competition!.id && p.season === m.season - 1),
+        PRIOR_SEASON_WEIGHT,
+      ),
       recentHome: recent(homeId),
       recentAway: recent(awayId),
       headToHead: before.filter((p) =>

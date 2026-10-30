@@ -189,3 +189,15 @@ Deno.test("fiche : qualité mesurée transmise, marchés faibles signalés", () 
   assert(fiche.missing.some((s) => s.includes("OU, BTTS")));
   assertEquals(fiche.teams.home.standing, null, "pas de classement recalculé en coupe");
 });
+
+Deno.test("saison précédente pondérée : une équipe dominante n'est plus ramenée à la moyenne", () => {
+  // Saison en cours : 2 matchs neutres. Saison précédente : l'équipe 1 écrase tout le monde.
+  const current = [m(1, 1, 3, 1, 1), m(2, 4, 2, 1, 1)];
+  const lastSeason = Array.from({ length: 10 }, (_, i) => ({
+    kickoffAt: `2025-0${(i % 9) + 1}-10T15:00:00Z`, homeId: 1, awayId: 10 + i, homeGoals: 3, awayGoals: 0,
+  }));
+  const without = runModel(current, 1, 2);
+  const withPrior = runModel([...lastSeason.map((x) => ({ ...x, weight: 0.5 })), ...current], 1, 2);
+  assert(withPrior.probabilities["1X2.HOME"] > without.probabilities["1X2.HOME"] + 0.1);
+  assertEquals(withPrior.sample.homeTeamHomeMatches, 6, "1 match + 10 × 0,5");
+});

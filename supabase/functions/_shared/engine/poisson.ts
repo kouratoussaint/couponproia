@@ -6,9 +6,11 @@
 // Chaque force est « rétrécie » vers 1 (la moyenne de la ligue) avec k matchs fictifs :
 // une équipe qui a joué 2 matchs pèse peu, une équipe qui en a joué 15 pèse beaucoup.
 // Seuls les matchs joués AVANT le coup d'envoi sont utilisés (aucune fuite du futur).
+// v1.1 : la saison précédente de la compétition compte aussi, avec un poids réduit, pour ne
+// pas ramener toutes les équipes à la moyenne en début de saison.
 // Fonctions pures, sans accès réseau : testables et rejouables sur l'historique.
 
-export const ENGINE_VERSION = "poisson-1.0";
+export const ENGINE_VERSION = "poisson-1.1";
 
 export interface PlayedMatch {
   kickoffAt: string;
@@ -16,6 +18,16 @@ export interface PlayedMatch {
   awayId: number;
   homeGoals: number;
   awayGoals: number;
+  /** Poids dans le modèle (1 par défaut ; saison précédente : PRIOR_SEASON_WEIGHT). */
+  weight?: number;
+}
+
+/** Poids des matchs de la saison précédente (même compétition) dans les forces des équipes. */
+export const PRIOR_SEASON_WEIGHT = 0.5;
+
+/** Matchs de la saison précédente, pondérés, à ajouter à l'historique du modèle. */
+export function weighted(matches: PlayedMatch[], weight: number): PlayedMatch[] {
+  return matches.map((m) => ({ ...m, weight }));
 }
 
 export interface SideRecord {
@@ -103,19 +115,30 @@ export function expectedGoals(
   awayId: number,
   options: ModelOptions = DEFAULT_OPTIONS,
 ) {
-  const n = history.length;
+  let n = 0;
   let sumHome = 0;
   let sumAway = 0;
+  const homeAtHome = { played: 0, goalsFor: 0, goalsAgainst: 0 };
+  const awayAway = { played: 0, goalsFor: 0, goalsAgainst: 0 };
   for (const m of history) {
-    sumHome += m.homeGoals;
-    sumAway += m.awayGoals;
+    const w = m.weight ?? 1;
+    n += w;
+    sumHome += w * m.homeGoals;
+    sumAway += w * m.awayGoals;
+    if (m.homeId === homeId) {
+      homeAtHome.played += w;
+      homeAtHome.goalsFor += w * m.homeGoals;
+      homeAtHome.goalsAgainst += w * m.awayGoals;
+    }
+    if (m.awayId === awayId) {
+      awayAway.played += w;
+      awayAway.goalsFor += w * m.awayGoals;
+      awayAway.goalsAgainst += w * m.homeGoals;
+    }
   }
   const p = options.leaguePriorMatches;
   const leagueHome = (sumHome + p * options.priorHomeGoals) / (n + p);
   const leagueAway = (sumAway + p * options.priorAwayGoals) / (n + p);
-
-  const homeAtHome = sideRecord(history, homeId, "home");
-  const awayAway = sideRecord(history, awayId, "away");
   const k = options.shrinkK;
   // Forces relatives (1 = moyenne de la ligue), rétrécies vers 1.
   const attackHome = (homeAtHome.goalsFor + k * leagueHome) / (homeAtHome.played + k) / leagueHome;
@@ -128,9 +151,9 @@ export function expectedGoals(
     lambdaAway: clamp(leagueAway * attackAway * defenseHome, 0.1, 5),
     leagueHome,
     leagueAway,
-    leagueMatches: n,
-    homeTeamHomeMatches: homeAtHome.played,
-    awayTeamAwayMatches: awayAway.played,
+    leagueMatches: Math.round(n * 10) / 10,
+    homeTeamHomeMatches: Math.round(homeAtHome.played * 10) / 10,
+    awayTeamAwayMatches: Math.round(awayAway.played * 10) / 10,
   };
 }
 

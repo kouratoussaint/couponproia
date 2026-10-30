@@ -3,7 +3,7 @@
 // Rejoue chaque match terminé de la saison avec les seuls matchs antérieurs, compare
 // au résultat réel et enregistre les scores dans engine_evaluations (lisibles par tous).
 import { evaluate } from "../_shared/engine/evaluate.ts";
-import { ENGINE_VERSION, type PlayedMatch } from "../_shared/engine/poisson.ts";
+import { ENGINE_VERSION, type PlayedMatch, PRIOR_SEASON_WEIGHT, weighted } from "../_shared/engine/poisson.ts";
 import { callerFrom, corsHeaders, env, json, readSettings, serverContext } from "../_shared/http.ts";
 import { safeEqual } from "../_shared/sports/normalize.ts";
 
@@ -30,15 +30,15 @@ Deno.serve(async (req) => {
     if (compError) throw new Error(compError.message);
     const season = Number(body?.season ?? settings["sports.archive_season"] ?? NaN);
 
-    const groups: { name: string; matches: PlayedMatch[] }[] = [];
-    for (const c of competitions ?? []) {
-      const s = Number.isInteger(season) ? season : c.current_season;
-      if (!s) continue;
+    const priorWeight = Number.isFinite(Number(body?.prior_weight)) ? Number(body.prior_weight) : PRIOR_SEASON_WEIGHT;
+    const dryRun = body?.dry_run === true;
+
+    const load = async (competitionId: number, season: number) => {
       const matches: PlayedMatch[] = [];
       for (let from = 0;; from += PAGE) {
         const { data, error } = await db.from("matches")
           .select("kickoff_at, home_team_id, away_team_id, home_goals, away_goals")
-          .eq("competition_id", c.id).eq("season", s).in("status", ["finished", "awarded"])
+          .eq("competition_id", competitionId).eq("season", season).in("status", ["finished", "awarded"])
           .not("home_goals", "is", null).not("away_goals", "is", null)
           .order("kickoff_at").order("id").range(from, from + PAGE - 1);
         if (error) throw new Error(error.message);
@@ -53,18 +53,30 @@ Deno.serve(async (req) => {
         }
         if (!data || data.length < PAGE) break;
       }
-      if (matches.length > 0) groups.push({ name: `${c.name} ${s}`, matches });
+      return matches;
+    };
+
+    const groups: { name: string; matches: PlayedMatch[]; prior: PlayedMatch[] }[] = [];
+    for (const c of competitions ?? []) {
+      const s = Number.isInteger(season) ? season : c.current_season;
+      if (!s) continue;
+      const matches = await load(c.id, s);
+      if (matches.length === 0) continue;
+      const prior = priorWeight > 0 ? weighted(await load(c.id, s - 1), priorWeight) : [];
+      groups.push({ name: `${c.name} ${s}`, matches, prior });
     }
 
     const warmupMatches = 30;
     const { evaluation, perCompetition } = evaluate(groups, { warmupMatches });
     const e = evaluation.oneXTwo;
+    if (dryRun) return json({ dry_run: true, prior_weight: priorWeight, evaluation, perCompetition });
     const { data: saved, error: saveError } = await db.from("engine_evaluations").insert({
       engine_version: ENGINE_VERSION,
       scope: {
         season: Number.isInteger(season) ? season : "en cours",
         competitions: groups.map((g) => g.name),
         warmup_matches: warmupMatches,
+        prior_season_weight: priorWeight,
         method: "Chaque match est prédit avec les seuls matchs antérieurs de sa compétition",
       },
       matches_evaluated: e.matches,

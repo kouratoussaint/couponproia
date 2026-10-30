@@ -41,6 +41,8 @@ export interface FicheInput {
   };
   /** Même compétition, même saison, matchs terminés AVANT le coup d'envoi. */
   history: PlayedMatch[];
+  /** Même compétition, saison précédente (pondérée), pour le modèle uniquement. */
+  prior?: PlayedMatch[];
   /** Derniers matchs terminés de chaque équipe (toutes compétitions), du plus récent au plus ancien. */
   recentHome: NamedMatch[];
   recentAway: NamedMatch[];
@@ -130,7 +132,8 @@ function h2hJson(m: NamedMatch) {
 
 export function buildFiche(input: FicheInput) {
   const { match } = input;
-  const model = runModel(input.history, match.home.id, match.away.id);
+  const prior = input.prior ?? [];
+  const model = runModel([...prior, ...input.history], match.home.id, match.away.id);
 
   const implied = impliedProbabilities(input.odds);
   const oddsLines: OddsLineFiche[] = input.odds.map((o) => {
@@ -163,7 +166,12 @@ export function buildFiche(input: FicheInput) {
   if (model.reliability === "faible") {
     missing.push("Peu de matchs joués cette saison par ces équipes : estimation fragile");
   }
-  if (input.history.length < 20) missing.push("Début de saison : moyennes de la compétition encore peu stables");
+  if (input.history.length < 20 && prior.length === 0) {
+    missing.push("Début de saison : moyennes de la compétition encore peu stables");
+  }
+  if (input.history.length < 60 && prior.length > 0) {
+    missing.push("Début de saison : le modèle s'appuie en partie sur la saison précédente (effectifs et promus ont pu changer)");
+  }
   if (input.headToHead.length === 0) missing.push("Aucune confrontation directe dans les données disponibles");
   const weak = Object.entries(input.quality?.beatsBaseline ?? {}).filter(([, ok]) => !ok).map(([g]) => g);
   if (weak.length) {
@@ -184,7 +192,9 @@ export function buildFiche(input: FicheInput) {
       away: match.away.name,
     },
     sample: {
-      competition_matches: model.sample.leagueMatches,
+      competition_matches: input.history.length,
+      previous_season_matches: prior.length,
+      previous_season_weight: prior[0]?.weight ?? null,
       home_team_home_matches: model.sample.homeTeamHomeMatches,
       away_team_away_matches: model.sample.awayTeamAwayMatches,
     },

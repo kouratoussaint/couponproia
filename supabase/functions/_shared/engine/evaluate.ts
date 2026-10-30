@@ -79,6 +79,8 @@ export function evaluateCompetition(
   matches: PlayedMatch[],
   options: EvaluationOptions = { warmupMatches: 30 },
   bins: number[][] = Array.from({ length: 10 }, () => [0, 0, 0]),
+  /** Saison précédente, déjà pondérée : connue avant chaque match évalué. */
+  prior: PlayedMatch[] = [],
 ) {
   const sorted = [...matches].sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt));
   const r1x2 = new Acc();
@@ -94,7 +96,7 @@ export function evaluateCompetition(
     const history = sorted.slice(0, j);
 
     if (history.length >= options.warmupMatches) {
-      const p = runModel(history, m.homeId, m.awayId).probabilities;
+      const p = runModel(prior.length ? [...prior, ...history] : history, m.homeId, m.awayId).probabilities;
       const n = history.length;
       const base1x2 = [(counts.home + 1) / (n + 3), (counts.draw + 1) / (n + 3), (counts.away + 1) / (n + 3)];
       const outcome = m.homeGoals > m.awayGoals ? 0 : m.homeGoals === m.awayGoals ? 1 : 2;
@@ -138,7 +140,7 @@ function merge(target: Acc, src: Acc) {
 
 /** Évaluation globale de plusieurs compétitions, avec le détail par compétition. */
 export function evaluate(
-  groups: { name: string; matches: PlayedMatch[] }[],
+  groups: { name: string; matches: PlayedMatch[]; prior?: PlayedMatch[] }[],
   options: EvaluationOptions = { warmupMatches: 30 },
 ) {
   const all1x2 = new Acc();
@@ -148,7 +150,7 @@ export function evaluate(
   const perCompetition: Record<string, Scores> = {};
 
   for (const g of groups) {
-    const r = evaluateCompetition(g.matches, options, bins);
+    const r = evaluateCompetition(g.matches, options, bins, g.prior ?? []);
     merge(all1x2, r.r1x2);
     merge(allOver, r.rOver);
     merge(allBtts, r.rBtts);

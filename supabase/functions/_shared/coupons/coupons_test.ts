@@ -177,3 +177,10 @@ Deno.test("filtres : compétition où le moteur ne bat pas la référence exclue
   assertEquals(kept.map((c) => c.matchId), [1]);
   assertEquals(excluded["compétition où le moteur ne bat pas la référence"], 1);
 });
+
+Deno.test("filtres : un désaccord trop fort avec le marché est écarté", () => {
+  const all = [cand({ matchId: 1, edge: 0.06 }), cand({ matchId: 2, edge: 0.27, modelProbability: 0.6, impliedProbability: 0.33 })];
+  const { kept, excluded } = filterCandidates(all, DEFAULT_CRITERIA, NOW, VALID);
+  assertEquals(kept.map((c) => c.matchId), [1]);
+  assertEquals(excluded["désaccord trop fort avec le marché"], 1);
+});

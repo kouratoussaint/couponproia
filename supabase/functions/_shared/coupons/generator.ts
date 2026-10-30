@@ -26,6 +26,8 @@ export interface Criteria {
   markets: string[];
   min_model_probability: number;
   min_edge: number;
+  /** Écart maximal avec le marché : au-delà, le désaccord trahit plus souvent une lacune du modèle. */
+  max_edge: number;
   min_reliability: Reliability;
   window_hours: number;
   min_minutes_before_kickoff: number;
@@ -48,6 +50,7 @@ export const DEFAULT_CRITERIA: Criteria = {
   markets: ["1X2", "DC"],
   min_model_probability: 0.5,
   min_edge: -0.02,
+  max_edge: 0.1,
   min_reliability: "moyenne",
   window_hours: 24,
   min_minutes_before_kickoff: 30,
@@ -75,6 +78,7 @@ export function parseCriteria(raw: unknown): Criteria {
     markets: Array.isArray(r.markets) && r.markets.length ? r.markets.map(String) : DEFAULT_CRITERIA.markets,
     min_model_probability: num("min_model_probability", 0, 1),
     min_edge: num("min_edge", -1, 1),
+    max_edge: num("max_edge", 0, 1),
     min_reliability: (["faible", "moyenne", "bonne"].includes(String(r.min_reliability))
       ? r.min_reliability
       : DEFAULT_CRITERIA.min_reliability) as Reliability,
@@ -89,6 +93,7 @@ export function parseCriteria(raw: unknown): Criteria {
   if (c.max_selections < c.min_selections) c.max_selections = c.min_selections;
   if (c.max_total_odd < c.min_total_odd) c.max_total_odd = c.min_total_odd;
   if (c.max_selection_odd < c.min_selection_odd) c.max_selection_odd = c.min_selection_odd;
+  if (c.max_edge < c.min_edge) c.max_edge = c.min_edge;
   return c;
 }
 
@@ -154,6 +159,7 @@ export function filterCandidates(
     if (c.odd < criteria.min_selection_odd || c.odd > criteria.max_selection_odd) return out("cote hors fourchette");
     if (c.modelProbability < criteria.min_model_probability) return out("probabilité du modèle trop faible");
     if (c.edge === null || c.edge < criteria.min_edge) return out("écart avec le marché insuffisant");
+    if (c.edge > criteria.max_edge) return out("désaccord trop fort avec le marché");
     if (RELIABILITY_RANK[c.reliability] < RELIABILITY_RANK[criteria.min_reliability]) return out("fiabilité insuffisante");
     return true;
   });

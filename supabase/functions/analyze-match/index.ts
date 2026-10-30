@@ -9,7 +9,7 @@ import { analyzeWithAi } from "../_shared/ai/analyst.ts";
 import { loadAiSetup } from "../_shared/ai/setup.ts";
 import { loadEngineQuality } from "../_shared/engine/quality.ts";
 import { buildFiche, type NamedMatch, type OddsRow } from "../_shared/engine/fiche.ts";
-import { ENGINE_VERSION, type PlayedMatch } from "../_shared/engine/poisson.ts";
+import { ENGINE_VERSION, type PlayedMatch, PRIOR_SEASON_WEIGHT, weighted } from "../_shared/engine/poisson.ts";
 import { callerFrom, corsHeaders, env, json, readSettings, serverContext } from "../_shared/http.ts";
 
 const PLAYED = ["finished", "awarded"];
@@ -63,10 +63,14 @@ async function loadFicheInputs(db: SupabaseClient, m: MatchRow) {
 
   const homeId = m.home!.id;
   const awayId = m.away!.id;
-  const [history, recentHome, recentAway, h2h, odds] = await Promise.all([
+  const [history, prior, recentHome, recentAway, h2h, odds] = await Promise.all([
     db.from("matches").select("kickoff_at, home_team_id, away_team_id, home_goals, away_goals")
       .eq("competition_id", m.competition!.id).eq("season", m.season).in("status", PLAYED)
       .lt("kickoff_at", m.kickoff_at).not("home_goals", "is", null).not("away_goals", "is", null)
+      .order("kickoff_at").limit(1000),
+    db.from("matches").select("kickoff_at, home_team_id, away_team_id, home_goals, away_goals")
+      .eq("competition_id", m.competition!.id).eq("season", m.season - 1).in("status", PLAYED)
+      .not("home_goals", "is", null).not("away_goals", "is", null)
       .order("kickoff_at").limit(1000),
     played().or(`home_team_id.eq.${homeId},away_team_id.eq.${homeId}`).order("kickoff_at", { ascending: false }).limit(5),
     played().or(`home_team_id.eq.${awayId},away_team_id.eq.${awayId}`).order("kickoff_at", { ascending: false }).limit(5),
@@ -76,11 +80,12 @@ async function loadFicheInputs(db: SupabaseClient, m: MatchRow) {
     db.from("latest_odds").select("market_code, outcome_code, line, odd_median, odd_best, bookmakers_count, captured_at")
       .eq("match_id", m.id),
   ]);
-  for (const r of [history, recentHome, recentAway, h2h, odds]) {
+  for (const r of [history, prior, recentHome, recentAway, h2h, odds]) {
     if (r.error) throw new Error(r.error.message);
   }
   return {
     history: (history.data as unknown as RawPlayed[]).map(toPlayed),
+    prior: weighted((prior.data as unknown as RawPlayed[]).map(toPlayed), PRIOR_SEASON_WEIGHT),
     recentHome: (recentHome.data as unknown as RawPlayed[]).map(toNamed),
     recentAway: (recentAway.data as unknown as RawPlayed[]).map(toNamed),
     headToHead: (h2h.data as unknown as RawPlayed[]).map(toNamed),
