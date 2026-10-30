@@ -95,4 +95,6 @@ export interface SportsDataProvider {
   getFixturesByIds(refs: string[]): Promise<ProviderFixture[]>;
   getStandings(leagueRef: string, season: number): Promise<ProviderStanding[]>;
   getOdds(fixtureRef: string): Promise<OddsQuote[]>;
+  /** Réglages de rythme (ex. offre gratuite limitée à 10 requêtes par minute). */
+  configure?(options: { minIntervalMs: number }): void;
 }

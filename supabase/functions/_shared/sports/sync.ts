@@ -13,6 +13,7 @@ export interface SyncSettings {
   liveLookbackHours: number;
   /** Saison passée à charger à la place de la saison en cours (offre gratuite), ou null. */
   archiveSeason: number | null;
+  minRequestIntervalMs: number;
 }
 
 const DEFAULTS: SyncSettings = {
@@ -21,6 +22,7 @@ const DEFAULTS: SyncSettings = {
   oddsMaxFixtures: 12,
   liveLookbackHours: 3,
   archiveSeason: null,
+  minRequestIntervalMs: 0,
 };
 
 export class BudgetExhausted extends Error {
@@ -41,10 +43,18 @@ export class SportsSync {
   private usedBefore = 0;
   private settings: SyncSettings = DEFAULTS;
 
+  private readonly startedAt = Date.now();
+
   constructor(
     private readonly db: SupabaseClient,
     private readonly provider: SportsDataProvider,
+    /** Durée maximale d'un passage (les fonctions serveur sont limitées en temps). */
+    private readonly timeBudgetMs = 100_000,
   ) {}
+
+  private outOfTime(): boolean {
+    return Date.now() - this.startedAt > this.timeBudgetMs;
+  }
 
   async loadSettings(): Promise<void> {
     const { data, error } = await this.db.from("app_settings").select("key, value").like("key", "sports.%");
@@ -62,7 +72,9 @@ export class SportsSync {
       archiveSeason: Number.isInteger(Number(map.get("sports.archive_season"))) && map.get("sports.archive_season") !== null
         ? Number(map.get("sports.archive_season"))
         : null,
+      minRequestIntervalMs: n("sports.min_request_interval_ms", DEFAULTS.minRequestIntervalMs),
     };
+    this.provider.configure?.({ minIntervalMs: this.settings.minRequestIntervalMs });
     const since = new Date();
     since.setUTCHours(0, 0, 0, 0);
     const runs = await this.db.from("sync_runs").select("requests_used").gte("started_at", since.toISOString());
@@ -137,6 +149,10 @@ export class SportsSync {
     try {
       const archive = this.settings.archiveSeason;
       for (const c of comps ?? []) {
+        if (this.outOfTime()) {
+          problems.push("durée maximale atteinte : compétitions restantes au prochain passage");
+          break;
+        }
         try {
           // Une saison d'archive est terminée : une fois chargée, inutile de la redemander.
           if (archive !== null) {
@@ -228,6 +244,10 @@ export class SportsSync {
     let withoutOdds = 0;
     let budgetHit = false;
     for (const m of todo) {
+      if (this.outOfTime()) {
+        budgetHit = true;
+        break;
+      }
       try {
         this.guard();
       } catch {

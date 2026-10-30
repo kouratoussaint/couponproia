@@ -119,22 +119,43 @@ export class ApiFootballProvider implements SportsDataProvider {
   readonly id = "api_football";
   requestsUsed = 0;
   requestsRemaining: number | null = null;
+  private minIntervalMs = 0;
+  private lastRequestAt = 0;
 
   constructor(
     private readonly apiKey: string,
     private readonly fetchFn: typeof fetch = fetch,
+    private readonly sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+    private readonly retryAfterMs = 7000,
   ) {}
+
+  configure(options: { minIntervalMs: number }): void {
+    this.minIntervalMs = Math.max(0, options.minIntervalMs);
+  }
+
+  private async send(url: URL, path: string): Promise<Response> {
+    const wait = this.lastRequestAt + this.minIntervalMs - Date.now();
+    if (wait > 0) await this.sleep(wait);
+    this.lastRequestAt = Date.now();
+    try {
+      return await this.fetchFn(url, { headers: { "x-apisports-key": this.apiKey } });
+    } catch (e) {
+      throw new ApiFootballError(`Réseau indisponible (${path}) : ${e instanceof Error ? e.message : e}`, "network");
+    }
+  }
 
   private async get(path: string, params: Record<string, string | number>): Promise<Json[]> {
     const url = new URL(BASE_URL + path);
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
-    let res: Response;
-    try {
-      res = await this.fetchFn(url, { headers: { "x-apisports-key": this.apiKey } });
-    } catch (e) {
-      throw new ApiFootballError(`Réseau indisponible (${path}) : ${e instanceof Error ? e.message : e}`, "network");
-    }
+    let res = await this.send(url, path);
     this.requestsUsed++;
+    if (res.status === 429) {
+      // Limite par minute atteinte : on patiente puis on réessaie une fois.
+      await res.body?.cancel();
+      await this.sleep(this.retryAfterMs);
+      res = await this.send(url, path);
+      this.requestsUsed++;
+    }
     const remaining = res.headers.get("x-ratelimit-requests-remaining");
     if (remaining !== null && remaining !== "" && Number.isFinite(Number(remaining))) {
       this.requestsRemaining = Number(remaining);

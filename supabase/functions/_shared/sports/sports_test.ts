@@ -116,3 +116,41 @@ Deno.test("fournisseur : erreur HTTP remontée", async () => {
   const p = new ApiFootballProvider("k", fakeFetch({}, {}, 500));
   await assertRejects(() => p.getStandings("39", 2026), ApiFootballError, "HTTP 500");
 });
+
+Deno.test("fournisseur : sur HTTP 429, attend puis réessaie une fois", async () => {
+  const responses = [
+    new Response("{}", { status: 429 }),
+    new Response(JSON.stringify({ errors: [], response: [fixtureJson] }), { status: 200 }),
+  ];
+  const waits: number[] = [];
+  const p = new ApiFootballProvider(
+    "k",
+    (() => Promise.resolve(responses.shift()!)) as typeof fetch,
+    (ms) => {
+      waits.push(ms);
+      return Promise.resolve();
+    },
+    7000,
+  );
+  const list = await p.getFixtures("39", 2024);
+  assertEquals(list.length, 1);
+  assertEquals(p.requestsUsed, 2);
+  assertEquals(waits.includes(7000), true);
+});
+
+Deno.test("fournisseur : espacement minimal entre deux requêtes", async () => {
+  const waits: number[] = [];
+  const p = new ApiFootballProvider(
+    "k",
+    fakeFetch({ errors: [], response: [] }),
+    (ms) => {
+      waits.push(ms);
+      return Promise.resolve();
+    },
+  );
+  p.configure({ minIntervalMs: 6500 });
+  await p.getFixtures("39", 2024);
+  await p.getFixtures("39", 2024);
+  assertEquals(waits.length, 1);
+  assertEquals(waits[0] > 6000, true);
+});
