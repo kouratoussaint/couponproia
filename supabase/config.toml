@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.assistant]
 verify_jwt = true
+
+[functions.lab]
+verify_jwt = true

@@ -9,7 +9,7 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { type AttemptLog, runValidated } from "../_shared/ai/analyst.ts";
 import { loadAiSetup } from "../_shared/ai/setup.ts";
 import { FORBIDDEN, validateCouponSummary } from "../_shared/ai/validate.ts";
-import { type CouponLine, diagnoseCoupon, opportunities } from "../_shared/assistant/actions.ts";
+import { diagnoseCoupon, opportunities } from "../_shared/assistant/actions.ts";
 import {
   criteriaFromIntent,
   dateRange,
@@ -19,6 +19,7 @@ import {
   PAID_INTENTS,
   parseIntent,
 } from "../_shared/assistant/intent.ts";
+import { insertUserCoupon, loadUserCoupon, type StoredLine } from "../_shared/assistant/store.ts";
 import { loadCandidates, loadLiveChecks } from "../_shared/coupons/data.ts";
 import {
   buildCoupons,
@@ -32,7 +33,6 @@ import {
   riskLevel,
   type RiskThresholds,
 } from "../_shared/coupons/generator.ts";
-import { ENGINE_VERSION } from "../_shared/engine/poisson.ts";
 import { type EngineQuality, loadEngineQuality } from "../_shared/engine/quality.ts";
 import { callerFrom, corsHeaders, env, json, readSettings, serverContext } from "../_shared/http.ts";
 
@@ -48,11 +48,6 @@ interface Result {
   paid: boolean;
 }
 
-interface StoredLine extends CouponLine {
-  marketCode: string;
-  outcomeCode: string;
-  line: number | null;
-}
 
 async function logAi(db: SupabaseClient, userId: string, kind: string, logs: AttemptLog[]) {
   if (!logs.length) return;
@@ -380,76 +375,21 @@ class Assistant {
     const thresholds = (this.settings["coupons.risk_thresholds"] ?? { prudent: 0.4, equilibre: 0.18 }) as RiskThresholds;
     for (const [index, p] of result.coupons.entries()) {
       const summary = index === 0 ? await this.summary(p) : { ...defaultSummary(p), source: "calcul" };
-      const { data: coupon, error } = await this.db.from("user_coupons").insert({
-        user_id: this.userId,
-        conversation_id: conversationId,
-        message_id: messageId,
+      const id = await insertUserCoupon(this.db, {
+        userId: this.userId,
+        conversationId,
+        messageId,
         status: "proposal",
         title: `Coupon ${p.selections.length} sélections · cote ${dec(p.totalOdd)}`,
         criteria: result.criteria ?? {},
-        total_odd: p.totalOdd,
-        combined_probability: p.combinedProbability,
-        implied_probability: p.impliedProbability,
-        risk_level: riskLevel(p.combinedProbability, thresholds),
+        proposal: p,
+        risk: riskLevel(p.combinedProbability, thresholds),
         analysis: { ...summary, warnings: this.warnings, engine_quality: this.quality },
-        engine_version: ENGINE_VERSION,
-        fingerprint: p.fingerprint,
-      }).select("id").single();
-      if (error) throw new Error(error.message);
-      const { error: selError } = await this.db.from("user_coupon_selections").insert(p.selections.map((s, k) => ({
-        coupon_id: coupon.id,
-        position: k + 1,
-        match_id: s.matchId,
-        market_code: s.marketCode,
-        outcome_code: s.outcomeCode,
-        line: s.line,
-        selection_key: s.key,
-        odd: s.odd,
-        odd_best: s.oddBest,
-        bookmakers: s.bookmakers,
-        odds_captured_at: s.oddsCapturedAt,
-        model_probability: s.modelProbability,
-        implied_probability: s.impliedProbability,
-        edge: s.edge,
-        reliability: s.reliability,
-        justification: s.justification,
-      })));
-      if (selError) throw new Error(selError.message);
-      ids.push(coupon.id);
+      });
+      ids.push(id);
     }
     return ids;
   }
-}
-
-/** Lignes d'un coupon de l'utilisateur (le coupon en cours de la conversation). */
-async function loadUserCoupon(db: SupabaseClient, userId: string, couponId: string | null, conversationId: string | null) {
-  let q = db.from("user_coupons").select(
-    "id, criteria, user_coupon_selections(position, match_id, market_code, outcome_code, line, selection_key, odd, model_probability, implied_probability, edge, reliability, match:matches(kickoff_at, home:teams!matches_home_team_fk(name), away:teams!matches_away_team_fk(name), competition:competitions(name)))",
-  ).eq("user_id", userId);
-  if (couponId) q = q.eq("id", couponId);
-  else if (conversationId) q = q.eq("conversation_id", conversationId).order("created_at", { ascending: false });
-  else return null;
-  const { data } = await q.limit(1).maybeSingle();
-  if (!data) return null;
-  // deno-lint-ignore no-explicit-any
-  const lines: StoredLine[] = (data.user_coupon_selections as any[]).map((s) => ({
-    position: s.position,
-    matchId: s.match_id,
-    home: s.match?.home?.name ?? "?",
-    away: s.match?.away?.name ?? "?",
-    competition: s.match?.competition?.name ?? "",
-    kickoffAt: s.match?.kickoff_at,
-    key: s.selection_key,
-    marketCode: s.market_code,
-    outcomeCode: s.outcome_code,
-    line: s.line === null ? null : Number(s.line),
-    odd: Number(s.odd),
-    modelProbability: Number(s.model_probability),
-    impliedProbability: s.implied_probability === null ? null : Number(s.implied_probability),
-    edge: s.edge === null ? null : Number(s.edge),
-    reliability: s.reliability,
-  })).sort((a, b) => a.position - b.position);
-  return { id: data.id as string, criteria: data.criteria, lines };
 }
 
 Deno.serve(async (req) => {

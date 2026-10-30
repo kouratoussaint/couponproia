@@ -88,15 +88,17 @@ export async function loadCandidates(
   windowHours: number,
   quality: EngineQuality | null,
   range?: { from: Date; until: Date },
+  matchIds?: number[],
 ): Promise<CandidateLoad> {
   const until = (range?.until ?? new Date(now.getTime() + windowHours * 3600_000)).toISOString();
   const startIso = new Date(Math.max(now.getTime(), range?.from.getTime() ?? 0)).toISOString();
-  const upcoming = await paged<UpcomingRow>((from, to) =>
-    db.from("matches").select(
+  const upcoming = await paged<UpcomingRow>((from, to) => {
+    let q = db.from("matches").select(
       "id, season, round, kickoff_at, competition:competitions(id, name, type), home:teams!matches_home_team_fk(id, name), away:teams!matches_away_team_fk(id, name)",
-    ).eq("status", "scheduled").gt("kickoff_at", startIso).lte("kickoff_at", until)
-      .order("kickoff_at").order("id").range(from, to) as unknown as PromiseLike<{ data: UpcomingRow[] | null; error: { message: string } | null }>
-  );
+    ).eq("status", "scheduled").gt("kickoff_at", startIso);
+    q = matchIds?.length ? q.in("id", matchIds) : q.lte("kickoff_at", until);
+    return q.order("kickoff_at").order("id").range(from, to) as unknown as PromiseLike<{ data: UpcomingRow[] | null; error: { message: string } | null }>;
+  });
   const valid = upcoming.filter((m) => m.competition && m.home && m.away);
   const odds = await latestOdds(db, valid.map((m) => m.id));
   const withOdds = valid.filter((m) => (odds.get(m.id) ?? []).length > 0);
