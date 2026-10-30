@@ -73,7 +73,7 @@ jobs:
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
           REF: ${{ steps.project.outputs.ref }}
         run: |
-          CRON_SECRET="$(openssl rand -hex 32)"
+          export CRON_SECRET="$(openssl rand -hex 32)"
           echo "::add-mask::$CRON_SECRET"
           echo "CRON_SECRET=$CRON_SECRET" >> "$GITHUB_ENV"
           args=("CRON_SECRET=$CRON_SECRET")
@@ -87,7 +87,7 @@ jobs:
             exit 1
           fi
           # URL du projet et secret partagé dans Vault, lus par pg_cron (app_private.invoke_sports_sync)
-          python3 - <<'PY' > vault.json
+          if ! python3 - <<'PY' > vault.json 2> vault_py.log
           import json, os
           url = f"https://{os.environ['REF']}.supabase.co"
           secret = os.environ["CRON_SECRET"]
@@ -102,6 +102,9 @@ jobs:
           """
           print(json.dumps({"query": sql}))
           PY
+          then
+            echo "::error::Préparation de la requête Vault impossible : $(head -c 300 vault_py.log)"; exit 1
+          fi
           status="$(curl -s -o vault_response.json -w '%{http_code}' -X POST \
             "https://api.supabase.com/v1/projects/$REF/database/query" \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" \
