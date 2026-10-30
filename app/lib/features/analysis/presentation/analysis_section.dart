@@ -2,45 +2,47 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/error_messages.dart';
+import '../../../core/theme/brand_colors.dart';
 import '../../../core/widgets/form_widgets.dart';
+import '../../lab/data/lab_repository.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/data/sports_models.dart';
-import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/analysis_format.dart';
 import '../data/analysis_models.dart';
 import '../data/analysis_repository.dart';
+import '../data/match_reading.dart';
 
-/// Bloc « Analyse IA » de la fiche d'un match : bouton, puis fiche statistique du
-/// moteur et texte de l'IA vérifié. Une analyse existante s'affiche dès l'ouverture.
-class AnalysisSection extends ConsumerStatefulWidget {
-  const AnalysisSection({super.key, required this.match});
+// Composants de la fiche match (onglets Pronostic, Analyse, Marchés). Chaque chiffre vient de la
+// fiche du moteur ; les textes de l'IA ont été vérifiés par le serveur.
+
+bool isAnalyzable(MatchSummary m) => !{
+      MatchStatus.postponed,
+      MatchStatus.cancelled,
+      MatchStatus.abandoned
+    }.contains(m.status);
+
+/// Bouton « Analyser avec l'IA » / « Mettre à jour l'analyse ».
+class AnalyzeButton extends ConsumerStatefulWidget {
+  const AnalyzeButton({super.key, required this.match, this.compact = false});
 
   final MatchSummary match;
+  final bool compact;
 
   @override
-  ConsumerState<AnalysisSection> createState() => _AnalysisSectionState();
+  ConsumerState<AnalyzeButton> createState() => _AnalyzeButtonState();
 }
 
-class _AnalysisSectionState extends ConsumerState<AnalysisSection> {
-  MatchAnalysis? _fresh;
+class _AnalyzeButtonState extends ConsumerState<AnalyzeButton> {
   bool _running = false;
-
-  MatchSummary get match => widget.match;
-
-  bool get _analyzable => !{
-        MatchStatus.postponed,
-        MatchStatus.cancelled,
-        MatchStatus.abandoned
-      }.contains(match.status);
 
   Future<void> _run({bool force = false}) async {
     setState(() => _running = true);
     try {
       final result = await ref
           .read(analysisRepositoryProvider)
-          .analyze(match.id, force: force);
-      if (mounted) setState(() => _fresh = result);
+          .analyze(widget.match.id, force: force);
+      ref.read(freshAnalysisProvider(widget.match.id).notifier).state = result;
     } catch (e) {
       if (mounted) {
         showMessage(
@@ -54,196 +56,59 @@ class _AnalysisSectionState extends ConsumerState<AnalysisSection> {
 
   @override
   Widget build(BuildContext context) {
-    final flags = ref.watch(featureFlagsProvider).valueOrNull ?? const {};
-    if (flags['match_analysis'] == false) return const SizedBox.shrink();
-    final stored = ref.watch(storedAnalysisProvider(match.id));
-    final analysis = _fresh ?? stored.valueOrNull;
+    final match = widget.match;
+    final analysis = ref.watch(currentAnalysisProvider(match.id)).valueOrNull;
     final isAdmin =
         (ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{})
             .contains('ai.configure');
-
     final played = match.status == MatchStatus.finished ||
         match.status == MatchStatus.awarded;
     final canRefresh = analysis == null || analysis.status != 'ok' || !played;
 
-    Widget button() {
-      if (!_analyzable) {
-        return const FilledButton.tonal(
-            onPressed: null,
-            child: Text('Analyse indisponible (match reporté ou annulé)'));
-      }
-      if (_running) {
-        return const FilledButton.tonal(
+    if (!isAnalyzable(match)) {
+      return const FilledButton.tonal(
           onPressed: null,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2)),
-              SizedBox(width: 12),
-              Text('Analyse en cours…'),
-            ],
-          ),
-        );
-      }
-      if (analysis == null) {
-        return FilledButton.icon(
-          onPressed: _run,
-          icon: const Icon(Icons.auto_awesome),
-          label: const Text('Analyser avec l’IA'),
-        );
-      }
-      return Row(
-        children: [
-          if (canRefresh)
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _run,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Mettre à jour l’analyse'),
-              ),
-            ),
-          if (isAdmin) ...[
-            if (canRefresh) const SizedBox(width: 8),
-            IconButton.outlined(
-              tooltip: 'Régénérer (administrateur)',
-              onPressed: () => _run(force: true),
-              icon: const Icon(Icons.restart_alt),
-            ),
+          child: Text('Analyse indisponible (match reporté ou annulé)'));
+    }
+    if (_running) {
+      return const FilledButton.tonal(
+        onPressed: null,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2)),
+            SizedBox(width: 12),
+            Text('Analyse en cours…'),
           ],
-        ],
+        ),
       );
     }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    if (analysis == null) {
+      return FilledButton.icon(
+        onPressed: _run,
+        icon: const Icon(Icons.auto_awesome),
+        label: const Text('Analyser avec l’IA'),
+      );
+    }
+    return Row(
       children: [
-        if (stored.isLoading && _fresh == null)
-          const LinearProgressIndicator()
-        else
-          button(),
-        if (analysis != null) AnalysisView(analysis: analysis, match: match),
-      ],
-    );
-  }
-}
-
-/// Affichage complet d'une analyse (sans bouton), réutilisable.
-class AnalysisView extends ConsumerWidget {
-  const AnalysisView({super.key, required this.analysis, required this.match});
-
-  final MatchAnalysis analysis;
-  final MatchSummary match;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final f = analysis.fiche;
-    final ai = analysis.ai;
-    final home = match.home.name;
-    final away = match.away.name;
-    final played = match.hasScore &&
-        (match.status == MatchStatus.finished ||
-            match.status == MatchStatus.awarded);
-    final evaluation = ref.watch(latestEvaluationProvider).valueOrNull;
-    final muted = theme.textTheme.bodySmall
-        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
-    final missing = mergedMissing(f, ai);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SectionTitle(
-          played ? 'Analyse d’avant-match' : 'Analyse IA',
-          trailing: ReliabilityChip(reliability: f.reliability),
-        ),
-        if (ai != null && ai.summary.isNotEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(ai.summary, style: theme.textTheme.bodyLarge),
+        if (canRefresh)
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _run,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Mettre à jour l’analyse'),
             ),
-          )
-        else
-          _Notice(
-              icon: Icons.info_outline,
-              text: statsOnlyReason(analysis.statusReason)),
-        if (played) _ActualResult(fiche: f, match: match),
-        ProbabilitiesCard(fiche: f, home: home, away: away),
-        if (f.comparableLines.isNotEmpty)
-          _MarketCard(fiche: f, home: home, away: away),
-        if (ai != null) ...[
-          if (ai.form.isNotEmpty)
-            _TextCard(
-                title: 'Forme',
-                body: ai.form,
-                form: (f.homeForm, f.awayForm, home, away)),
-          if (ai.homeFactors.isNotEmpty)
-            _ListCard(
-                title: 'Atouts de $home',
-                items: ai.homeFactors,
-                icon: Icons.home_outlined),
-          if (ai.awayFactors.isNotEmpty)
-            _ListCard(
-                title: 'Atouts de $away',
-                items: ai.awayFactors,
-                icon: Icons.flight_takeoff),
-          if (ai.trends.isNotEmpty)
-            _ListCard(
-                title: 'Tendances', items: ai.trends, icon: Icons.trending_up),
-          if (ai.picks.isNotEmpty)
-            _PicksCard(picks: ai.picks, home: home, away: away),
-          if (ai.risks.isNotEmpty)
-            _ListCard(
-                title: 'Risques',
-                items: ai.risks,
-                icon: Icons.warning_amber_outlined),
-        ] else if (f.homeForm.isNotEmpty || f.awayForm.isNotEmpty)
-          _TextCard(
-              title: 'Forme',
-              body: null,
-              form: (f.homeForm, f.awayForm, home, away)),
-        if (missing.isNotEmpty)
-          _ListCard(
-              title: 'Informations manquantes',
-              items: missing,
-              icon: Icons.help_outline),
-        if (ai != null && ai.conclusion.isNotEmpty)
-          _TextCard(title: 'Conclusion', body: ai.conclusion),
-        if (ai != null && !ai.recommendationPossible)
-          const _Notice(
-            icon: Icons.do_not_disturb_on_outlined,
-            text:
-                'Pas de recommandation pour ce match : données insuffisantes ou estimation trop fragile.',
           ),
-        const SizedBox(height: 8),
-        Text(
-          [
-            'Moteur ${analysis.engineVersion}',
-            if (analysis.provider != null)
-              'IA ${analysis.provider} (${analysis.model})',
-            'analyse du ${shortDate(analysis.createdAt)}/${analysis.createdAt.year} à ${timeLabel(analysis.createdAt)}',
-          ].join(' · '),
-          style: muted,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Calculée avec les seuls matchs joués avant le coup d’envoi (${f.competitionMatches} matchs de la compétition). '
-          '${reliabilityExplanation(f)} Ce sont des estimations, pas des certitudes.',
-          style: muted,
-          textAlign: TextAlign.center,
-        ),
-        if (evaluation != null && evaluation.oneXTwo.matches > 0) ...[
-          const SizedBox(height: 4),
-          Text(
-            'Qualité mesurée sur ${evaluation.oneXTwo.matches} matchs passés'
-            '${evaluation.season == null ? '' : ' (${seasonLabel(evaluation.season!)})'} : '
-            'issue la plus probable juste dans ${pct(evaluation.oneXTwo.accuracyModel)} des cas.',
-            style: muted,
-            textAlign: TextAlign.center,
+        if (isAdmin) ...[
+          if (canRefresh) const SizedBox(width: 8),
+          IconButton.outlined(
+            tooltip: 'Régénérer (administrateur)',
+            onPressed: () => _run(force: true),
+            icon: const Icon(Icons.restart_alt),
           ),
         ],
       ],
@@ -261,7 +126,7 @@ class ReliabilityChip extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final color = switch (reliability) {
       Reliability.bonne => scheme.primary,
-      Reliability.moyenne => scheme.tertiary,
+      Reliability.moyenne => BrandColors.orange,
       Reliability.faible => scheme.error,
     };
     return Container(
@@ -277,8 +142,9 @@ class ReliabilityChip extends StatelessWidget {
   }
 }
 
-class _Notice extends StatelessWidget {
-  const _Notice({required this.icon, required this.text});
+/// Encadré d'information neutre.
+class NoticeCard extends StatelessWidget {
+  const NoticeCard({super.key, required this.icon, required this.text});
 
   final IconData icon;
   final String text;
@@ -303,7 +169,193 @@ class _Notice extends StatelessWidget {
   }
 }
 
-/// Barre de probabilité avec libellé et pourcentage.
+/// Petite case chiffrée (« Estimation du modèle 75 % »).
+class StatCell extends StatelessWidget {
+  const StatCell(
+      {super.key,
+      required this.label,
+      required this.value,
+      this.caption,
+      this.highlight = false});
+
+  final String label;
+  final String value;
+  final String? caption;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      decoration: BoxDecoration(
+        color: highlight
+            ? scheme.primary.withValues(alpha: 0.12)
+            : scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(14),
+        border: highlight
+            ? Border.all(color: scheme.primary.withValues(alpha: 0.5))
+            : null,
+      ),
+      child: Column(
+        children: [
+          Text(label,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 4),
+          Text(value,
+              style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: highlight ? scheme.primary : null)),
+          if (caption != null)
+            Text(caption!,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: scheme.onSurfaceVariant)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Carte « pronostic principal » : issue, estimation, cote juste, cote du marché, justification.
+class MainPickCard extends ConsumerWidget {
+  const MainPickCard(
+      {super.key,
+      required this.pick,
+      required this.match,
+      required this.analysis});
+
+  final MainPick pick;
+  final MatchSummary match;
+  final MatchAnalysis analysis;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final label = outcomeKeyLabel(pick.key, match.home.name, match.away.name);
+    final picks = ref.watch(manualCouponProvider);
+    final selected =
+        picks.any((p) => p.matchId == match.id && p.key == pick.key);
+    final canPick = pick.oddMedian != null &&
+        match.status == MatchStatus.scheduled &&
+        match.kickoffAt.isAfter(DateTime.now());
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: scheme.primary.withValues(alpha: 0.6)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    pick.fromAi
+                        ? 'PRONOSTIC DE L’IA'
+                        : 'ISSUE LA PLUS PROBABLE (MODÈLE)',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                        color: scheme.primary,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1),
+                  ),
+                ),
+                ReliabilityChip(reliability: analysis.fiche.reliability),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(label,
+                style: theme.textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: StatCell(
+                    label: 'Estimation du modèle',
+                    value: pct(pick.probability),
+                    caption: frequencyLabel(pick.probability),
+                    highlight: true,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: StatCell(
+                    label: 'Cote juste',
+                    value: decimal(pick.fairOddValue),
+                    caption: '1 ÷ estimation',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: StatCell(
+                    label: 'Cote du marché',
+                    value:
+                        pick.oddMedian == null ? '—' : decimal(pick.oddMedian!),
+                    caption: pick.edge == null
+                        ? 'non relevée'
+                        : 'écart ${edgePoints(pick.edge!)}',
+                  ),
+                ),
+              ],
+            ),
+            if ((pick.justification ?? '').isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(pick.justification!, style: theme.textTheme.bodyLarge),
+            ],
+            if (!pick.fromAi) ...[
+              const SizedBox(height: 10),
+              Text(
+                analysis.ai != null && !analysis.ai!.recommendationPossible
+                    ? 'L’IA ne retient aucun pronostic pour ce match (données insuffisantes ou estimation trop fragile). '
+                        'Ci-dessus, l’issue la plus probable selon le modèle, à titre d’information.'
+                    : 'Issue la plus probable selon le modèle, sans recommandation de l’IA.',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ],
+            if (canPick) ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: () => ref
+                      .read(manualCouponProvider.notifier)
+                      .toggle(ManualPick(
+                        matchId: match.id,
+                        key: pick.key,
+                        matchLabel: '${match.home.name} – ${match.away.name}',
+                        label: label,
+                        odd: pick.oddMedian!,
+                      )),
+                  icon: Icon(selected ? Icons.check : Icons.add),
+                  label: Text(
+                      selected ? 'Dans mon coupon' : 'Ajouter à mon coupon'),
+                ),
+              ),
+            ],
+            const SizedBox(height: 10),
+            Text(
+              'La cote du marché est la cote médiane relevée${analysis.fiche.marketCapturedAt == null ? '' : ' le ${shortDate(analysis.fiche.marketCapturedAt!)} à ${timeLabel(analysis.fiche.marketCapturedAt!)}'} ; '
+              'elle peut bouger avant le match. La cote juste n’est pas une promesse : c’est la cote '
+              'qui correspond à l’estimation du modèle.',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Barre de probabilité avec libellé, pourcentage et fréquence en clair.
 class ProbabilityBar extends StatelessWidget {
   const ProbabilityBar(
       {super.key,
@@ -347,6 +399,10 @@ class ProbabilityBar extends StatelessWidget {
               backgroundColor: theme.colorScheme.surfaceContainerHighest,
             ),
           ),
+          const SizedBox(height: 2),
+          Text(frequencyLabel(probability),
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         ],
       ),
     );
@@ -370,21 +426,14 @@ class ProbabilitiesCard extends StatelessWidget {
           null,
           (b, k) => b == null || f.p(k)! > f.p(b)! ? k : b,
         );
-    const others = [
-      'DC.1X',
-      'DC.X2',
-      'OU.OVER.1.5',
-      'OU.OVER.2.5',
-      'OU.UNDER.2.5',
-      'BTTS.YES'
-    ];
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Probabilités du modèle', style: theme.textTheme.labelLarge),
+            Text('Résultat du match selon le modèle',
+                style: theme.textTheme.labelLarge),
             const SizedBox(height: 6),
             for (final k in oneXTwo)
               if (f.p(k) != null)
@@ -392,43 +441,11 @@ class ProbabilitiesCard extends StatelessWidget {
                     label: outcomeKeyLabel(k, home, away),
                     probability: f.p(k)!,
                     highlight: k == best),
-            const Divider(height: 24),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final k in others)
-                  if (f.p(k) != null)
-                    _Pill(
-                        label: outcomeKeyLabel(k, home, away),
-                        value: pct(f.p(k)!)),
-              ],
-            ),
-            if (f.weakGroups.any((g) => g == 'OU' || g == 'BTTS')) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Prudence : sur l’historique, le moteur ne fait pas mieux qu’une simple fréquence pour '
-                '${[
-                  if (f.weakGroups.contains('OU')) 'le nombre de buts',
-                  if (f.weakGroups.contains('BTTS')) '« les deux marquent »'
-                ].join(' et ')}. '
-                'Ces chiffres sont indicatifs.',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.error),
-              ),
-            ],
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             Text(
               'Buts attendus : $home ${decimal(f.expectedGoalsHome)} – ${decimal(f.expectedGoalsAway)} $away',
               style: theme.textTheme.bodyMedium,
             ),
-            if (f.topScores.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                'Scores les plus probables : ${f.topScores.map((s) => '${s.score} (${pct(s.probability)})').join(' · ')}',
-                style: theme.textTheme.bodyMedium,
-              ),
-            ],
           ],
         ),
       ),
@@ -436,119 +453,57 @@ class ProbabilitiesCard extends StatelessWidget {
   }
 }
 
-class _Pill extends StatelessWidget {
-  const _Pill({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text.rich(
-        TextSpan(children: [
-          TextSpan(text: '$label  ', style: theme.textTheme.labelMedium),
-          TextSpan(
-              text: value,
-              style: theme.textTheme.labelLarge
-                  ?.copyWith(color: theme.colorScheme.primary)),
-        ]),
-      ),
-    );
-  }
-}
-
-class _MarketCard extends StatelessWidget {
-  const _MarketCard(
-      {required this.fiche, required this.home, required this.away});
+/// Scores exacts les plus probables (modèle de buts).
+class ScoresCard extends StatelessWidget {
+  const ScoresCard({super.key, required this.fiche, this.max = 5});
 
   final AnalysisFiche fiche;
-  final String home;
-  final String away;
+  final int max;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lines = fiche.comparableLines;
-    final head = theme.textTheme.labelSmall
-        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final scores = fiche.topScores.take(max).toList();
+    if (scores.isEmpty) return const SizedBox.shrink();
+    final covered = scores.fold<double>(0, (s, x) => s + x.probability);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Modèle et marché', style: theme.textTheme.labelLarge),
-            const SizedBox(height: 8),
-            Row(
+            Text('Scores exacts les plus probables',
+                style: theme.textTheme.labelLarge),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                Expanded(child: Text('Issue', style: head)),
-                SizedBox(
-                    width: 48,
-                    child: Text('Cote', style: head, textAlign: TextAlign.end)),
-                SizedBox(
-                    width: 56,
-                    child:
-                        Text('Marché', style: head, textAlign: TextAlign.end)),
-                SizedBox(
-                    width: 56,
-                    child:
-                        Text('Modèle', style: head, textAlign: TextAlign.end)),
-                SizedBox(
-                    width: 60,
-                    child:
-                        Text('Écart', style: head, textAlign: TextAlign.end)),
+                for (final s in scores)
+                  Container(
+                    width: 74,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(s.score,
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800)),
+                        Text(pct(s.probability),
+                            style: theme.textTheme.labelMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant)),
+                      ],
+                    ),
+                  ),
               ],
             ),
-            for (final l in lines)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(outcomeKeyLabel(l.key, home, away),
-                          style: theme.textTheme.bodySmall,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                    SizedBox(
-                        width: 48,
-                        child: Text(decimal(l.oddMedian),
-                            textAlign: TextAlign.end)),
-                    SizedBox(
-                        width: 56,
-                        child: Text(pct(l.impliedProbability!),
-                            textAlign: TextAlign.end)),
-                    SizedBox(
-                        width: 56,
-                        child: Text(pct(l.modelProbability!),
-                            textAlign: TextAlign.end)),
-                    SizedBox(
-                      width: 60,
-                      child: Text(
-                        edgePoints(l.edge ?? 0),
-                        textAlign: TextAlign.end,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: (l.edge ?? 0) > 0
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             const SizedBox(height: 8),
             Text(
-              'Marché : probabilité implicite de la cote médiane, marge des bookmakers retirée. '
-              'Un écart positif signifie que le modèle estime l’issue plus probable que le marché ; '
-              'ce n’est pas une garantie.',
+              'Ces ${scores.length} scores couvrent ${pct(covered)} des cas selon le modèle : '
+              'un score exact reste très incertain.',
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -559,145 +514,191 @@ class _MarketCard extends StatelessWidget {
   }
 }
 
-class _TextCard extends StatelessWidget {
-  const _TextCard({required this.title, required this.body, this.form});
+const marketFamilies = [
+  ('1X2', 'Résultat'),
+  ('DC', 'Double chance'),
+  ('OU', 'Nombre de buts'),
+  ('BTTS', 'Les deux équipes marquent'),
+];
 
-  final String title;
-  final String? body;
-  final (String, String, String, String)? form;
+/// Marchés du match : estimation du modèle, cote juste, cote du marché, écart.
+class MarketsComparison extends StatelessWidget {
+  const MarketsComparison(
+      {super.key,
+      required this.fiche,
+      required this.home,
+      required this.away,
+      this.highlightKey});
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final form = this.form;
-    Widget formRow(String name, String letters) => Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Row(
-            children: [
-              Expanded(child: Text(name, overflow: TextOverflow.ellipsis)),
-              FormChips(results: letters.split('')),
-            ],
-          ),
-        );
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(title, style: theme.textTheme.labelLarge),
-            if (body != null) ...[
-              const SizedBox(height: 6),
-              Text(body!, style: theme.textTheme.bodyMedium),
-            ],
-            if (form != null) ...[
-              if (form.$1.isNotEmpty) formRow(form.$3, form.$1),
-              if (form.$2.isNotEmpty) formRow(form.$4, form.$2),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ListCard extends StatelessWidget {
-  const _ListCard(
-      {required this.title, required this.items, required this.icon});
-
-  final String title;
-  final List<String> items;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 18, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Expanded(child: Text(title, style: theme.textTheme.labelLarge)),
-              ],
-            ),
-            const SizedBox(height: 6),
-            for (final item in items)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('•  '),
-                    Expanded(
-                        child: Text(item, style: theme.textTheme.bodyMedium)),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PicksCard extends StatelessWidget {
-  const _PicksCard(
-      {required this.picks, required this.home, required this.away});
-
-  final List<MarketPick> picks;
+  final AnalysisFiche fiche;
   final String home;
   final String away;
+  final String? highlightKey;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Marchés envisageables', style: theme.textTheme.labelLarge),
-            for (final p in picks)
-              Container(
-                margin: const EdgeInsets.only(top: 10),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+    final f = fiche;
+    final lines = f.comparableLines;
+    final weak = f.weakGroups;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (code, title) in marketFamilies)
+          if (lines.any((l) => l.key.startsWith('$code.')))
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                            child: Text(outcomeKeyLabel(p.key, home, away),
-                                style: theme.textTheme.titleSmall)),
-                        Text(pct(p.modelProbability),
-                            style: theme.textTheme.titleSmall
-                                ?.copyWith(color: theme.colorScheme.primary)),
-                      ],
-                    ),
-                    if (p.oddMedian != null)
+                    Text(title.toUpperCase(),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w800, letterSpacing: 1)),
+                    if (weak.contains(code == 'DC' ? '1X2' : code))
                       Padding(
-                        padding: const EdgeInsets.only(top: 2),
+                        padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          'Cote médiane ${decimal(p.oddMedian!)}'
-                          '${p.edge == null ? '' : ' · écart modèle/marché ${edgePoints(p.edge!)}'}',
-                          style: theme.textTheme.labelSmall,
+                          'Prudence : sur l’historique, le moteur ne fait pas mieux qu’une simple fréquence '
+                          'sur ce type de marché. Chiffres indicatifs.',
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: BrandColors.orange),
                         ),
                       ),
-                    const SizedBox(height: 6),
-                    Text(p.justification, style: theme.textTheme.bodySmall),
+                    for (final l
+                        in lines.where((l) => l.key.startsWith('$code.')))
+                      _MarketLine(
+                          line: l,
+                          label: outcomeKeyLabel(l.key, home, away),
+                          highlight: l.key == highlightKey),
                   ],
                 ),
               ),
+            ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: Text(
+            'Cote juste = 1 ÷ estimation du modèle. Cote du marché = cote médiane des bookmakers ; '
+            'l’écart compare l’estimation du modèle à celle du marché (marge retirée). Un écart positif '
+            'n’est pas une garantie.',
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MarketLine extends StatelessWidget {
+  const _MarketLine(
+      {required this.line, required this.label, this.highlight = false});
+
+  final FicheOddsLine line;
+  final String label;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final p = line.modelProbability!;
+    final edge = line.edge ?? 0;
+    Widget cell(String head, String value, {Color? color}) => Expanded(
+          child: Column(
+            children: [
+              Text(head,
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: scheme.onSurfaceVariant)),
+              Text(value,
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700, color: color)),
+            ],
+          ),
+        );
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(14),
+        border: highlight ? Border.all(color: scheme.primary) : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                  child: Text(label,
+                      style: theme.textTheme.titleSmall,
+                      overflow: TextOverflow.ellipsis)),
+              if (highlight)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: scheme.primary),
+                  ),
+                  child: Text('Pronostic',
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: scheme.primary)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              cell('Modèle', pct(p), color: scheme.primary),
+              cell('Cote juste', decimal(1 / p)),
+              cell('Cote', decimal(line.oddMedian)),
+              cell('Écart', edgePoints(edge),
+                  color: edge > 0 ? scheme.primary : scheme.onSurfaceVariant),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(frequencyLabel(p),
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Fait vérifié avec son étiquette « source · date heure ».
+class FactCard extends StatelessWidget {
+  const FactCard({super.key, required this.fact});
+
+  final VerifiedFact fact;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.verified_outlined, color: scheme.primary, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(fact.title,
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(fact.text, style: theme.textTheme.bodyMedium),
+                  const SizedBox(height: 8),
+                  SourceChip(label: fact.sourceLabel),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -705,8 +706,78 @@ class _PicksCard extends StatelessWidget {
   }
 }
 
-class _ActualResult extends StatelessWidget {
-  const _ActualResult({required this.fiche, required this.match});
+class SourceChip extends StatelessWidget {
+  const SourceChip({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Text(label,
+          style: theme.textTheme.labelSmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+    );
+  }
+}
+
+/// Bloc de texte titré (« LE SCÉNARIO », « CE QUI PEUT TOUT CHANGER »…).
+class TextBlock extends StatelessWidget {
+  const TextBlock(
+      {super.key,
+      required this.title,
+      this.body,
+      this.items = const [],
+      this.color});
+
+  final String title;
+  final String? body;
+  final List<String> items;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = color ?? theme.colorScheme.primary;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(title.toUpperCase(),
+              style: theme.textTheme.labelMedium?.copyWith(
+                  color: c, fontWeight: FontWeight.w800, letterSpacing: 1)),
+          const SizedBox(height: 6),
+          if (body != null && body!.isNotEmpty)
+            Text(body!, style: theme.textTheme.bodyMedium),
+          for (final item in items)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('•  ', style: TextStyle(color: c)),
+                  Expanded(
+                      child: Text(item, style: theme.textTheme.bodyMedium)),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Résultat réel comparé à l'estimation d'avant-match.
+class ActualResultNotice extends StatelessWidget {
+  const ActualResultNotice(
+      {super.key, required this.fiche, required this.match});
 
   final AnalysisFiche fiche;
   final MatchSummary match;
@@ -716,10 +787,85 @@ class _ActualResult extends StatelessWidget {
     final key = actualOneXTwoKey(match.homeGoals, match.awayGoals);
     if (key == null || fiche.p(key) == null) return const SizedBox.shrink();
     final label = outcomeKeyLabel(key, match.home.name, match.away.name);
-    return _Notice(
+    return NoticeCard(
       icon: Icons.sports_score,
       text: 'Résultat réel : ${match.homeGoals}-${match.awayGoals} ($label). '
           'Avant le match, le modèle donnait ${pct(fiche.p(key)!)} à cette issue.',
+    );
+  }
+}
+
+/// Mentions de bas d'onglet : moteur, IA, heure de rédaction et des données.
+class AnalysisFooter extends ConsumerWidget {
+  const AnalysisFooter({super.key, required this.analysis});
+
+  final MatchAnalysis analysis;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall
+        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final f = analysis.fiche;
+    final evaluation = ref.watch(latestEvaluationProvider).valueOrNull;
+    final at = analysis.createdAt;
+    final data = analysis.sourceUpdatedAt;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 8),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.schedule,
+                size: 16, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Rédigé le ${shortDate(at)} à ${timeLabel(at)}'
+                '${data == null ? '' : ' avec les données du ${shortDate(data)} à ${timeLabel(data)}'} · '
+                'moteur ${analysis.engineVersion}'
+                '${analysis.provider == null ? '' : ' · IA ${analysis.provider}'}.',
+                style: muted,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Calculée avec les seuls matchs joués avant le coup d’envoi (${f.competitionMatches} matchs de la compétition). '
+          '${reliabilityExplanation(f)}',
+          style: muted,
+        ),
+        if (evaluation != null && evaluation.oneXTwo.matches > 0) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Qualité mesurée sur ${evaluation.oneXTwo.matches} matchs passés : '
+            'issue la plus probable juste dans ${pct(evaluation.oneXTwo.accuracyModel)} des cas.',
+            style: muted,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Avertissement présent en bas de chaque onglet.
+class ResponsibleNote extends StatelessWidget {
+  const ResponsibleNote({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 20, 8, 8),
+      child: Text(
+        'Estimations à titre d’information, pas des certitudes. Aucun gain n’est garanti. '
+        'Interdit aux moins de 18 ans ; pariez de façon responsable.',
+        textAlign: TextAlign.center,
+        style: theme.textTheme.bodySmall
+            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+      ),
     );
   }
 }

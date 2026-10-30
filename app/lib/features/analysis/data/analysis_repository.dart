@@ -6,7 +6,7 @@ import 'analysis_models.dart';
 
 const _analysisColumns =
     'id, match_id, engine_version, provider, model, status, status_reason, '
-    'stats, analysis, created_at';
+    'stats, analysis, source_updated_at, created_at';
 
 /// Erreur métier renvoyée par la fonction d'analyse, déjà formulée pour l'utilisateur.
 class AnalysisException implements Exception {
@@ -117,3 +117,15 @@ final recentAiRequestsProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>(
   (ref) => ref.watch(analysisRepositoryProvider).recentAiRequests(),
 );
+
+/// Analyse obtenue pendant la session (bouton « Analyser »), prioritaire sur celle en base.
+final freshAnalysisProvider =
+    StateProvider.autoDispose.family<MatchAnalysis?, int>((ref, _) => null);
+
+/// Analyse affichée dans la fiche : la plus récente de la session, sinon la dernière enregistrée.
+final currentAnalysisProvider =
+    Provider.autoDispose.family<AsyncValue<MatchAnalysis?>, int>((ref, id) {
+  final fresh = ref.watch(freshAnalysisProvider(id));
+  if (fresh != null) return AsyncData(fresh);
+  return ref.watch(storedAnalysisProvider(id));
+});

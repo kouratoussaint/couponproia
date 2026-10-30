@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/brand_colors.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/widgets/form_widgets.dart';
@@ -320,7 +321,7 @@ class _RunTile extends StatelessWidget {
     final r = run;
     final color = switch (r.status) {
       'success' => theme.colorScheme.primary,
-      'partial' => theme.colorScheme.tertiary,
+      'partial' => BrandColors.orange,
       'failed' => theme.colorScheme.error,
       _ => theme.colorScheme.onSurfaceVariant,
     };

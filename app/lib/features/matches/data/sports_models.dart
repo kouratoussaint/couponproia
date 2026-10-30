@@ -28,6 +28,7 @@ class CompetitionRef {
     this.country,
     this.logoUrl,
     this.currentSeason,
+    this.priority = 100,
   });
 
   factory CompetitionRef.fromJson(Map<String, dynamic> json) => CompetitionRef(
@@ -36,6 +37,7 @@ class CompetitionRef {
         country: json['country'] as String?,
         logoUrl: json['logo_url'] as String?,
         currentSeason: _intOrNull(json['current_season']),
+        priority: _intOrNull(json['priority']) ?? 100,
       );
 
   final int id;
@@ -43,6 +45,9 @@ class CompetitionRef {
   final String? country;
   final String? logoUrl;
   final int? currentSeason;
+
+  /// Plus petit = plus important (ordre des listes et de l'accueil).
+  final int priority;
 }
 
 enum MatchStatus {

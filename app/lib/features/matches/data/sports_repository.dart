@@ -3,12 +3,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers.dart';
 import 'sports_format.dart';
+import 'insights_models.dart';
 import 'sports_models.dart';
 
 const _matchColumns =
     'id, season, round, kickoff_at, status, status_short, elapsed, '
     'home_goals, away_goals, ht_home_goals, ht_away_goals, venue, referee, source_updated_at, '
-    'competition:competitions(id, name, country, logo_url, current_season), '
+    'competition:competitions(id, name, country, logo_url, current_season, priority), '
     'home:teams!matches_home_team_fk(id, name, logo_url), '
     'away:teams!matches_away_team_fk(id, name, logo_url)';
 
@@ -81,6 +82,39 @@ class SportsRepository {
     return _matches(rows);
   }
 
+  /// Probabilités 1/N/2 selon les cotes, pour une liste de matchs.
+  Future<Map<int, Market1x2>> market1x2(List<int> matchIds) async {
+    if (matchIds.isEmpty) return const {};
+    final out = <int, Market1x2>{};
+    for (var i = 0; i < matchIds.length; i += 150) {
+      final rows = await _client
+          .from('match_1x2_market')
+          .select('match_id, p_home, p_draw, p_away, bookmakers, captured_at')
+          .inFilter('match_id',
+              matchIds.sublist(i, (i + 150).clamp(0, matchIds.length)));
+      for (final r in rows) {
+        final m = Market1x2.fromJson(r);
+        out[m.matchId] = m;
+      }
+    }
+    return out;
+  }
+
+  /// Onglet Stats : classement, forme, comparatif, séries, confrontations.
+  Future<MatchInsights?> insights(int matchId) async {
+    final res =
+        await _client.rpc('match_insights', params: {'p_match': matchId});
+    return res is Map
+        ? MatchInsights.fromJson(Map<String, dynamic>.from(res))
+        : null;
+  }
+
+  /// Match dont l'analyse est offerte aujourd'hui (null tant qu'il n'est pas choisi).
+  Future<int?> featuredMatchToday() async {
+    final res = await _client.rpc('featured_match_today');
+    return (res as num?)?.toInt();
+  }
+
   Future<List<CompetitionRef>> competitions() async {
     final rows = await _client
         .from('competitions')
@@ -144,6 +178,24 @@ final sportsRepositoryProvider = Provider<SportsRepository>(
 final matchesOfDayProvider =
     FutureProvider.family<List<MatchSummary>, DateTime>(
   (ref, day) => ref.watch(sportsRepositoryProvider).matchesOfDay(day),
+);
+
+/// Barre 1/N/2 des matchs d'un jour (selon les cotes).
+final market1x2OfDayProvider =
+    FutureProvider.family<Map<int, Market1x2>, DateTime>((ref, day) async {
+  final matches = await ref.watch(matchesOfDayProvider(day).future);
+  return ref
+      .watch(sportsRepositoryProvider)
+      .market1x2([for (final m in matches) m.id]);
+});
+
+final matchInsightsProvider =
+    FutureProvider.autoDispose.family<MatchInsights?, int>(
+  (ref, matchId) => ref.watch(sportsRepositoryProvider).insights(matchId),
+);
+
+final featuredMatchProvider = FutureProvider.autoDispose<int?>(
+  (ref) => ref.watch(sportsRepositoryProvider).featuredMatchToday(),
 );
 
 final matchProvider = FutureProvider.family<MatchSummary?, int>(

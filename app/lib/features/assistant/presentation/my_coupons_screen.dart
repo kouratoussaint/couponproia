@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/widgets/history_filter.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../analysis/data/analysis_format.dart';
 import '../../coupons/data/coupon_models.dart';
@@ -14,12 +15,19 @@ import '../../matches/presentation/sports_widgets.dart';
 import '../data/assistant_models.dart';
 import '../data/assistant_repository.dart';
 
-/// Mes coupons : coupons enregistrés depuis l'assistant.
-class MyCouponsScreen extends ConsumerWidget {
+/// Mes coupons : coupons enregistrés depuis l'assistant ou le laboratoire.
+class MyCouponsScreen extends ConsumerStatefulWidget {
   const MyCouponsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyCouponsScreen> createState() => _MyCouponsScreenState();
+}
+
+class _MyCouponsScreenState extends ConsumerState<MyCouponsScreen> {
+  HistoryFilter _filter = const HistoryFilter();
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final coupons = ref.watch(savedCouponsProvider);
     return Scaffold(
@@ -41,25 +49,36 @@ class MyCouponsScreen extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
                   children: [
-                    for (final c in list)
-                      Card(
-                        child: ListTile(
-                          onTap: () =>
-                              context.push(AppRoutes.myCouponFor(c.id)),
-                          title: Text(c.title),
-                          subtitle: Text(
-                            '${c.selections.map((s) => '${s.match.home} – ${s.match.away}').join(' · ')}\n'
-                            'Créé le ${shortDate(c.createdAt)} · probabilité estimée ${pct(c.combinedProbability)}'
-                            '${c.result == null ? '' : ' · ${resultLabels[c.result] ?? c.result}'}',
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          isThreeLine: true,
-                          trailing: Text(decimal(c.totalOdd),
-                              style: theme.textTheme.titleMedium
-                                  ?.copyWith(color: theme.colorScheme.primary)),
-                        ),
+                    HistoryFilterBar(
+                        value: _filter,
+                        onChanged: (v) => setState(() => _filter = v)),
+                    const SizedBox(height: 8),
+                    if (!list
+                        .any((c) => _filter.accepts(c.result, c.createdAt)))
+                      const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text('Aucun coupon pour ce filtre.'),
                       ),
+                    for (final c in list)
+                      if (_filter.accepts(c.result, c.createdAt))
+                        Card(
+                          child: ListTile(
+                            onTap: () =>
+                                context.push(AppRoutes.myCouponFor(c.id)),
+                            title: Text(c.title),
+                            subtitle: Text(
+                              '${c.selections.map((s) => '${s.match.home} – ${s.match.away}').join(' · ')}\n'
+                              'Créé le ${shortDate(c.createdAt)} · probabilité estimée ${pct(c.combinedProbability)}'
+                              '${c.result == null ? '' : ' · ${resultLabels[c.result] ?? c.result}'}',
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            isThreeLine: true,
+                            trailing: Text(decimal(c.totalOdd),
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                    color: theme.colorScheme.primary)),
+                          ),
+                        ),
                   ],
                 ),
               ),

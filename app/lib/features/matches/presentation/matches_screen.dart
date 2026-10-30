@@ -86,6 +86,8 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
       for (var i = -1; i <= 6; i++) DateTime(day.year, day.month, day.day + i)
     ];
     final matches = ref.watch(matchesOfDayProvider(day));
+    final markets =
+        ref.watch(market1x2OfDayProvider(day)).valueOrNull ?? const {};
 
     return Scaffold(
       appBar: appBar,
@@ -150,6 +152,7 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
             child: RefreshIndicator(
               onRefresh: () async {
                 ref.invalidate(matchesOfDayProvider(day));
+                ref.invalidate(market1x2OfDayProvider(day));
                 await ref.read(matchesOfDayProvider(day).future);
               },
               child: matches.when(
@@ -212,6 +215,7 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                             ],
                           ),
                         ),
+                      if (markets.isNotEmpty) const OneXTwoLegend(),
                       if (all.isEmpty)
                         const InfoMessage(
                           icon: Icons.event_busy_outlined,
@@ -237,7 +241,9 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                             children: [
                               for (var i = 0; i < list.length; i++) ...[
                                 if (i > 0) const Divider(height: 1),
-                                MatchCard(match: list[i]),
+                                MatchCard(
+                                    match: list[i],
+                                    market: markets[list[i].id]),
                               ],
                             ],
                           ),

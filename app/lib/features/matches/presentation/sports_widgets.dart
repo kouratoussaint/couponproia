@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/brand_colors.dart';
+import '../data/insights_models.dart';
 import '../data/sports_format.dart';
 import '../data/sports_models.dart';
 
@@ -41,9 +43,12 @@ class SportsLogo extends StatelessWidget {
 
 /// Ligne d'un match dans les listes.
 class MatchCard extends StatelessWidget {
-  const MatchCard({super.key, required this.match});
+  const MatchCard({super.key, required this.match, this.market});
 
   final MatchSummary match;
+
+  /// Répartition 1/N/2 selon les cotes (affichée tant que le match n'est pas joué).
+  final Market1x2? market;
 
   @override
   Widget build(BuildContext context) {
@@ -113,6 +118,10 @@ class MatchCard extends StatelessWidget {
                   teamRow(m.home, m.homeGoals, homeWins),
                   const SizedBox(height: 6),
                   teamRow(m.away, m.awayGoals, awayWins),
+                  if (market != null && !m.hasScore) ...[
+                    const SizedBox(height: 8),
+                    OneXTwoBar(market: market!),
+                  ],
                 ],
               ),
             ),
@@ -123,11 +132,89 @@ class MatchCard extends StatelessWidget {
   }
 }
 
+/// Barre 1 / N / 2 en trois segments : équipe qui reçoit, nul, équipe visiteuse.
+class OneXTwoBar extends StatelessWidget {
+  const OneXTwoBar({super.key, required this.market, this.height = 6});
+
+  final Market1x2 market;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    int flex(double p) => (p * 1000).round().clamp(1, 1000);
+    return Semantics(
+      label: 'Selon les cotes : domicile ${(market.pHome * 100).round()} %, '
+          'nul ${(market.pDraw * 100).round()} %, extérieur ${(market.pAway * 100).round()} %',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(height),
+        child: SizedBox(
+          height: height,
+          child: Row(
+            children: [
+              Expanded(
+                  flex: flex(market.pHome),
+                  child: Container(color: BrandColors.vertIA)),
+              const SizedBox(width: 2),
+              Expanded(
+                  flex: flex(market.pDraw),
+                  child: Container(color: scheme.outline)),
+              const SizedBox(width: 2),
+              Expanded(
+                  flex: flex(market.pAway),
+                  child: Container(color: BrandColors.orange)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Légende de la barre 1 / N / 2.
+class OneXTwoLegend extends StatelessWidget {
+  const OneXTwoLegend({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    Widget key(Color c, String label) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+                width: 14,
+                height: 6,
+                decoration: BoxDecoration(
+                    color: c, borderRadius: BorderRadius.circular(3))),
+            const SizedBox(width: 4),
+            Text(label, style: theme.textTheme.labelSmall),
+          ],
+        );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text('Selon les cotes :',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          key(BrandColors.vertIA, 'domicile'),
+          key(theme.colorScheme.outline, 'nul'),
+          key(BrandColors.orange, 'extérieur'),
+        ],
+      ),
+    );
+  }
+}
+
 /// Pastilles V / N / D de la forme récente.
 class FormChips extends StatelessWidget {
-  const FormChips({super.key, required this.results});
+  const FormChips({super.key, required this.results, this.size = 26});
 
   final List<String> results;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -135,24 +222,26 @@ class FormChips extends StatelessWidget {
     Color colorFor(String r) => switch (r) {
           'V' => scheme.primary,
           'D' => scheme.error,
-          _ => scheme.outline,
+          _ => scheme.onSurfaceVariant,
         };
     return Wrap(
       spacing: 4,
       children: [
         for (final r in results)
           Container(
-            width: 26,
-            height: 26,
+            width: size,
+            height: size,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: colorFor(r).withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(size / 4),
               border: Border.all(color: colorFor(r)),
             ),
             child: Text(r,
-                style:
-                    TextStyle(fontWeight: FontWeight.w700, color: colorFor(r))),
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: size * 0.5,
+                    color: colorFor(r))),
           ),
       ],
     );

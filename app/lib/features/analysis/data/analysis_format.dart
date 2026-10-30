@@ -94,3 +94,44 @@ List<String> mergedMissing(AnalysisFiche fiche, AiAnalysis? ai) {
   }
   return out;
 }
+
+/// Probabilité dite en langage courant : 0,75 → « environ 3 fois sur 4 »,
+/// 0,17 → « environ 1 fois sur 6 ». Toujours une approximation (« environ »).
+String frequencyLabel(double p) {
+  if (p.isNaN || p <= 0) return 'presque jamais selon le modèle';
+  if (p < 0.05) return 'moins d’1 fois sur 20';
+  if (p >= 0.975) return 'plus de 19 fois sur 20';
+  if (p < 0.5) {
+    final d = (1 / p).round();
+    if (d >= 2 && ((1 / d) - p).abs() / p <= 0.12) {
+      return 'environ 1 fois sur $d';
+    }
+    for (final d in const [3, 4, 5, 10, 20]) {
+      final n = (p * d).round();
+      if (n >= 1 && (n / d - p).abs() <= 0.03) {
+        return 'environ $n fois sur $d';
+      }
+    }
+    return 'environ ${(p * 10).round()} fois sur 10';
+  }
+  for (final d in const [2, 3, 4, 5]) {
+    final n = (p * d).round();
+    if ((n / d - p).abs() <= 0.035) return 'environ $n fois sur $d';
+  }
+  if (p >= 0.85) {
+    for (final d in const [10, 20]) {
+      final n = (p * d).round();
+      if ((n / d - p).abs() <= 0.02) return 'environ $n fois sur $d';
+    }
+  }
+  // Sinon, la fraction simple la plus proche (dénominateur 2 à 5, ou 10).
+  var best = (1, 2);
+  for (final d in const [2, 3, 4, 5, 10]) {
+    final n = (p * d).round();
+    if ((n / d - p).abs() < (best.$1 / best.$2 - p).abs() - 1e-9) best = (n, d);
+  }
+  return 'environ ${best.$1} fois sur ${best.$2}';
+}
+
+/// Cote équivalente à l'estimation du modèle (1 ÷ probabilité).
+double? fairOdd(double? p) => p == null || p <= 0 ? null : 1 / p;

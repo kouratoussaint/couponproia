@@ -73,6 +73,7 @@ class AnalysisFiche {
     required this.marketLines,
     required this.missing,
     this.beatsBaseline = const {},
+    this.marketCapturedAt,
   });
 
   factory AnalysisFiche.fromJson(Map<String, dynamic> j) {
@@ -101,6 +102,9 @@ class AnalysisFiche {
           FicheOddsLine.fromJson(_map(l)),
       ],
       missing: _strings(j['missing']),
+      marketCapturedAt: market['captured_at'] is String
+          ? DateTime.tryParse(market['captured_at'] as String)?.toLocal()
+          : null,
       beatsBaseline: {
         for (final e
             in _map(_map(j['engine_quality'])['beats_baseline']).entries)
@@ -122,6 +126,9 @@ class AnalysisFiche {
   final String awayForm;
   final List<FicheOddsLine> marketLines;
   final List<String> missing;
+
+  /// Heure du dernier relevé de cotes utilisé par la fiche.
+  final DateTime? marketCapturedAt;
 
   /// Par famille de marchés (1X2, OU, BTTS) : le moteur a-t-il battu la référence sur l'historique ?
   final Map<String, bool> beatsBaseline;
@@ -223,6 +230,7 @@ class MatchAnalysis {
     this.model,
     this.ai,
     this.cached = true,
+    this.sourceUpdatedAt,
   });
 
   factory MatchAnalysis.fromJson(Map<String, dynamic> j) => MatchAnalysis(
@@ -238,6 +246,9 @@ class MatchAnalysis {
             ? AiAnalysis.fromJson(_map(j['analysis']))
             : null,
         createdAt: DateTime.parse(j['created_at'] as String).toLocal(),
+        sourceUpdatedAt: j['source_updated_at'] is String
+            ? DateTime.tryParse(j['source_updated_at'] as String)?.toLocal()
+            : null,
         cached: j['cached'] != false,
       );
 
@@ -253,6 +264,9 @@ class MatchAnalysis {
   final AnalysisFiche fiche;
   final AiAnalysis? ai;
   final DateTime createdAt;
+
+  /// Données les plus récentes prises en compte (dernier match joué ou relevé de cotes).
+  final DateTime? sourceUpdatedAt;
   final bool cached;
 
   bool get hasAi => status == 'ok' && ai != null;

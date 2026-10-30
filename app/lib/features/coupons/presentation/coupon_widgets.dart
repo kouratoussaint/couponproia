@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/brand_colors.dart';
 import '../../analysis/data/analysis_models.dart';
 import '../../analysis/presentation/analysis_section.dart';
 import '../../matches/presentation/sports_widgets.dart';
@@ -22,7 +23,7 @@ class RiskBadge extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final color = switch (risk) {
       'prudent' => scheme.primary,
-      'equilibre' => scheme.tertiary,
+      'equilibre' => BrandColors.orange,
       _ => scheme.error,
     };
     final text = compact
@@ -59,7 +60,7 @@ class ResultBadge extends StatelessWidget {
       'won' => (scheme.primary, Icons.check_circle),
       'lost' => (scheme.error, Icons.cancel),
       'void' => (scheme.outline, Icons.remove_circle_outline),
-      _ => (scheme.tertiary, Icons.schedule),
+      _ => (scheme.onSurfaceVariant, Icons.schedule),
     };
     final label = result == null
         ? 'En cours'

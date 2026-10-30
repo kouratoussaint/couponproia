@@ -24,6 +24,7 @@ import {
   type RiskThresholds,
 } from "../_shared/coupons/generator.ts";
 import { dueSlots, localDate, type Slot } from "../_shared/coupons/schedule.ts";
+import { freshAnalysis, generateMatchAnalysis, MATCH_COLUMNS, type MatchRow } from "../_shared/analysis/generate.ts";
 import { loadEngineQuality } from "../_shared/engine/quality.ts";
 import { ENGINE_VERSION } from "../_shared/engine/poisson.ts";
 import { callerFrom, corsHeaders, env, json, readSettings, serverContext } from "../_shared/http.ts";
@@ -72,6 +73,8 @@ class CouponEngine {
       "coupons.max_publications_per_day",
       "coupons.data_freshness_hours",
       "ai.coupon_summary",
+      "ai.analysis_ttl_hours",
+      "featured.prepare_from_hour",
     ]);
     this.quality = await loadEngineQuality(this.db);
   }
@@ -456,7 +459,30 @@ class CouponEngine {
       }
     }
     const publication = await this.publishDue();
-    return { runs, ...publication };
+    const featured = await this.prepareFeatured().catch((e) => ({ error: String((e as Error).message ?? e) }));
+    return { runs, ...publication, featured };
+  }
+
+  /** Analyse offerte du jour : match choisi le matin, analyse préparée pour qu'elle soit prête. */
+  async prepareFeatured() {
+    const fromHour = Number(this.settings["featured.prepare_from_hour"] ?? 5);
+    const localHour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: this.timeZone, hour: "2-digit", hourCycle: "h23" })
+      .format(this.now));
+    if (localHour < fromHour) return { skipped: "too_early" };
+    const { data: flag } = await this.db.from("feature_flags").select("enabled").eq("key", "match_analysis").maybeSingle();
+    if (!flag?.enabled) return { skipped: "analysis_disabled" };
+    const { data: matchId, error } = await this.db.rpc("svc_pick_featured_match");
+    if (error) throw new Error(error.message);
+    if (!matchId) return { skipped: "no_match" };
+    const { data: row } = await this.db.from("matches").select(MATCH_COLUMNS).eq("id", matchId).maybeSingle();
+    const m = row as unknown as MatchRow | null;
+    if (!m || !m.competition || !m.home || !m.away) return { skipped: "match_incomplete" };
+    const { data: prompt } = await this.db.from("ai_prompts").select("key, version, system_prompt")
+      .eq("key", "match_analysis").eq("is_active", true).maybeSingle();
+    const ttl = Number(this.settings["ai.analysis_ttl_hours"] ?? 12);
+    if (await freshAnalysis(this.db, m, ttl, prompt?.version ?? null)) return { match_id: m.id, ready: true };
+    const saved = await generateMatchAnalysis(this.db, m, prompt, null);
+    return { match_id: m.id, prepared: saved.id };
   }
 }
 

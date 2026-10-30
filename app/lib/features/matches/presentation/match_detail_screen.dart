@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
-import '../../../core/router/app_routes.dart';
 import '../../analysis/data/analysis_repository.dart';
-import '../../analysis/presentation/analysis_section.dart';
-import '../../lab/data/lab_repository.dart';
 import '../../lab/presentation/manual_coupon_bar.dart';
+import '../data/insights_models.dart';
 import '../data/sports_format.dart';
 import '../data/sports_models.dart';
 import '../data/sports_repository.dart';
+import 'match_tabs.dart';
 import 'sports_widgets.dart';
 
-/// Fiche d'un match : en-tête, cotes, forme récente, confrontations, classement.
-/// Chaque bloc indique sa source et ses limites ; les estimations viennent du moteur
-/// d'analyse (bloc « Analyse IA »), calculées côté serveur.
+/// Fiche d'un match : en-tête, puis 4 onglets (Pronostic, Analyse, Marchés, Stats).
+/// Les estimations viennent du moteur (serveur) ; chaque fait indique sa source et son heure.
 class MatchDetailScreen extends ConsumerWidget {
   const MatchDetailScreen({super.key, required this.matchId});
 
@@ -37,422 +34,221 @@ class MatchDetailScreen extends ConsumerWidget {
         data: (m) => m == null
             ? const InfoMessage(
                 icon: Icons.help_outline, title: 'Match introuvable')
-            : RefreshIndicator(
-                onRefresh: () async {
-                  ref.invalidate(matchProvider(matchId));
-                  ref.invalidate(latestOddsProvider(matchId));
-                  ref.invalidate(storedAnalysisProvider(matchId));
-                  await ref.read(matchProvider(matchId).future);
-                },
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
-                  children: [
-                    _Header(match: m),
-                    const SizedBox(height: 12),
-                    AnalysisSection(match: m),
-                    _OddsSection(match: m),
-                    _FormSection(match: m),
-                    _HeadToHeadSection(match: m),
-                    _StandingsSection(match: m),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Source : API-Football · données mises à jour le ${shortDate(m.sourceUpdatedAt)} '
-                      'à ${timeLabel(m.sourceUpdatedAt)}. Les pronostics sont des estimations ; aucun gain n’est garanti.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+            : _MatchTabs(match: m),
       ),
     );
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.match});
+class _MatchTabs extends ConsumerWidget {
+  const _MatchTabs({required this.match});
 
   final MatchSummary match;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    Future<void> refresh() async {
+      ref.invalidate(matchProvider(match.id));
+      ref.invalidate(latestOddsProvider(match.id));
+      ref.invalidate(storedAnalysisProvider(match.id));
+      ref.invalidate(matchInsightsProvider(match.id));
+      await ref.read(matchProvider(match.id).future);
+    }
+
+    return DefaultTabController(
+      length: 4,
+      child: NestedScrollView(
+        headerSliverBuilder: (context, _) => [
+          SliverToBoxAdapter(child: MatchHeader(match: match)),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _TabBarDelegate(
+              TabBar(
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                labelStyle: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w700),
+                tabs: const [
+                  Tab(text: 'Pronostic'),
+                  Tab(text: 'Analyse'),
+                  Tab(text: 'Marchés'),
+                  Tab(text: 'Stats'),
+                ],
+              ),
+              theme.scaffoldBackgroundColor,
+            ),
+          ),
+        ],
+        body: TabBarView(
+          children: [
+            RefreshIndicator(
+                onRefresh: refresh, child: PronosticTab(match: match)),
+            RefreshIndicator(
+                onRefresh: refresh, child: AnalysisTab(match: match)),
+            RefreshIndicator(
+                onRefresh: refresh, child: MarketsTab(match: match)),
+            RefreshIndicator(onRefresh: refresh, child: StatsTab(match: match)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TabBarDelegate extends SliverPersistentHeaderDelegate {
+  _TabBarDelegate(this.tabBar, this.background);
+
+  final TabBar tabBar;
+  final Color background;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(
+          BuildContext context, double shrinkOffset, bool overlapsContent) =>
+      Material(
+          color: background, elevation: overlapsContent ? 2 : 0, child: tabBar);
+
+  @override
+  bool shouldRebuild(covariant _TabBarDelegate old) =>
+      old.tabBar != tabBar || old.background != background;
+}
+
+/// En-tête : logos, noms, forme (5 derniers), score ou horaire, stade, analyse offerte.
+class MatchHeader extends ConsumerWidget {
+  const MatchHeader({super.key, required this.match});
+
+  final MatchSummary match;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final m = match;
-    Widget team(TeamRef t) => Expanded(
+    final insights = ref.watch(matchInsightsProvider(m.id)).valueOrNull;
+    final featured = ref.watch(featuredMatchProvider).valueOrNull == m.id;
+
+    Widget team(TeamRef t, List<FormEntry>? form) => Expanded(
           child: Column(
             children: [
               SportsLogo(url: t.logoUrl, size: 56),
               const SizedBox(height: 8),
               Text(t.name,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.titleSmall,
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700),
                   maxLines: 2),
+              if (form != null && form.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                // Du plus ancien au plus récent (le plus récent à droite).
+                FormChips(
+                    results: [for (final e in form.reversed) e.letter],
+                    size: 20),
+              ],
             ],
           ),
         );
     final center =
         m.hasScore ? '${m.homeGoals} - ${m.awayGoals}' : timeLabel(m.kickoffAt);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Text(
-              [
-                if (m.round != null) m.round!,
-                '${dayLabel(m.kickoffAt, DateTime.now())} ${shortDate(m.kickoffAt)}'
-              ].join(' · '),
-              style: theme.textTheme.labelMedium
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                team(m.home),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                  child: Column(
-                    children: [
-                      Text(center,
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            color: m.isLive ? theme.colorScheme.primary : null,
-                          )),
-                      Text(statusLabel(m), style: theme.textTheme.labelMedium),
-                      if (m.htHomeGoals != null &&
-                          m.htAwayGoals != null &&
-                          m.status != MatchStatus.scheduled)
-                        Text('Mi-temps ${m.htHomeGoals}-${m.htAwayGoals}',
-                            style: theme.textTheme.labelSmall),
-                    ],
-                  ),
-                ),
-                team(m.away),
-              ],
-            ),
-            if (m.venue != null || m.referee != null) ...[
-              const SizedBox(height: 12),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
               Text(
-                [
-                  if (m.venue != null) m.venue!,
-                  if (m.referee != null) 'Arbitre : ${m.referee}'
-                ].join(' · '),
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                [if (m.round != null) m.round!, _dateLine(m.kickoffAt)]
+                    .join(' · '),
+                style: theme.textTheme.labelMedium
+                    ?.copyWith(color: scheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _OddsSection extends ConsumerWidget {
-  const _OddsSection({required this.match});
-
-  final MatchSummary match;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final odds = ref.watch(latestOddsProvider(match.id));
-    final picks = ref.watch(manualCouponProvider);
-    final canPick = match.status == MatchStatus.scheduled &&
-        match.kickoffAt.isAfter(DateTime.now());
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SectionTitle('Cotes'),
-        odds.when(
-          loading: () => const LinearProgressIndicator(),
-          error: (e, _) => Text(userMessageFor(e)),
-          data: (list) {
-            if (list.isEmpty) {
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    'Aucune cote relevée pour ce match. Les cotes sont relevées deux fois par jour '
-                    'pour les matchs des 48 heures à venir.',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                ),
-              );
-            }
-            final byMarket = oddsByMarket(list);
-            final latest = list
-                .map((o) => o.capturedAt)
-                .reduce((a, b) => a.isAfter(b) ? a : b);
-            final books =
-                list.map((o) => o.bookmakers).reduce((a, b) => a > b ? a : b);
-            return Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final entry in byMarket.entries) ...[
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
-                        child: Text(marketTitles[entry.key] ?? entry.key,
-                            style: theme.textTheme.labelLarge),
-                      ),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final o in entry.value)
-                            _OddTile(
-                              odd: o,
-                              selected: picks.any((p) =>
-                                  p.matchId == match.id && p.key == oddsKey(o)),
-                              onTap: canPick
-                                  ? () => ref
-                                      .read(manualCouponProvider.notifier)
-                                      .toggle(ManualPick(
-                                        matchId: match.id,
-                                        key: oddsKey(o),
-                                        matchLabel:
-                                            '${match.home.name} – ${match.away.name}',
-                                        label:
-                                            '${marketTitles[o.marketCode] ?? o.marketCode} : ${outcomeLabel(o)}',
-                                        odd: o.median,
-                                      ))
-                                  : null,
-                            )
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    if (canPick)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Text(
-                          'Touchez une cote pour l’ajouter à votre coupon (générateur manuel).',
-                          style: theme.textTheme.labelMedium
-                              ?.copyWith(color: theme.colorScheme.primary),
-                        ),
-                      ),
-                    Text(
-                      'Cote médiane de $books bookmakers au maximum (« max » = meilleure cote), '
-                      'relevé du ${shortDate(latest)} à ${timeLabel(latest)}. '
-                      'Les cotes changent et peuvent différer de celles de votre opérateur.',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _OddTile extends StatelessWidget {
-  const _OddTile({required this.odd, this.selected = false, this.onTap});
-
-  final OddsLine odd;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        width: 104,
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-        decoration: BoxDecoration(
-          color: selected
-              ? scheme.primary.withValues(alpha: 0.18)
-              : scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: selected ? scheme.primary : Colors.transparent,
-              width: 1.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(outcomeLabel(odd),
-                style: theme.textTheme.labelMedium,
-                overflow: TextOverflow.ellipsis),
-            Text(formatOdd(odd.median),
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(color: scheme.primary)),
-            Text('max ${formatOdd(odd.best)}',
-                style: theme.textTheme.labelSmall),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FormSection extends ConsumerWidget {
-  const _FormSection({required this.match});
-
-  final MatchSummary match;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    Widget teamForm(TeamRef team) {
-      final recent =
-          ref.watch(recentMatchesProvider((team.id, match.kickoffAt)));
-      return ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: SportsLogo(url: team.logoUrl, size: 28),
-        title: Text(team.name, overflow: TextOverflow.ellipsis),
-        subtitle: recent.when(
-          loading: () => const Text('…'),
-          error: (e, _) => Text(userMessageFor(e)),
-          data: (list) {
-            final form = formFor(team.id, list);
-            return form.isEmpty
-                ? const Text(
-                    'Aucun match terminé dans les données synchronisées')
-                : Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: FormChips(results: form));
-          },
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SectionTitle('Forme récente (5 derniers matchs)'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child:
-                Column(children: [teamForm(match.home), teamForm(match.away)]),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _HeadToHeadSection extends ConsumerWidget {
-  const _HeadToHeadSection({required this.match});
-
-  final MatchSummary match;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final h2h = ref.watch(
-        headToHeadProvider((match.home.id, match.away.id, match.kickoffAt)));
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SectionTitle('Confrontations directes'),
-        Card(
-          child: h2h.when(
-            loading: () => const Padding(
-                padding: EdgeInsets.all(16), child: LinearProgressIndicator()),
-            error: (e, _) => Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(userMessageFor(e))),
-            data: (list) => list.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Aucune confrontation dans les données synchronisées (saison en cours des compétitions suivies).',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  )
-                : Column(
-                    children: [
-                      for (final m in list)
-                        ListTile(
-                          dense: true,
-                          title: Text(
-                              '${m.home.name}  ${m.homeGoals} - ${m.awayGoals}  ${m.away.name}'),
-                          subtitle: Text(
-                              '${shortDate(m.kickoffAt)}/${m.kickoffAt.year} · ${m.competition.name}'),
-                          onTap: () =>
-                              context.push(AppRoutes.matchDetailFor(m.id)),
-                        ),
-                    ],
-                  ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StandingsSection extends ConsumerWidget {
-  const _StandingsSection({required this.match});
-
-  final MatchSummary match;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final table =
-        ref.watch(standingsProvider((match.competition.id, match.season)));
-    return table.maybeWhen(
-      data: (rows) {
-        final mine = rows
-            .where(
-                (r) => r.team.id == match.home.id || r.team.id == match.away.id)
-            .toList();
-        if (mine.isEmpty) return const SizedBox.shrink();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SectionTitle(
-              'Classement',
-              trailing: TextButton(
-                onPressed: () =>
-                    context.push(AppRoutes.standingsFor(match.competition.id)),
-                child: const Text('Tout voir'),
-              ),
-            ),
-            Card(
-              child: Column(
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final r in mine)
-                    ListTile(
-                      leading: CircleAvatar(
-                        radius: 14,
-                        backgroundColor:
-                            theme.colorScheme.primary.withValues(alpha: 0.15),
-                        child: Text('${r.rank}',
+                  team(m.home, insights?.homeForm),
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                    child: Column(
+                      children: [
+                        Text(center,
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: m.isLive ? scheme.primary : null,
+                            )),
+                        Text(
+                            m.status == MatchStatus.scheduled
+                                ? 'Coup d’envoi'
+                                : statusLabel(m),
                             style: theme.textTheme.labelMedium),
-                      ),
-                      title: Text(r.team.name, overflow: TextOverflow.ellipsis),
-                      subtitle: Text(
-                        '${r.played} J · ${r.win} G ${r.draw} N ${r.lose} P · diff. ${r.goalDiff > 0 ? '+' : ''}${r.goalDiff}'
-                        '${r.group.isNotEmpty && rows.map((x) => x.group).toSet().length > 1 ? ' · ${r.group}' : ''}',
-                      ),
-                      trailing: Text('${r.points} pts',
-                          style: theme.textTheme.titleSmall),
+                        if (m.htHomeGoals != null &&
+                            m.htAwayGoals != null &&
+                            m.status != MatchStatus.scheduled)
+                          Text('Mi-temps ${m.htHomeGoals}-${m.htAwayGoals}',
+                              style: theme.textTheme.labelSmall),
+                      ],
                     ),
+                  ),
+                  team(m.away, insights?.awayForm),
                 ],
               ),
-            ),
-          ],
-        );
-      },
-      orElse: () => const SizedBox.shrink(),
+              if (m.venue != null || m.referee != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  [
+                    if (m.venue != null) m.venue!,
+                    if (m.referee != null) 'Arbitre : ${m.referee}'
+                  ].join(' · '),
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: scheme.onSurfaceVariant),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              if (featured) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: scheme.primary.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.card_giftcard,
+                          size: 18, color: scheme.primary),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text('Analyse offerte du jour',
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelLarge?.copyWith(
+                                color: scheme.primary,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
+}
+
+/// « Aujourd’hui 30/10 », « Demain 31/10 », sinon « sam. 31/10 » (année si différente).
+String _dateLine(DateTime kickoff) {
+  final label = dayLabel(kickoff, DateTime.now());
+  return label.contains('/') ? label : '$label ${shortDate(kickoff)}';
 }

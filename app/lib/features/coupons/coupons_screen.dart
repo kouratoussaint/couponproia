@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/errors/error_messages.dart';
 import '../../core/router/app_routes.dart';
+import '../../core/widgets/history_filter.dart';
 import '../matches/presentation/sports_widgets.dart';
 import '../shell/app_drawer.dart';
 import '../system/system_providers.dart';
@@ -22,6 +23,7 @@ class CouponsScreen extends ConsumerStatefulWidget {
 class _CouponsScreenState extends ConsumerState<CouponsScreen>
     with AutomaticKeepAliveClientMixin {
   String? _category;
+  HistoryFilter _history = const HistoryFilter();
 
   @override
   bool get wantKeepAlive => true;
@@ -76,7 +78,12 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
                 final open = list.where((c) => c.isOpen(now)).toList()
                   ..sort(
                       (a, b) => a.firstKickoffAt.compareTo(b.firstKickoffAt));
-                final past = list.where((c) => !c.isOpen(now)).toList();
+                final allPast = list.where((c) => !c.isOpen(now)).toList();
+                final past = allPast
+                    .where((c) => _history.accepts(
+                        c.isWithdrawn ? 'withdrawn' : c.result,
+                        c.publishedAt ?? c.publishAt))
+                    .toList();
                 return RefreshIndicator(
                   onRefresh: refresh,
                   child: ListView(
@@ -126,7 +133,17 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
                             coupon: c,
                             onTap: () =>
                                 context.push(AppRoutes.couponDetailFor(c.id))),
-                      if (past.isNotEmpty) const SectionTitle('Précédents'),
+                      if (allPast.isNotEmpty) ...[
+                        const SectionTitle('Historique, pertes comprises'),
+                        HistoryFilterBar(
+                            value: _history,
+                            onChanged: (v) => setState(() => _history = v)),
+                        if (past.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('Aucun coupon pour ce filtre.'),
+                          ),
+                      ],
                       for (final c in past)
                         CouponCard(
                             coupon: c,
