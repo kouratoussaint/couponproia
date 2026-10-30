@@ -76,8 +76,37 @@ Edge Function : `coupon-engine` (secret d'exploitation ou administrateur).
 - Visibilité des coupons selon le forfait : LOT 9. Règlement (gagné/perdu) et statistiques : LOT 8.
 - Probabilité combinée = produit des probabilités (matchs supposés indépendants) : estimation.
 
-## 5. Bascule vers l'offre Pro (dès que l'abonnement est actif)
+## 5. Bascule vers l'offre Pro (faite le 30/10/2026 au soir)
 
-`sports.archive_season` → `null` ; `sports.min_request_interval_ms` → 250 ;
-`sports.daily_request_budget` → 7 000 ; `sports.odds_max_fixtures_per_run` relevé ; chargement de la
-saison en cours et de 2025/26 ; réévaluation du moteur.
+- Réglages : fin de l'archive, 250 ms entre requêtes, budget 7 000 requêtes/jour, 150 matchs par relevé
+  de cotes, saison 2025/26 chargée une fois comme historique (`sports.history_seasons`).
+- Relevés de cotes à 6 h, 12 h et 18 h (avant les générations de 7 h et 13 h).
+- Premier passage : 5 060 lignes, 35 requêtes ; cotes de 39 matchs des 48 h suivantes (39 requêtes).
+- CLI Supabase épinglé (2.122.0) dans le déploiement : « latest » échouait sur une limite de l'API GitHub.
+
+## 6. Moteur poisson-1.1 (correction après les premiers coupons réels)
+
+Les 4 premiers coupons générés (30/10, 17 h 11) contenaient des sélections très éloignées du marché
+(+17 à +27 points, ex. « Nul ou Espanyol » à Villarreal : 60 % contre 33 %). Cause : en début de
+saison (≈ 9 journées), le moteur n'utilisait que la saison en cours et ramenait toutes les équipes vers
+la moyenne, ce qui favorisait les outsiders. Ces coupons sont signalés au propriétaire pour retrait.
+
+Corrections :
+- la saison précédente de la compétition entre dans les forces des équipes avec un poids réduit ;
+- poids choisi par mesure sur 2025/26 (a priori 2024/25), 1/N/2 :
+
+| Poids de la saison précédente | 0 | 0,25 | **0,5** | 0,75 | 1 |
+| --- | --- | --- | --- | --- | --- |
+| Brier (référence 0,648) | 0,623 | 0,613 | **0,610** | 0,609 | 0,609 |
+
+  0,5 est retenu (au plateau de l'optimum, plus prudent qu'un poids plein) ;
+- nouveau critère `max_edge` (0,10) : une sélection dont le modèle s'écarte de plus de 10 points du
+  marché est écartée (désaccord plus souvent dû à une lacune du modèle qu'à une vraie valeur) ;
+- les compétitions où le moteur ne bat pas la référence sont exclues des coupons ;
+- évaluation hebdomadaire sur la saison précédente et la saison en cours.
+
+Évaluation officielle poisson-1.1 (2 763 matchs, 2025/26 et 2026/27) : Brier **0,607** contre 0,646 ;
+issue la plus probable juste **50,5 %** contre 45,5 %. Plus/moins 2,5 (0,496 contre 0,495) et
+« les deux marquent » (0,502 contre 0,495) : toujours pas mieux que la référence, toujours exclus.
+
+Aperçu sans écriture après correction : écarts avec le marché de +3 à +10 points (au lieu de +27).
