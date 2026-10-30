@@ -1,10 +1,14 @@
-# À lancer UNE fois (onglet Actions > Bootstrap plateformes > Run workflow) :
-# génère les dossiers android/ et ios/ avec `flutter create`, puis les icônes,
-# et les commite dans le dépôt. Ne remplace jamais du code existant dans lib/.
+# Génère les dossiers android/ et ios/ avec `flutter create`, puis les icônes,
+# et les commite dans le dépôt. Se lance tout seul sur main tant que android/
+# n'existe pas (ou à la main : Actions > Bootstrap plateformes > Run workflow).
+# Ne remplace jamais du code existant dans lib/.
 name: Bootstrap plateformes
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['app/pubspec.yaml', '.github/workflows/bootstrap-platforms.yml']
 
 permissions:
   contents: write
