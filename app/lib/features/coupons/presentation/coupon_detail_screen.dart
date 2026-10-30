@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
-import '../../../core/router/app_routes.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../analysis/data/analysis_format.dart';
-import '../../analysis/presentation/analysis_section.dart';
-import '../../analysis/data/analysis_models.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
@@ -146,7 +142,7 @@ class _CouponBody extends ConsumerWidget {
         ),
         const SectionTitle('Sélections'),
         for (final s in c.selections)
-          _SelectionCard(
+          SelectionCard(
               selection: s, currentOdd: current['${s.match.id}:${s.key}']),
         if (c.summary.isNotEmpty) ...[
           const SectionTitle('Analyse générale'),
@@ -262,106 +258,5 @@ class _CouponBody extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) showMessage(context, userMessageFor(e), error: true);
     }
-  }
-}
-
-class _SelectionCard extends StatelessWidget {
-  const _SelectionCard({required this.selection, this.currentOdd});
-
-  final CouponSelection selection;
-  final double? currentOdd;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final s = selection;
-    final m = s.match;
-    final now = DateTime.now();
-    final played =
-        m.homeGoals != null && m.awayGoals != null && m.status != 'scheduled';
-    final changed = currentOdd != null && (currentOdd! - s.odd).abs() >= 0.01;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => context.push(AppRoutes.matchDetailFor(m.id)),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                '${m.competition} · ${dayLabel(m.kickoffAt, now)} ${shortDate(m.kickoffAt)} à ${timeLabel(m.kickoffAt)}',
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  SportsLogo(url: m.homeLogo, size: 20),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      played
-                          ? '${m.home} ${m.homeGoals}-${m.awayGoals} ${m.away}'
-                          : '${m.home} – ${m.away}',
-                      style: theme.textTheme.titleSmall,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  SportsLogo(url: m.awayLogo, size: 20),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(outcomeKeyLabel(s.key, m.home, m.away),
-                        style: theme.textTheme.bodyLarge
-                            ?.copyWith(fontWeight: FontWeight.w600)),
-                  ),
-                  Text(decimal(s.odd),
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(color: theme.colorScheme.primary)),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  ReliabilityChip(
-                      reliability: Reliability.parse(s.reliability)),
-                  Text('Modèle ${pct(s.modelProbability)}',
-                      style: theme.textTheme.labelMedium),
-                  if (s.impliedProbability != null)
-                    Text('Marché ${pct(s.impliedProbability!)}',
-                        style: theme.textTheme.labelMedium),
-                  if (s.edge != null)
-                    Text(
-                      'Écart ${edgePoints(s.edge!)}',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: s.edge! > 0
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(s.justification, style: theme.textTheme.bodySmall),
-              const SizedBox(height: 6),
-              Text(
-                'Cote médiane de ${s.bookmakers ?? '?'} bookmakers relevée le ${shortDate(s.oddsCapturedAt)} à ${timeLabel(s.oddsCapturedAt)}'
-                '${changed ? ' · cote actuelle ${decimal(currentOdd!)} (la cote publiée est conservée)' : ''}',
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

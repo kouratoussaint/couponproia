@@ -9,6 +9,7 @@ import '../../../core/theme/theme_mode_controller.dart';
 import '../../../core/validators.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../assistant/data/assistant_repository.dart';
 import '../../system/system_providers.dart';
 import '../data/profile_repository.dart';
 import '../../shell/app_drawer.dart';
@@ -94,6 +95,19 @@ class ProfileScreen extends ConsumerWidget {
                     leading: Icon(Icons.workspace_premium_outlined),
                     title: Text('Abonnement'),
                     subtitle: Text('FREE · les forfaits arrivent au LOT 9'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.bolt),
+                    title: const Text('Crédits IA'),
+                    subtitle: Text(
+                      ref.watch(myCreditsProvider).when(
+                            data: (c) => c.unlimited
+                                ? 'Illimités (compte équipe)'
+                                : '${c.total} disponible(s) · ${c.planCredits} du forfait ce mois-ci + ${c.extraCredits} supplémentaire(s)',
+                            loading: () => '…',
+                            error: (_, __) => 'Solde indisponible',
+                          ),
+                    ),
                   ),
                   if (permissions.contains('admin.access'))
                     const ListTile(

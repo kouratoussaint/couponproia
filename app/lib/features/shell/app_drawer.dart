@@ -109,6 +109,12 @@ class AppDrawer extends ConsumerWidget {
           title: const Text('Compétitions et classements'),
           onTap: () => open(AppRoutes.competitions),
         ),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+          leading: const Icon(Icons.bookmarks_outlined),
+          title: const Text('Mes coupons'),
+          onTap: () => open(AppRoutes.myCoupons),
+        ),
         const _SoonTile(
             icon: Icons.science_outlined,
             label: 'Laboratoire IA',

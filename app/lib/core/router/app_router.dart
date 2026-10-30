@@ -5,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/analysis/presentation/engine_admin_screen.dart';
-import '../../features/assistant/assistant_screen.dart';
+import '../../features/assistant/presentation/assistant_screen.dart';
+import '../../features/assistant/presentation/my_coupons_screen.dart';
 import '../../features/auth/presentation/password_reset_screens.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
 import '../../features/auth/presentation/sign_up_screen.dart';
@@ -119,6 +120,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.generationsAdmin,
         builder: (context, state) => const GenerationsAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.myCoupons,
+        builder: (context, state) => const MyCouponsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.myCouponDetail,
+        builder: (context, state) =>
+            MyCouponDetailScreen(couponId: state.pathParameters['id'] ?? ''),
       ),
       GoRoute(
         path: AppRoutes.couponDetail,
