@@ -1,6 +1,6 @@
 # LOT 1 — Identité visuelle et fondations
 
-Statut au 30/10/2026 : **code écrit, base de données testée ; compilation de l'APK en attente du dépôt GitHub.**
+Statut au 30/10/2026 : **CI verte, APK de test v0.1.0-test.1 publié (signé avec la clé de debug) ; en attente des secrets de signature et de Supabase.**
 
 ## 1. Résumé
 
@@ -53,13 +53,12 @@ Statut au 30/10/2026 : **code écrit, base de données testée ; compilation de 
 | --- | --- |
 | Migrations + 30 tests RLS sur PostgreSQL 16 | **30/30 réussis** ; échec volontaire vérifié (le harnais détecte une erreur) |
 | Rejeu des données de référence | OK, sans doublon |
-| Tests Flutter (validateurs, redirections, thème, mises à jour, messages d'erreur, widget) | Écrits ; **pas encore exécutés** : le SDK Flutter n'est pas téléchargeable ici, ils tourneront dans la CI GitHub |
-| Edge Function `delete-account` | Vérification de types prévue en CI (Deno indisponible ici) |
+| Analyse statique + tests Flutter (validateurs, redirections, thème, mises à jour, messages d'erreur, widget) | **Réussis** en CI (Flutter 3.47.9, Dart 3.13.7) |
+| Edge Function `delete-account` | Vérification de types **réussie** en CI (Deno 2) |
+| Compilation Android release (arm64-v8a, armeabi-v7a, x86_64) | **Réussie** ; APK de 16 à 21 Mo |
 
 ## 6. Limites connues
 
-- Le code Dart n'a pas encore été compilé : la première CI peut révéler des écarts de version de
-  paquets à corriger.
 - Les polices sont téléchargées au premier lancement (google_fonts) puis mises en cache ; elles
   seront embarquées dans l'APK à un lot ultérieur pour un fonctionnement 100 % hors ligne.
 - Photo de profil : la colonne existe, l'envoi d'image arrive avec le Storage (LOT 7 ou avant si besoin).
