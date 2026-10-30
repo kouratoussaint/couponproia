@@ -6,6 +6,8 @@
 #   SUPABASE_DB_PASSWORD   mot de passe de la base choisi à la création du projet
 #   API_FOOTBALL_KEY       clé API-Football (dashboard.api-football.com) ; sans elle, la
 #                          synchronisation est journalisée « ignorée »
+#   CINETPAY_API_KEY, CINETPAY_SITE_ID, CINETPAY_SECRET_KEY : compte marchand CinetPay (menu
+#                          Intégrations) ; sans eux, les achats sont indisponibles.
 #   GEMINI_API_KEY         clé Google AI Studio (aistudio.google.com) pour l'analyse IA ;
 #                          secours facultatifs : ANTHROPIC_API_KEY, GROQ_API_KEY. Sans clé,
 #                          l'analyse se limite à la fiche statistique.
@@ -77,6 +79,9 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          CINETPAY_API_KEY: ${{ secrets.CINETPAY_API_KEY }}
+          CINETPAY_SITE_ID: ${{ secrets.CINETPAY_SITE_ID }}
+          CINETPAY_SECRET_KEY: ${{ secrets.CINETPAY_SECRET_KEY }}
           REF: ${{ steps.project.outputs.ref }}
         run: |
           export CRON_SECRET="$(openssl rand -hex 32)"
@@ -92,6 +97,12 @@ jobs:
           for k in GEMINI_API_KEY ANTHROPIC_API_KEY GROQ_API_KEY; do
             if [ -n "${!k}" ]; then args+=("$k=${!k}"); ai_keys=$((ai_keys + 1)); fi
           done
+          for k in CINETPAY_API_KEY CINETPAY_SITE_ID CINETPAY_SECRET_KEY; do
+            if [ -n "${!k}" ]; then args+=("$k=${!k}"); fi
+          done
+          if [ -z "$CINETPAY_API_KEY" ] || [ -z "$CINETPAY_SITE_ID" ]; then
+            echo "::warning::CINETPAY_API_KEY / CINETPAY_SITE_ID absents : les achats répondront « paiement pas encore configuré »."
+          fi
           if [ "$ai_keys" -eq 0 ]; then
             echo "::warning::Aucune clé IA (GEMINI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY) : les analyses se limiteront à la fiche statistique."
           fi

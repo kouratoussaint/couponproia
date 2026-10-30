@@ -69,3 +69,14 @@ verify_jwt = true
 [functions.settle-coupons]
 # Appelée par pg_cron sans JWT : la fonction vérifie le secret ou la permission generation.manage.
 verify_jwt = false
+
+[functions.payments]
+# Utilisateur (JWT vérifié par la fonction) ou pg_cron (secret) pour le rapprochement.
+verify_jwt = false
+
+[functions.payment-webhook]
+# Appelée par l'agrégateur : aucune confiance accordée, le statut est relu chez lui.
+verify_jwt = false
+
+[functions.payment-return]
+verify_jwt = false

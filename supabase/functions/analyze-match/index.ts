@@ -7,6 +7,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { analyzeWithAi } from "../_shared/ai/analyst.ts";
 import { loadAiSetup } from "../_shared/ai/setup.ts";
+import { planFeatures } from "../_shared/billing.ts";
 import { loadEngineQuality } from "../_shared/engine/quality.ts";
 import { buildFiche, type NamedMatch, type OddsRow } from "../_shared/engine/fiche.ts";
 import { ENGINE_VERSION, type PlayedMatch, PRIOR_SEASON_WEIGHT, weighted } from "../_shared/engine/poisson.ts";
@@ -164,7 +165,9 @@ Deno.serve(async (req) => {
     }
 
     // Quota : nouvelles analyses déclenchées par l'utilisateur aujourd'hui (UTC = heure de Ouagadougou).
-    const limit = Number(settings["ai.max_new_analyses_per_user_day"] ?? 20);
+    // Limite selon le forfait (réglage pricing.plans), à défaut le réglage général.
+    const { features } = await planFeatures(db, caller.id);
+    const limit = Number(features.match_analyses_per_day ?? settings["ai.max_new_analyses_per_user_day"] ?? 20);
     if (!canManage) {
       const dayStart = new Date();
       dayStart.setUTCHours(0, 0, 0, 0);
