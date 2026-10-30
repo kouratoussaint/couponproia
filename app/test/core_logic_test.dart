@@ -43,43 +43,57 @@ void main() {
   group('Redirections', () {
     test('sans configuration, tout mène à l’écran de configuration', () {
       expect(
-        resolveRedirect(isConfigured: false, isSignedIn: false, location: AppRoutes.home),
+        resolveRedirect(
+            isConfigured: false, isSignedIn: false, location: AppRoutes.home),
         AppRoutes.missingConfig,
       );
       expect(
-        resolveRedirect(isConfigured: false, isSignedIn: false, location: AppRoutes.missingConfig),
+        resolveRedirect(
+            isConfigured: false,
+            isSignedIn: false,
+            location: AppRoutes.missingConfig),
         isNull,
       );
     });
 
     test('non connecté : seuls les écrans publics sont accessibles', () {
       expect(
-        resolveRedirect(isConfigured: true, isSignedIn: false, location: AppRoutes.profile),
+        resolveRedirect(
+            isConfigured: true, isSignedIn: false, location: AppRoutes.profile),
         AppRoutes.signIn,
       );
       expect(
-        resolveRedirect(isConfigured: true, isSignedIn: false, location: AppRoutes.signUp),
+        resolveRedirect(
+            isConfigured: true, isSignedIn: false, location: AppRoutes.signUp),
         isNull,
       );
     });
 
-    test('connecté : les écrans publics renvoient à l’accueil, sauf le nouveau mot de passe', () {
+    test(
+        'connecté : les écrans publics renvoient à l’accueil, sauf le nouveau mot de passe',
+        () {
       expect(
-        resolveRedirect(isConfigured: true, isSignedIn: true, location: AppRoutes.signIn),
+        resolveRedirect(
+            isConfigured: true, isSignedIn: true, location: AppRoutes.signIn),
         AppRoutes.home,
       );
       expect(
-        resolveRedirect(isConfigured: true, isSignedIn: true, location: AppRoutes.resetPassword),
+        resolveRedirect(
+            isConfigured: true,
+            isSignedIn: true,
+            location: AppRoutes.resetPassword),
         isNull,
       );
       expect(
-        resolveRedirect(isConfigured: true, isSignedIn: true, location: AppRoutes.legal),
+        resolveRedirect(
+            isConfigured: true, isSignedIn: true, location: AppRoutes.legal),
         isNull,
       );
     });
 
     test('les liens vers la vérification transportent l’email', () {
-      expect(AppRoutes.verifyEmailFor('awa@exemple.bf'), '/verification?email=awa%40exemple.bf');
+      expect(AppRoutes.verifyEmailFor('awa@exemple.bf'),
+          '/verification?email=awa%40exemple.bf');
     });
   });
 
@@ -102,25 +116,30 @@ void main() {
     );
 
     test('aucune mise à jour si à jour ou si rien n’est publié', () {
-      expect(updateKindFor(installedBuild: 20, latest: latest), UpdateKind.none);
+      expect(
+          updateKindFor(installedBuild: 20, latest: latest), UpdateKind.none);
       expect(updateKindFor(installedBuild: 5, latest: null), UpdateKind.none);
     });
 
     test('optionnelle puis obligatoire sous le minimum supporté', () {
-      expect(updateKindFor(installedBuild: 15, latest: latest), UpdateKind.optional);
-      expect(updateKindFor(installedBuild: 9, latest: latest), UpdateKind.required);
+      expect(updateKindFor(installedBuild: 15, latest: latest),
+          UpdateKind.optional);
+      expect(updateKindFor(installedBuild: 9, latest: latest),
+          UpdateKind.required);
     });
 
     test('message', () {
       expect(updateMessage(UpdateKind.optional, latest), 'Matchs réels');
-      expect(updateMessage(UpdateKind.required, latest), contains('n’est plus prise en charge'));
+      expect(updateMessage(UpdateKind.required, latest),
+          contains('n’est plus prise en charge'));
     });
   });
 
   group('Messages d’erreur', () {
     test('identifiants incorrects', () {
       expect(
-        userMessageFor(AuthException('Invalid login credentials', code: 'invalid_credentials')),
+        userMessageFor(AuthException('Invalid login credentials',
+            code: 'invalid_credentials')),
         'Email ou mot de passe incorrect.',
       );
     });
@@ -133,18 +152,24 @@ void main() {
     });
 
     test('jamais de message technique brut', () {
-      expect(userMessageFor(StateError('boom')), 'Une erreur inattendue est survenue. Réessayez.');
+      expect(userMessageFor(StateError('boom')),
+          'Une erreur inattendue est survenue. Réessayez.');
     });
   });
 
   group('Configuration', () {
     test('une URL https et une clé sont exigées', () {
       expect(
-        const AppConfig(supabaseUrl: '', supabaseAnonKey: '', environment: 'dev').isConfigured,
+        const AppConfig(
+                supabaseUrl: '', supabaseAnonKey: '', environment: 'dev')
+            .isConfigured,
         isFalse,
       );
       expect(
-        const AppConfig(supabaseUrl: 'https://x.supabase.co', supabaseAnonKey: 'k', environment: 'prod')
+        const AppConfig(
+                supabaseUrl: 'https://x.supabase.co',
+                supabaseAnonKey: 'k',
+                environment: 'prod')
             .isConfigured,
         isTrue,
       );

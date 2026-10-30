@@ -34,7 +34,9 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
     try {
-      await ref.read(authRepositoryProvider).confirmSignUp(email: widget.email, code: _code.text);
+      await ref
+          .read(authRepositoryProvider)
+          .confirmSignUp(email: widget.email, code: _code.text);
       // Session ouverte : le routeur redirige vers l'accueil.
     } catch (e) {
       if (mounted) showMessage(context, userMessageFor(e), error: true);
@@ -47,7 +49,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     setState(() => _resending = true);
     try {
       await ref.read(authRepositoryProvider).resendSignUpCode(widget.email);
-      if (mounted) showMessage(context, 'Nouveau code envoyé à ${widget.email}.');
+      if (mounted)
+        showMessage(context, 'Nouveau code envoyé à ${widget.email}.');
     } catch (e) {
       if (mounted) showMessage(context, userMessageFor(e), error: true);
     } finally {
@@ -74,15 +77,25 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               enabled: !missingEmail,
               keyboardType: TextInputType.number,
               autofillHints: const [AutofillHints.oneTimeCode],
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(6)
+              ],
               validator: Validators.otpCode,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(letterSpacing: 8),
-              decoration: const InputDecoration(labelText: 'Code de confirmation'),
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(letterSpacing: 8),
+              decoration:
+                  const InputDecoration(labelText: 'Code de confirmation'),
               onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 24),
-            BusyButton(label: 'Confirmer', busy: _busy, onPressed: missingEmail ? null : _submit),
+            BusyButton(
+                label: 'Confirmer',
+                busy: _busy,
+                onPressed: missingEmail ? null : _submit),
             const SizedBox(height: 12),
             TextButton(
               onPressed: missingEmail || _resending ? null : _resend,

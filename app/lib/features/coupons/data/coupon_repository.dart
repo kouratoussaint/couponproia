@@ -5,13 +5,15 @@ import '../../../core/providers.dart';
 import '../../analysis/data/analysis_repository.dart';
 import 'coupon_models.dart';
 
-const _selectionColumns = 'position, selection_key, odd, odd_best, bookmakers, odds_captured_at, '
+const _selectionColumns =
+    'position, selection_key, odd, odd_best, bookmakers, odds_captured_at, '
     'model_probability, implied_probability, edge, reliability, justification, result, '
     'match:matches(id, kickoff_at, status, home_goals, away_goals, '
     'home:teams!matches_home_team_fk(name, logo_url), away:teams!matches_away_team_fk(name, logo_url), '
     'competition:competitions(name))';
 
-const _couponColumns = 'id, category, title, description, risk_level, total_odd, combined_probability, '
+const _couponColumns =
+    'id, category, title, description, risk_level, total_odd, combined_probability, '
     'implied_probability, status, status_note, publish_at, published_at, first_kickoff_at, last_kickoff_at, '
     'engine_version, data_source, analysis, result, created_at, coupon_selections($_selectionColumns)';
 
@@ -20,7 +22,8 @@ class CouponRepository {
 
   final SupabaseClient _client;
 
-  List<Coupon> _coupons(List<dynamic> rows) => rows.map((r) => Coupon.fromJson(r as Map<String, dynamic>)).toList();
+  List<Coupon> _coupons(List<dynamic> rows) =>
+      rows.map((r) => Coupon.fromJson(r as Map<String, dynamic>)).toList();
 
   /// Coupons publiés (et retirés, pour la transparence), les plus récents d'abord.
   Future<List<Coupon>> published() async {
@@ -36,7 +39,8 @@ class CouponRepository {
   Future<Coupon?> coupon(String id) async {
     final row = await _client
         .from('coupons')
-        .select('$_couponColumns, coupon_status_history(from_status, to_status, reason, created_at)')
+        .select(
+            '$_couponColumns, coupon_status_history(from_status, to_status, reason, created_at)')
         .eq('id', id)
         .maybeSingle();
     return row == null ? null : Coupon.fromJson(row);
@@ -51,13 +55,16 @@ class CouponRepository {
         .inFilter('match_id', matchIds);
     final out = <String, double>{};
     for (final r in rows) {
-      final line = r['line'] == null ? '' : '.${_line((r['line'] as num).toDouble())}';
-      out['${r['match_id']}:${r['market_code']}.${r['outcome_code']}$line'] = (r['odd_median'] as num).toDouble();
+      final line =
+          r['line'] == null ? '' : '.${_line((r['line'] as num).toDouble())}';
+      out['${r['match_id']}:${r['market_code']}.${r['outcome_code']}$line'] =
+          (r['odd_median'] as num).toDouble();
     }
     return out;
   }
 
-  static String _line(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
+  static String _line(double v) =>
+      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
 
   // --- Administration (generation.manage) --------------------------------------------------
 
@@ -69,7 +76,8 @@ class CouponRepository {
   Future<List<GenerationRun>> runs() async {
     final rows = await _client
         .from('generation_runs')
-        .select('id, trigger, slot_key, status, coupons_created, candidates, reasons, started_at, profile:coupon_profiles(name)')
+        .select(
+            'id, trigger, slot_key, status, coupons_created, candidates, reasons, started_at, profile:coupon_profiles(name)')
         .order('started_at', ascending: false)
         .limit(40);
     return rows.map(GenerationRun.fromJson).toList();
@@ -88,21 +96,29 @@ class CouponRepository {
 
   Future<Map<String, dynamic>> generateNow(int profileId) async {
     try {
-      final res = await _client.functions.invoke('coupon-engine', body: {'job': 'generate', 'profile_id': profileId});
+      final res = await _client.functions.invoke('coupon-engine',
+          body: {'job': 'generate', 'profile_id': profileId});
       return Map<String, dynamic>.from(res.data as Map);
     } on FunctionException catch (e) {
       throw AnalysisException(analysisErrorMessage(e.status, e.details));
     }
   }
 
-  Future<void> review(String couponId, {required bool approve, String? reason}) =>
-      _client.rpc('admin_review_coupon', params: {'p_coupon': couponId, 'p_approve': approve, 'p_reason': reason});
+  Future<void> review(String couponId,
+          {required bool approve, String? reason}) =>
+      _client.rpc('admin_review_coupon', params: {
+        'p_coupon': couponId,
+        'p_approve': approve,
+        'p_reason': reason
+      });
 
   Future<void> withdraw(String couponId, String reason) =>
-      _client.rpc('admin_withdraw_coupon', params: {'p_coupon': couponId, 'p_reason': reason});
+      _client.rpc('admin_withdraw_coupon',
+          params: {'p_coupon': couponId, 'p_reason': reason});
 
   Future<void> updateProfile(int profileId, Map<String, dynamic> patch) =>
-      _client.rpc('admin_update_coupon_profile', params: {'p_profile': profileId, 'p_patch': patch});
+      _client.rpc('admin_update_coupon_profile',
+          params: {'p_profile': profileId, 'p_patch': patch});
 }
 
 final couponRepositoryProvider = Provider<CouponRepository>(
@@ -117,10 +133,13 @@ final couponProvider = FutureProvider.autoDispose.family<Coupon?, String>(
   (ref, id) => ref.watch(couponRepositoryProvider).coupon(id),
 );
 
-final currentOddsProvider = FutureProvider.autoDispose.family<Map<String, double>, String>((ref, couponId) async {
+final currentOddsProvider = FutureProvider.autoDispose
+    .family<Map<String, double>, String>((ref, couponId) async {
   final coupon = await ref.watch(couponProvider(couponId).future);
   if (coupon == null) return const {};
-  return ref.watch(couponRepositoryProvider).currentOdds(coupon.selections.map((s) => s.match.id).toList());
+  return ref
+      .watch(couponRepositoryProvider)
+      .currentOdds(coupon.selections.map((s) => s.match.id).toList());
 });
 
 final couponProfilesProvider = FutureProvider.autoDispose<List<CouponProfile>>(

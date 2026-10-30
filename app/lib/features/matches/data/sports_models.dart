@@ -56,8 +56,8 @@ enum MatchStatus {
   awarded,
   unknown;
 
-  static MatchStatus parse(String? value) =>
-      MatchStatus.values.firstWhere((s) => s.name == value, orElse: () => MatchStatus.unknown);
+  static MatchStatus parse(String? value) => MatchStatus.values
+      .firstWhere((s) => s.name == value, orElse: () => MatchStatus.unknown);
 }
 
 class MatchSummary {
@@ -96,7 +96,8 @@ class MatchSummary {
         venue: json['venue'] as String?,
         referee: json['referee'] as String?,
         sourceUpdatedAt: _date(json['source_updated_at']),
-        competition: CompetitionRef.fromJson(json['competition'] as Map<String, dynamic>),
+        competition: CompetitionRef.fromJson(
+            json['competition'] as Map<String, dynamic>),
         home: TeamRef.fromJson(json['home'] as Map<String, dynamic>),
         away: TeamRef.fromJson(json['away'] as Map<String, dynamic>),
       );
@@ -119,7 +120,8 @@ class MatchSummary {
   final TeamRef home;
   final TeamRef away;
 
-  bool get isLive => status == MatchStatus.live || status == MatchStatus.interrupted;
+  bool get isLive =>
+      status == MatchStatus.live || status == MatchStatus.interrupted;
   bool get hasScore => homeGoals != null && awayGoals != null;
 }
 
@@ -219,7 +221,8 @@ class SyncRun {
         job: json['job'] as String,
         status: json['status'] as String,
         startedAt: _date(json['started_at']),
-        finishedAt: json['finished_at'] == null ? null : _date(json['finished_at']),
+        finishedAt:
+            json['finished_at'] == null ? null : _date(json['finished_at']),
         requestsUsed: _int(json['requests_used']),
         requestsRemaining: _intOrNull(json['requests_remaining']),
         itemsUpserted: _int(json['items_upserted']),

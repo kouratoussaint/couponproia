@@ -29,8 +29,10 @@ class AuthRepository {
     return response.session == null;
   }
 
-  Future<void> confirmSignUp({required String email, required String code}) async {
-    await _auth.verifyOTP(type: OtpType.signup, email: email.trim(), token: code.trim());
+  Future<void> confirmSignUp(
+      {required String email, required String code}) async {
+    await _auth.verifyOTP(
+        type: OtpType.signup, email: email.trim(), token: code.trim());
   }
 
   Future<void> resendSignUpCode(String email) async {
@@ -49,7 +51,8 @@ class AuthRepository {
     // Si le code a déjà été validé lors d'une tentative précédente (session ouverte),
     // on ne le revalide pas : il n'est utilisable qu'une fois.
     if (_auth.currentSession == null) {
-      await _auth.verifyOTP(type: OtpType.recovery, email: email.trim(), token: code.trim());
+      await _auth.verifyOTP(
+          type: OtpType.recovery, email: email.trim(), token: code.trim());
     }
     await _auth.updateUser(UserAttributes(password: newPassword));
   }

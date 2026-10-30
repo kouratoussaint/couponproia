@@ -39,10 +39,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    final flags = ref.watch(featureFlagsProvider).valueOrNull ?? const <String, bool>{};
-    final permissions = ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
-    if ((flags['maintenance_mode'] ?? false) && !permissions.contains('admin.access')) {
-      return MaintenanceScreen(onRetry: () => ref.invalidate(featureFlagsProvider));
+    final flags =
+        ref.watch(featureFlagsProvider).valueOrNull ?? const <String, bool>{};
+    final permissions =
+        ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
+    if ((flags['maintenance_mode'] ?? false) &&
+        !permissions.contains('admin.access')) {
+      return MaintenanceScreen(
+          onRetry: () => ref.invalidate(featureFlagsProvider));
     }
 
     return Scaffold(

@@ -9,12 +9,14 @@ class AssistantScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(leading: const DrawerMenuButton(), title: const Text('Assistant IA')),
+      appBar: AppBar(
+          leading: const DrawerMenuButton(), title: const Text('Assistant IA')),
       body: const ComingSoonView(
         icon: Icons.smart_toy,
         title: 'Mon Assistant IA',
         lot: 'LOT 5',
-        description: 'Décrivez le coupon que vous voulez en langage naturel ; l’IA le construit à partir '
+        description:
+            'Décrivez le coupon que vous voulez en langage naturel ; l’IA le construit à partir '
             'de données réelles, le serveur le vérifie, et vous gardez la main.',
         features: [
           '« Fais-moi un coupon de 5 matchs avec une cote proche de 10 »',

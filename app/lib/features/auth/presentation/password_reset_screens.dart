@@ -14,7 +14,8 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
@@ -46,7 +47,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     return AuthScaffold(
       title: 'Mot de passe oublié',
-      subtitle: 'Indiquez votre email : vous recevrez un code pour choisir un nouveau mot de passe.',
+      subtitle:
+          'Indiquez votre email : vous recevrez un code pour choisir un nouveau mot de passe.',
       showBack: true,
       child: Form(
         key: _formKey,
@@ -65,7 +67,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 24),
-            BusyButton(label: 'Recevoir un code', busy: _busy, onPressed: _submit),
+            BusyButton(
+                label: 'Recevoir un code', busy: _busy, onPressed: _submit),
           ],
         ),
       ),
@@ -80,7 +83,8 @@ class ResetPasswordScreen extends ConsumerStatefulWidget {
   final String email;
 
   @override
-  ConsumerState<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() =>
+      _ResetPasswordScreenState();
 }
 
 class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
@@ -136,7 +140,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 enabled: !missingEmail,
                 keyboardType: TextInputType.number,
                 autofillHints: const [AutofillHints.oneTimeCode],
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6)
+                ],
                 validator: Validators.otpCode,
                 decoration: const InputDecoration(
                   labelText: 'Code reçu par email',
@@ -156,11 +163,16 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 controller: _confirm,
                 label: 'Confirmer',
                 autofillHints: const [AutofillHints.newPassword],
-                validator: (v) => v != _password.text ? 'Les mots de passe ne correspondent pas.' : null,
+                validator: (v) => v != _password.text
+                    ? 'Les mots de passe ne correspondent pas.'
+                    : null,
                 onSubmitted: (_) => _submit(),
               ),
               const SizedBox(height: 24),
-              BusyButton(label: 'Enregistrer', busy: _busy, onPressed: missingEmail ? null : _submit),
+              BusyButton(
+                  label: 'Enregistrer',
+                  busy: _busy,
+                  onPressed: missingEmail ? null : _submit),
               TextButton(
                 onPressed: () => context.go(AppRoutes.signIn),
                 child: const Text('Retour à la connexion'),

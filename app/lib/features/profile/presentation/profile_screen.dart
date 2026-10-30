@@ -21,12 +21,14 @@ class ProfileScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final profile = ref.watch(myProfileProvider);
     final user = ref.watch(currentUserProvider);
-    final permissions = ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
+    final permissions =
+        ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     final themeMode = ref.watch(themeModeProvider);
     final version = ref.watch(installedPackageProvider).valueOrNull;
 
     return Scaffold(
-      appBar: AppBar(leading: const DrawerMenuButton(), title: const Text('Profil')),
+      appBar: AppBar(
+          leading: const DrawerMenuButton(), title: const Text('Profil')),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(myProfileProvider);
@@ -40,16 +42,19 @@ class ProfileScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: profile.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Text(userMessageFor(e)),
                   data: (p) => Row(
                     children: [
                       CircleAvatar(
                         radius: 28,
-                        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+                        backgroundColor:
+                            theme.colorScheme.primary.withValues(alpha: 0.15),
                         child: Text(
                           p?.initials ?? '?',
-                          style: theme.textTheme.titleLarge?.copyWith(color: theme.colorScheme.primary),
+                          style: theme.textTheme.titleLarge
+                              ?.copyWith(color: theme.colorScheme.primary),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -57,7 +62,8 @@ class ProfileScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(p?.displayName ?? '—', style: theme.textTheme.titleLarge),
+                            Text(p?.displayName ?? '—',
+                                style: theme.textTheme.titleLarge),
                             const SizedBox(height: 4),
                             Text(
                               user?.email ?? '',
@@ -71,7 +77,9 @@ class ProfileScreen extends ConsumerWidget {
                       IconButton(
                         tooltip: 'Modifier le nom',
                         icon: const Icon(Icons.edit_outlined),
-                        onPressed: p == null ? null : () => _editName(context, ref, p.displayName),
+                        onPressed: p == null
+                            ? null
+                            : () => _editName(context, ref, p.displayName),
                       ),
                     ],
                   ),
@@ -91,7 +99,8 @@ class ProfileScreen extends ConsumerWidget {
                     const ListTile(
                       leading: Icon(Icons.admin_panel_settings_outlined),
                       title: Text('Administration'),
-                      subtitle: Text('Accès autorisé · console prévue au LOT 11'),
+                      subtitle:
+                          Text('Accès autorisé · console prévue au LOT 11'),
                     ),
                 ],
               ),
@@ -126,7 +135,9 @@ class ProfileScreen extends ConsumerWidget {
                           ),
                         ],
                         selected: {themeMode},
-                        onSelectionChanged: (s) => ref.read(themeModeProvider.notifier).setMode(s.first),
+                        onSelectionChanged: (s) => ref
+                            .read(themeModeProvider.notifier)
+                            .setMode(s.first),
                       ),
                     ),
                   ],
@@ -149,8 +160,10 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () => ref.read(authRepositoryProvider).signOut(),
                   ),
                   ListTile(
-                    leading: Icon(Icons.delete_forever_outlined, color: theme.colorScheme.error),
-                    title: Text('Supprimer mon compte', style: TextStyle(color: theme.colorScheme.error)),
+                    leading: Icon(Icons.delete_forever_outlined,
+                        color: theme.colorScheme.error),
+                    title: Text('Supprimer mon compte',
+                        style: TextStyle(color: theme.colorScheme.error)),
                     onTap: () => _confirmDeletion(context, ref),
                   ),
                 ],
@@ -159,8 +172,11 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             Center(
               child: Text(
-                version == null ? '' : 'Version ${version.version} (${version.buildNumber})',
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                version == null
+                    ? ''
+                    : 'Version ${version.version} (${version.buildNumber})',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ),
           ],
@@ -169,7 +185,8 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _editName(BuildContext context, WidgetRef ref, String current) async {
+  Future<void> _editName(
+      BuildContext context, WidgetRef ref, String current) async {
     final name = await showDialog<String>(
       context: context,
       builder: (_) => _EditNameDialog(initial: current),
@@ -209,7 +226,8 @@ class _EditNameDialog extends StatefulWidget {
 }
 
 class _EditNameDialogState extends State<_EditNameDialog> {
-  late final TextEditingController _controller = TextEditingController(text: widget.initial);
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initial);
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -219,7 +237,8 @@ class _EditNameDialogState extends State<_EditNameDialog> {
   }
 
   void _save() {
-    if (_formKey.currentState!.validate()) Navigator.of(context).pop(_controller.text.trim());
+    if (_formKey.currentState!.validate())
+      Navigator.of(context).pop(_controller.text.trim());
   }
 
   @override
@@ -237,7 +256,9 @@ class _EditNameDialogState extends State<_EditNameDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Annuler')),
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annuler')),
         FilledButton(onPressed: _save, child: const Text('Enregistrer')),
       ],
     );
@@ -278,12 +299,15 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
             controller: _controller,
             onChanged: (_) => setState(() {}),
             textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(labelText: 'Tapez SUPPRIMER pour confirmer'),
+            decoration: const InputDecoration(
+                labelText: 'Tapez SUPPRIMER pour confirmer'),
           ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Annuler')),
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler')),
         FilledButton(
           style: FilledButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.error,

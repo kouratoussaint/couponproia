@@ -71,16 +71,26 @@ abstract final class AppTheme {
       brightness: scheme.brightness,
     );
     final body = GoogleFonts.interTextTheme(base.textTheme);
-    final textTheme = body.copyWith(
-      displayLarge: GoogleFonts.montserrat(textStyle: body.displayLarge, fontWeight: FontWeight.w800),
-      displayMedium: GoogleFonts.montserrat(textStyle: body.displayMedium, fontWeight: FontWeight.w800),
-      displaySmall: GoogleFonts.montserrat(textStyle: body.displaySmall, fontWeight: FontWeight.w700),
-      headlineLarge: GoogleFonts.montserrat(textStyle: body.headlineLarge, fontWeight: FontWeight.w700),
-      headlineMedium: GoogleFonts.montserrat(textStyle: body.headlineMedium, fontWeight: FontWeight.w700),
-      headlineSmall: GoogleFonts.montserrat(textStyle: body.headlineSmall, fontWeight: FontWeight.w700),
-      titleLarge: GoogleFonts.montserrat(textStyle: body.titleLarge, fontWeight: FontWeight.w700),
-      titleMedium: GoogleFonts.montserrat(textStyle: body.titleMedium, fontWeight: FontWeight.w600),
-    ).apply(bodyColor: scheme.onSurface, displayColor: scheme.onSurface);
+    final textTheme = body
+        .copyWith(
+          displayLarge: GoogleFonts.montserrat(
+              textStyle: body.displayLarge, fontWeight: FontWeight.w800),
+          displayMedium: GoogleFonts.montserrat(
+              textStyle: body.displayMedium, fontWeight: FontWeight.w800),
+          displaySmall: GoogleFonts.montserrat(
+              textStyle: body.displaySmall, fontWeight: FontWeight.w700),
+          headlineLarge: GoogleFonts.montserrat(
+              textStyle: body.headlineLarge, fontWeight: FontWeight.w700),
+          headlineMedium: GoogleFonts.montserrat(
+              textStyle: body.headlineMedium, fontWeight: FontWeight.w700),
+          headlineSmall: GoogleFonts.montserrat(
+              textStyle: body.headlineSmall, fontWeight: FontWeight.w700),
+          titleLarge: GoogleFonts.montserrat(
+              textStyle: body.titleLarge, fontWeight: FontWeight.w700),
+          titleMedium: GoogleFonts.montserrat(
+              textStyle: body.titleMedium, fontWeight: FontWeight.w600),
+        )
+        .apply(bodyColor: scheme.onSurface, displayColor: scheme.onSurface);
 
     final radius = BorderRadius.circular(16);
     return base.copyWith(
@@ -106,7 +116,9 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerHigh,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: scheme.outlineVariant),
@@ -115,19 +127,22 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: scheme.primary, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, 52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           textStyle: textTheme.titleMedium,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(64, 52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -135,7 +150,8 @@ abstract final class AppTheme {
         indicatorColor: scheme.primary.withValues(alpha: 0.18),
         labelTextStyle: WidgetStatePropertyAll(textTheme.labelSmall),
       ),
-      snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+      snackBarTheme:
+          const SnackBarThemeData(behavior: SnackBarBehavior.floating),
     );
   }
 }

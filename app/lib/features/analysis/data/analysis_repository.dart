@@ -4,7 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/providers.dart';
 import 'analysis_models.dart';
 
-const _analysisColumns = 'id, match_id, engine_version, provider, model, status, status_reason, '
+const _analysisColumns =
+    'id, match_id, engine_version, provider, model, status, status_reason, '
     'stats, analysis, created_at';
 
 /// Erreur métier renvoyée par la fonction d'analyse, déjà formulée pour l'utilisateur.
@@ -55,7 +56,8 @@ class AnalysisRepository {
     return row == null ? null : MatchAnalysis.fromJson(row);
   }
 
-  Future<Map<String, dynamic>> _invoke(String fn, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> _invoke(
+      String fn, Map<String, dynamic> body) async {
     try {
       final res = await _client.functions.invoke(fn, body: body);
       return Map<String, dynamic>.from(res.data as Map);
@@ -66,7 +68,8 @@ class AnalysisRepository {
 
   /// Lance (ou récupère en cache) l'analyse d'un match. `force` : administrateurs.
   Future<MatchAnalysis> analyze(int matchId, {bool force = false}) async {
-    final data = await _invoke('analyze-match', {'match_id': matchId, if (force) 'force': true});
+    final data = await _invoke(
+        'analyze-match', {'match_id': matchId, if (force) 'force': true});
     return MatchAnalysis.fromJson(data);
   }
 
@@ -88,7 +91,8 @@ class AnalysisRepository {
     final since = DateTime.now().toUtc().subtract(const Duration(days: 7));
     final rows = await _client
         .from('ai_requests')
-        .select('provider, model, status, input_tokens, output_tokens, cost_usd, latency_ms, error, created_at')
+        .select(
+            'provider, model, status, input_tokens, output_tokens, cost_usd, latency_ms, error, created_at')
         .gte('created_at', since.toIso8601String())
         .order('created_at', ascending: false)
         .limit(500);
@@ -100,7 +104,8 @@ final analysisRepositoryProvider = Provider<AnalysisRepository>(
   (ref) => AnalysisRepository(ref.watch(supabaseClientProvider)),
 );
 
-final storedAnalysisProvider = FutureProvider.autoDispose.family<MatchAnalysis?, int>(
+final storedAnalysisProvider =
+    FutureProvider.autoDispose.family<MatchAnalysis?, int>(
   (ref, matchId) => ref.watch(analysisRepositoryProvider).latest(matchId),
 );
 
@@ -108,6 +113,7 @@ final latestEvaluationProvider = FutureProvider<EngineEvaluation?>(
   (ref) => ref.watch(analysisRepositoryProvider).latestEvaluation(),
 );
 
-final recentAiRequestsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>(
+final recentAiRequestsProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>(
   (ref) => ref.watch(analysisRepositoryProvider).recentAiRequests(),
 );

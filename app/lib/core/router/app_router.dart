@@ -95,13 +95,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.resetPassword,
-        builder: (context, state) =>
-            ResetPasswordScreen(email: state.uri.queryParameters['email'] ?? ''),
+        builder: (context, state) => ResetPasswordScreen(
+            email: state.uri.queryParameters['email'] ?? ''),
       ),
       GoRoute(
         path: AppRoutes.matchDetail,
-        builder: (context, state) =>
-            MatchDetailScreen(matchId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+        builder: (context, state) => MatchDetailScreen(
+            matchId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
       ),
       GoRoute(
         path: AppRoutes.competitions,
@@ -109,8 +109,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.standings,
-        builder: (context, state) =>
-            StandingsScreen(competitionId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+        builder: (context, state) => StandingsScreen(
+            competitionId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
       ),
       GoRoute(
         path: AppRoutes.sportsAdmin,
@@ -122,7 +122,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.couponDetail,
-        builder: (context, state) => CouponDetailScreen(couponId: state.pathParameters['id'] ?? ''),
+        builder: (context, state) =>
+            CouponDetailScreen(couponId: state.pathParameters['id'] ?? ''),
       ),
       GoRoute(
         path: AppRoutes.engineAdmin,
@@ -131,30 +132,41 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute(
         builder: (context, state, navigationShell) =>
             HomeShell(navigationShell: navigationShell),
-        navigatorContainerBuilder: (context, navigationShell, children) => SwipeBranchContainer(
+        navigatorContainerBuilder: (context, navigationShell, children) =>
+            SwipeBranchContainer(
           currentIndex: navigationShell.currentIndex,
           onPageChanged: (index) => navigationShell.goBranch(index),
           children: children,
         ),
         branches: [
           StatefulShellBranch(routes: [
-            GoRoute(path: AppRoutes.home, builder: (context, state) => const HomeScreen()),
+            GoRoute(
+                path: AppRoutes.home,
+                builder: (context, state) => const HomeScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: AppRoutes.matches, builder: (context, state) => const MatchesScreen()),
+            GoRoute(
+                path: AppRoutes.matches,
+                builder: (context, state) => const MatchesScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: AppRoutes.coupons, builder: (context, state) => const CouponsScreen()),
+            GoRoute(
+                path: AppRoutes.coupons,
+                builder: (context, state) => const CouponsScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: AppRoutes.assistant, builder: (context, state) => const AssistantScreen()),
+            GoRoute(
+                path: AppRoutes.assistant,
+                builder: (context, state) => const AssistantScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
               path: AppRoutes.profile,
               builder: (context, state) => const ProfileScreen(),
               routes: [
-                GoRoute(path: 'mentions', builder: (context, state) => const LegalScreen()),
+                GoRoute(
+                    path: 'mentions',
+                    builder: (context, state) => const LegalScreen()),
               ],
             ),
           ]),

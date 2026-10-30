@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('un module à venir affiche son lot et aucune donnée fictive', (tester) async {
+  testWidgets('un module à venir affiche son lot et aucune donnée fictive',
+      (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(

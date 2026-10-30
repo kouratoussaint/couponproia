@@ -29,7 +29,13 @@ Map<String, dynamic> _matchJson({
       'venue': null,
       'referee': null,
       'source_updated_at': '2026-10-30T04:00:00Z',
-      'competition': {'id': competitionId, 'name': competitionName, 'country': 'England', 'logo_url': null, 'current_season': 2026},
+      'competition': {
+        'id': competitionId,
+        'name': competitionName,
+        'country': 'England',
+        'logo_url': null,
+        'current_season': 2026
+      },
       'home': {'id': homeId, 'name': 'Équipe Alpha', 'logo_url': null},
       'away': {'id': awayId, 'name': 'Beta FC', 'logo_url': 'https://x/b.png'},
     };
@@ -67,20 +73,50 @@ void main() {
 
   group('Statuts affichés', () {
     test('en cours, mi-temps, terminé, reporté', () {
-      expect(statusLabel(MatchSummary.fromJson(_matchJson(status: 'live', short: '2H'))), '67’');
-      expect(statusLabel(MatchSummary.fromJson(_matchJson(status: 'live', short: 'HT'))), 'Mi-temps');
+      expect(
+          statusLabel(
+              MatchSummary.fromJson(_matchJson(status: 'live', short: '2H'))),
+          '67’');
+      expect(
+          statusLabel(
+              MatchSummary.fromJson(_matchJson(status: 'live', short: 'HT'))),
+          'Mi-temps');
       expect(statusLabel(MatchSummary.fromJson(_matchJson())), 'Terminé');
-      expect(statusLabel(MatchSummary.fromJson(_matchJson(status: 'postponed', short: 'PST'))), 'Reporté');
+      expect(
+          statusLabel(MatchSummary.fromJson(
+              _matchJson(status: 'postponed', short: 'PST'))),
+          'Reporté');
     });
   });
 
   group('Forme récente', () {
-    test('V / N / D du point de vue de l’équipe, du plus récent au plus ancien', () {
+    test('V / N / D du point de vue de l’équipe, du plus récent au plus ancien',
+        () {
       final matches = [
-        MatchSummary.fromJson(_matchJson(id: 1, kickoff: '2026-10-01T15:00:00Z', homeGoals: 0, awayGoals: 0)),
-        MatchSummary.fromJson(_matchJson(id: 2, kickoff: '2026-10-20T15:00:00Z', homeGoals: 3, awayGoals: 1)),
-        MatchSummary.fromJson(_matchJson(id: 3, kickoff: '2026-10-10T15:00:00Z', homeId: 30, awayId: 10, homeGoals: 2, awayGoals: 0)),
-        MatchSummary.fromJson(_matchJson(id: 4, kickoff: '2026-10-25T15:00:00Z', status: 'postponed', short: 'PST', homeGoals: null, awayGoals: null)),
+        MatchSummary.fromJson(_matchJson(
+            id: 1,
+            kickoff: '2026-10-01T15:00:00Z',
+            homeGoals: 0,
+            awayGoals: 0)),
+        MatchSummary.fromJson(_matchJson(
+            id: 2,
+            kickoff: '2026-10-20T15:00:00Z',
+            homeGoals: 3,
+            awayGoals: 1)),
+        MatchSummary.fromJson(_matchJson(
+            id: 3,
+            kickoff: '2026-10-10T15:00:00Z',
+            homeId: 30,
+            awayId: 10,
+            homeGoals: 2,
+            awayGoals: 0)),
+        MatchSummary.fromJson(_matchJson(
+            id: 4,
+            kickoff: '2026-10-25T15:00:00Z',
+            status: 'postponed',
+            short: 'PST',
+            homeGoals: null,
+            awayGoals: null)),
       ];
       expect(formFor(10, matches), ['V', 'D', 'N']);
       expect(formFor(20, matches), ['D', 'N']);
@@ -123,9 +159,12 @@ void main() {
 
     test('groupes par compétition dans l’ordre d’apparition', () {
       final groups = groupByCompetition([
-        MatchSummary.fromJson(_matchJson(id: 1, competitionId: 2, competitionName: 'Ligue des champions')),
-        MatchSummary.fromJson(_matchJson(id: 2, competitionId: 1, competitionName: 'Ligue 1')),
-        MatchSummary.fromJson(_matchJson(id: 3, competitionId: 2, competitionName: 'Ligue des champions')),
+        MatchSummary.fromJson(_matchJson(
+            id: 1, competitionId: 2, competitionName: 'Ligue des champions')),
+        MatchSummary.fromJson(
+            _matchJson(id: 2, competitionId: 1, competitionName: 'Ligue 1')),
+        MatchSummary.fromJson(_matchJson(
+            id: 3, competitionId: 2, competitionName: 'Ligue des champions')),
       ]);
       expect(groups.map((g) => g.$1.name), ['Ligue des champions', 'Ligue 1']);
       expect(groups.first.$2.length, 2);
@@ -150,7 +189,8 @@ void main() {
       ]);
       expect(byMarket.keys, ['1X2', 'OU']);
       expect(byMarket['1X2']!.map(outcomeLabel), ['1', 'X', '2']);
-      expect(byMarket['OU']!.map(outcomeLabel), ['Plus de 1,5', 'Moins de 2,5']);
+      expect(
+          byMarket['OU']!.map(outcomeLabel), ['Plus de 1,5', 'Moins de 2,5']);
     });
   });
 }

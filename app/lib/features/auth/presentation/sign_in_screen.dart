@@ -77,7 +77,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               const SizedBox(height: 16),
               PasswordField(
                 controller: _password,
-                validator: (v) => (v == null || v.isEmpty) ? 'Saisissez votre mot de passe.' : null,
+                validator: (v) => (v == null || v.isEmpty)
+                    ? 'Saisissez votre mot de passe.'
+                    : null,
                 onSubmitted: (_) => _submit(),
               ),
               Align(
@@ -88,7 +90,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              BusyButton(label: 'Se connecter', busy: _busy, onPressed: _submit),
+              BusyButton(
+                  label: 'Se connecter', busy: _busy, onPressed: _submit),
               const SizedBox(height: 16),
               OutlinedButton(
                 onPressed: _busy ? null : () => context.push(AppRoutes.signUp),

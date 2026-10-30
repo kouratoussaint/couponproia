@@ -11,7 +11,8 @@ class LegalScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final disclaimers = ref.watch(disclaimersProvider).valueOrNull ?? fallbackDisclaimers;
+    final disclaimers =
+        ref.watch(disclaimersProvider).valueOrNull ?? fallbackDisclaimers;
     return Scaffold(
       appBar: AppBar(title: const Text('Mentions et avertissements')),
       body: ListView(
@@ -31,7 +32,8 @@ class LegalScreen extends ConsumerWidget {
                   for (final d in disclaimers)
                     ListTile(
                       dense: true,
-                      leading: Icon(Icons.info_outline, color: theme.colorScheme.secondary),
+                      leading: Icon(Icons.info_outline,
+                          color: theme.colorScheme.secondary),
                       title: Text(d),
                     ),
                 ],
@@ -42,7 +44,8 @@ class LegalScreen extends ConsumerWidget {
           Text(
             'Conditions générales d’utilisation et politique de confidentialité : en cours de rédaction, '
             'elles seront publiées avant l’ouverture au public.',
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),

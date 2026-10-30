@@ -21,9 +21,12 @@ class MaintenanceScreen extends StatelessWidget {
               children: [
                 const AppLogo(size: 40),
                 const SizedBox(height: 32),
-                Icon(Icons.construction_outlined, size: 48, color: theme.colorScheme.secondary),
+                Icon(Icons.construction_outlined,
+                    size: 48, color: theme.colorScheme.secondary),
                 const SizedBox(height: 16),
-                Text('Maintenance en cours', style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
+                Text('Maintenance en cours',
+                    style: theme.textTheme.headlineSmall,
+                    textAlign: TextAlign.center),
                 const SizedBox(height: 12),
                 Text(
                   'Coupon Pro IA est momentanément indisponible. Réessayez dans quelques minutes.',
@@ -31,7 +34,8 @@ class MaintenanceScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
-                OutlinedButton(onPressed: onRetry, child: const Text('Réessayer')),
+                OutlinedButton(
+                    onPressed: onRetry, child: const Text('Réessayer')),
               ],
             ),
           ),

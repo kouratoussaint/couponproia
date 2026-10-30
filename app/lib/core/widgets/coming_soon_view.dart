@@ -46,7 +46,9 @@ class ComingSoonView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Text(description, style: theme.textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant)),
+        Text(description,
+            style: theme.textTheme.bodyLarge
+                ?.copyWith(color: scheme.onSurfaceVariant)),
         if (features.isNotEmpty) ...[
           const SizedBox(height: 20),
           Card(
@@ -55,7 +57,8 @@ class ComingSoonView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Ce que ce module apportera', style: theme.textTheme.titleMedium),
+                  Text('Ce que ce module apportera',
+                      style: theme.textTheme.titleMedium),
                   const SizedBox(height: 8),
                   for (final f in features)
                     Padding(
@@ -63,9 +66,12 @@ class ComingSoonView extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.check_circle_outline, size: 18, color: scheme.primary),
+                          Icon(Icons.check_circle_outline,
+                              size: 18, color: scheme.primary),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(f, style: theme.textTheme.bodyMedium)),
+                          Expanded(
+                              child:
+                                  Text(f, style: theme.textTheme.bodyMedium)),
                         ],
                       ),
                     ),

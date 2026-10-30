@@ -5,16 +5,18 @@ library;
 double _d(Object? v) => (v as num).toDouble();
 double? _dn(Object? v) => v == null ? null : (v as num).toDouble();
 int _i(Object? v) => (v as num?)?.toInt() ?? 0;
-List<String> _strings(Object? v) => v is List ? v.map((e) => e.toString()).toList() : const [];
-Map<String, dynamic> _map(Object? v) => v is Map ? Map<String, dynamic>.from(v) : const {};
+List<String> _strings(Object? v) =>
+    v is List ? v.map((e) => e.toString()).toList() : const [];
+Map<String, dynamic> _map(Object? v) =>
+    v is Map ? Map<String, dynamic>.from(v) : const {};
 
 enum Reliability {
   faible,
   moyenne,
   bonne;
 
-  static Reliability parse(Object? v) =>
-      Reliability.values.firstWhere((r) => r.name == v, orElse: () => Reliability.faible);
+  static Reliability parse(Object? v) => Reliability.values
+      .firstWhere((r) => r.name == v, orElse: () => Reliability.faible);
 }
 
 class FicheOddsLine {
@@ -95,11 +97,14 @@ class AnalysisFiche {
       homeForm: _map(teams['home'])['form'] as String? ?? '',
       awayForm: _map(teams['away'])['form'] as String? ?? '',
       marketLines: [
-        for (final l in (market['lines'] as List? ?? const [])) FicheOddsLine.fromJson(_map(l)),
+        for (final l in (market['lines'] as List? ?? const []))
+          FicheOddsLine.fromJson(_map(l)),
       ],
       missing: _strings(j['missing']),
       beatsBaseline: {
-        for (final e in _map(_map(j['engine_quality'])['beats_baseline']).entries) e.key: e.value == true,
+        for (final e
+            in _map(_map(j['engine_quality'])['beats_baseline']).entries)
+          e.key: e.value == true,
       },
     );
   }
@@ -124,11 +129,15 @@ class AnalysisFiche {
   double? p(String key) => probabilities[key];
 
   /// Familles où le moteur ne fait pas mieux qu'une simple fréquence.
-  List<String> get weakGroups => [for (final e in beatsBaseline.entries) if (!e.value) e.key];
+  List<String> get weakGroups => [
+        for (final e in beatsBaseline.entries)
+          if (!e.value) e.key
+      ];
 
   /// Lignes de cotes comparables au modèle (probabilité implicite connue).
-  List<FicheOddsLine> get comparableLines =>
-      marketLines.where((l) => l.impliedProbability != null && l.modelProbability != null).toList();
+  List<FicheOddsLine> get comparableLines => marketLines
+      .where((l) => l.impliedProbability != null && l.modelProbability != null)
+      .toList();
 }
 
 class MarketPick {
@@ -179,7 +188,10 @@ class AiAnalysis {
         homeFactors: _strings(j['facteurs_domicile']),
         awayFactors: _strings(j['facteurs_exterieur']),
         trends: _strings(j['tendances']),
-        picks: [for (final p in (j['marches_envisageables'] as List? ?? const [])) MarketPick.fromJson(_map(p))],
+        picks: [
+          for (final p in (j['marches_envisageables'] as List? ?? const []))
+            MarketPick.fromJson(_map(p))
+        ],
         risks: _strings(j['risques']),
         missing: _strings(j['informations_manquantes']),
         conclusion: j['conclusion'] as String? ?? '',
@@ -222,7 +234,9 @@ class MatchAnalysis {
         provider: j['provider'] as String?,
         model: j['model'] as String?,
         fiche: AnalysisFiche.fromJson(_map(j['stats'])),
-        ai: j['analysis'] is Map ? AiAnalysis.fromJson(_map(j['analysis'])) : null,
+        ai: j['analysis'] is Map
+            ? AiAnalysis.fromJson(_map(j['analysis']))
+            : null,
         createdAt: DateTime.parse(j['created_at'] as String).toLocal(),
         cached: j['cached'] != false,
       );
@@ -277,7 +291,8 @@ class Metrics {
 }
 
 class CalibrationBin {
-  const CalibrationBin(this.from, this.to, this.count, this.predicted, this.observed);
+  const CalibrationBin(
+      this.from, this.to, this.count, this.predicted, this.observed);
 
   final double from;
   final double to;
@@ -317,14 +332,21 @@ class EngineEvaluation {
         accuracyModel: _d(j['accuracy_model']),
         accuracyBaseline: _dn(details['accuracy_baseline']),
       ),
-      over25: details['over_2_5'] is Map ? Metrics.fromJson(_map(details['over_2_5'])) : null,
-      btts: details['btts'] is Map ? Metrics.fromJson(_map(details['btts'])) : null,
+      over25: details['over_2_5'] is Map
+          ? Metrics.fromJson(_map(details['over_2_5']))
+          : null,
+      btts: details['btts'] is Map
+          ? Metrics.fromJson(_map(details['btts']))
+          : null,
       calibration: [
         for (final b in (j['calibration'] as List? ?? const []))
-          CalibrationBin(_d(b['from']), _d(b['to']), _i(b['count']), _d(b['predicted']), _d(b['observed'])),
+          CalibrationBin(_d(b['from']), _d(b['to']), _i(b['count']),
+              _d(b['predicted']), _d(b['observed'])),
       ],
       competitions: _strings(scope['competitions']),
-      perCompetition: {for (final e in per.entries) e.key: Metrics.fromJson(_map(e.value))},
+      perCompetition: {
+        for (final e in per.entries) e.key: Metrics.fromJson(_map(e.value))
+      },
     );
   }
 

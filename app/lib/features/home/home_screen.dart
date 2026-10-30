@@ -11,13 +11,43 @@ import '../shell/app_drawer.dart';
 
 /// Modules affichés sur l'accueil avec leur lot de livraison et leur flag.
 const _modules = [
-  (flag: 'matches', title: 'Matchs, classements et cotes', lot: 'LOT 2', icon: Icons.sports_soccer),
-  (flag: 'match_analysis', title: 'Analyses IA des matchs', lot: 'LOT 3', icon: Icons.psychology),
-  (flag: 'platform_coupons', title: 'Coupons IA de la plateforme', lot: 'LOT 4', icon: Icons.receipt_long),
-  (flag: 'assistant_ia', title: 'Mon Assistant IA', lot: 'LOT 5', icon: Icons.smart_toy),
+  (
+    flag: 'matches',
+    title: 'Matchs, classements et cotes',
+    lot: 'LOT 2',
+    icon: Icons.sports_soccer
+  ),
+  (
+    flag: 'match_analysis',
+    title: 'Analyses IA des matchs',
+    lot: 'LOT 3',
+    icon: Icons.psychology
+  ),
+  (
+    flag: 'platform_coupons',
+    title: 'Coupons IA de la plateforme',
+    lot: 'LOT 4',
+    icon: Icons.receipt_long
+  ),
+  (
+    flag: 'assistant_ia',
+    title: 'Mon Assistant IA',
+    lot: 'LOT 5',
+    icon: Icons.smart_toy
+  ),
   (flag: 'ai_lab', title: 'Laboratoire IA', lot: 'LOT 6', icon: Icons.science),
-  (flag: 'results_tracking', title: 'Suivi des performances', lot: 'LOT 8', icon: Icons.insights),
-  (flag: 'subscriptions', title: 'Forfaits et crédits IA', lot: 'LOT 9', icon: Icons.workspace_premium),
+  (
+    flag: 'results_tracking',
+    title: 'Suivi des performances',
+    lot: 'LOT 8',
+    icon: Icons.insights
+  ),
+  (
+    flag: 'subscriptions',
+    title: 'Forfaits et crédits IA',
+    lot: 'LOT 9',
+    icon: Icons.workspace_premium
+  ),
 ];
 
 class HomeScreen extends ConsumerWidget {
@@ -28,10 +58,12 @@ class HomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final name = ref.watch(myProfileProvider).valueOrNull?.displayName;
-    final flags = ref.watch(featureFlagsProvider).valueOrNull ?? const <String, bool>{};
+    final flags =
+        ref.watch(featureFlagsProvider).valueOrNull ?? const <String, bool>{};
 
     return Scaffold(
-      appBar: AppBar(leading: const DrawerMenuButton(), title: const AppLogo(size: 30)),
+      appBar: AppBar(
+          leading: const DrawerMenuButton(), title: const AppLogo(size: 30)),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(featureFlagsProvider);
@@ -48,7 +80,8 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: 4),
             Text(
               'L’intelligence au service de vos pronostics.',
-              style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 20),
             Card(
@@ -76,7 +109,8 @@ class HomeScreen extends ConsumerWidget {
               child: ListTile(
                 leading: Icon(Icons.today_outlined, color: scheme.primary),
                 title: const Text('Matchs du jour'),
-                subtitle: const Text('Calendrier, scores, cotes et classements'),
+                subtitle:
+                    const Text('Calendrier, scores, cotes et classements'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.go(AppRoutes.matches),
               ),
@@ -95,7 +129,8 @@ class HomeScreen extends ConsumerWidget {
                       trailing: (flags[m.flag] ?? false)
                           ? Chip(
                               label: const Text('Actif'),
-                              backgroundColor: scheme.primary.withValues(alpha: 0.15),
+                              backgroundColor:
+                                  scheme.primary.withValues(alpha: 0.15),
                               side: BorderSide.none,
                             )
                           : const Chip(label: Text('Bientôt')),
@@ -106,7 +141,8 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: 20),
             Text(
               'Les pronostics sont des estimations. Aucun gain n’est garanti.',
-              style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
           ],

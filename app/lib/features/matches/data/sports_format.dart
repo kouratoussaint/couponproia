@@ -36,7 +36,8 @@ DateTime archiveDay(DateTime today, int season) {
 }
 
 /// « 2024/25 »
-String seasonLabel(int season) => '$season/${((season + 1) % 100).toString().padLeft(2, '0')}';
+String seasonLabel(int season) =>
+    '$season/${((season + 1) % 100).toString().padLeft(2, '0')}';
 
 String statusLabel(MatchSummary m) {
   switch (m.status) {
@@ -79,7 +80,8 @@ String? resultFor(int teamId, MatchSummary m) {
 
 /// Forme récente : résultats du plus récent au plus ancien.
 List<String> formFor(int teamId, List<MatchSummary> matches) {
-  final sorted = [...matches]..sort((a, b) => b.kickoffAt.compareTo(a.kickoffAt));
+  final sorted = [...matches]
+    ..sort((a, b) => b.kickoffAt.compareTo(a.kickoffAt));
   return [
     for (final m in sorted)
       if (resultFor(teamId, m) case final r?) r,
@@ -87,7 +89,8 @@ List<String> formFor(int teamId, List<MatchSummary> matches) {
 }
 
 /// Regroupe les matchs par compétition, dans l'ordre d'apparition.
-List<(CompetitionRef, List<MatchSummary>)> groupByCompetition(List<MatchSummary> matches) {
+List<(CompetitionRef, List<MatchSummary>)> groupByCompetition(
+    List<MatchSummary> matches) {
   final order = <int>[];
   final byId = <int, (CompetitionRef, List<MatchSummary>)>{};
   for (final m in matches) {
@@ -103,12 +106,27 @@ List<(CompetitionRef, List<MatchSummary>)> groupByCompetition(List<MatchSummary>
 }
 
 const _accents = {
-  'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a', 'ã': 'a',
+  'à': 'a',
+  'â': 'a',
+  'ä': 'a',
+  'á': 'a',
+  'ã': 'a',
   'ç': 'c',
-  'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
-  'î': 'i', 'ï': 'i', 'í': 'i',
-  'ô': 'o', 'ö': 'o', 'ó': 'o', 'õ': 'o',
-  'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
+  'é': 'e',
+  'è': 'e',
+  'ê': 'e',
+  'ë': 'e',
+  'î': 'i',
+  'ï': 'i',
+  'í': 'i',
+  'ô': 'o',
+  'ö': 'o',
+  'ó': 'o',
+  'õ': 'o',
+  'ù': 'u',
+  'û': 'u',
+  'ü': 'u',
+  'ú': 'u',
   'ñ': 'n',
 };
 
@@ -139,7 +157,8 @@ String formatLine(double line) => line.toStringAsFixed(1).replaceAll('.', ',');
 String outcomeLabel(OddsLine o) {
   switch (o.marketCode) {
     case '1X2':
-      return const {'HOME': '1', 'DRAW': 'X', 'AWAY': '2'}[o.outcomeCode] ?? o.outcomeCode;
+      return const {'HOME': '1', 'DRAW': 'X', 'AWAY': '2'}[o.outcomeCode] ??
+          o.outcomeCode;
     case 'DC':
       return o.outcomeCode;
     case 'OU':
@@ -158,7 +177,18 @@ const marketTitles = {
   'BTTS': 'Les deux équipes marquent',
 };
 
-const _outcomeOrder = ['HOME', 'DRAW', 'AWAY', '1X', '12', 'X2', 'OVER', 'UNDER', 'YES', 'NO'];
+const _outcomeOrder = [
+  'HOME',
+  'DRAW',
+  'AWAY',
+  '1X',
+  '12',
+  'X2',
+  'OVER',
+  'UNDER',
+  'YES',
+  'NO'
+];
 
 /// Cotes rangées par marché, issues dans l'ordre habituel (1, X, 2…), lignes croissantes.
 Map<String, List<OddsLine>> oddsByMarket(List<OddsLine> odds) {
@@ -168,7 +198,9 @@ Map<String, List<OddsLine>> oddsByMarket(List<OddsLine> odds) {
       ..sort((a, b) {
         final byLine = (a.line ?? 0).compareTo(b.line ?? 0);
         if (byLine != 0) return byLine;
-        return _outcomeOrder.indexOf(a.outcomeCode).compareTo(_outcomeOrder.indexOf(b.outcomeCode));
+        return _outcomeOrder
+            .indexOf(a.outcomeCode)
+            .compareTo(_outcomeOrder.indexOf(b.outcomeCode));
       });
     if (list.isNotEmpty) result[code] = list;
   }

@@ -76,12 +76,15 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
           icon: Icons.sports_soccer,
           title: 'Matchs momentanément indisponibles',
           lot: 'LOT 2',
-          description: 'L’administration a désactivé ce module. Réessayez plus tard.',
+          description:
+              'L’administration a désactivé ce module. Réessayez plus tard.',
         ),
       );
     }
 
-    final days = [for (var i = -1; i <= 6; i++) DateTime(day.year, day.month, day.day + i)];
+    final days = [
+      for (var i = -1; i <= 6; i++) DateTime(day.year, day.month, day.day + i)
+    ];
     final matches = ref.watch(matchesOfDayProvider(day));
 
     return Scaffold(
@@ -158,7 +161,8 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                       title: 'Impossible de charger les matchs',
                       body: userMessageFor(e),
                       action: OutlinedButton(
-                        onPressed: () => ref.invalidate(matchesOfDayProvider(day)),
+                        onPressed: () =>
+                            ref.invalidate(matchesOfDayProvider(day)),
                         child: const Text('Réessayer'),
                       ),
                     ),
@@ -167,7 +171,9 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                 data: (all) {
                   final groups = groupByCompetition(all);
                   final filtered = all
-                      .where((m) => _competitionId == null || m.competition.id == _competitionId)
+                      .where((m) =>
+                          _competitionId == null ||
+                          m.competition.id == _competitionId)
                       .where((m) => matchesQuery(m, _search.text))
                       .toList();
                   final shown = groupByCompetition(filtered);
@@ -186,17 +192,21 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                                 child: FilterChip(
                                   label: const Text('Toutes'),
                                   selected: _competitionId == null,
-                                  onSelected: (_) => setState(() => _competitionId = null),
+                                  onSelected: (_) =>
+                                      setState(() => _competitionId = null),
                                 ),
                               ),
                               for (final (competition, list) in groups)
                                 Padding(
                                   padding: const EdgeInsets.only(right: 8),
                                   child: FilterChip(
-                                    avatar: SportsLogo(url: competition.logoUrl, size: 18),
-                                    label: Text('${competition.name} (${list.length})'),
+                                    avatar: SportsLogo(
+                                        url: competition.logoUrl, size: 18),
+                                    label: Text(
+                                        '${competition.name} (${list.length})'),
                                     selected: _competitionId == competition.id,
-                                    onSelected: (_) => setState(() => _competitionId = competition.id),
+                                    onSelected: (_) => setState(
+                                        () => _competitionId = competition.id),
                                   ),
                                 ),
                             ],
@@ -206,7 +216,8 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                         const InfoMessage(
                           icon: Icons.event_busy_outlined,
                           title: 'Aucun match pour ce jour',
-                          body: 'Aucune des compétitions suivies ne joue ce jour-là, ou le calendrier n’est pas encore '
+                          body:
+                              'Aucune des compétitions suivies ne joue ce jour-là, ou le calendrier n’est pas encore '
                               'synchronisé (mise à jour chaque matin à 4 h). Essayez un autre jour.',
                         )
                       else if (filtered.isEmpty)
@@ -215,7 +226,10 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                           title: 'Aucun match ne correspond à votre recherche',
                         ),
                       for (final (competition, list) in shown) ...[
-                        _CompetitionHeader(name: competition.name, country: competition.country, logoUrl: competition.logoUrl),
+                        _CompetitionHeader(
+                            name: competition.name,
+                            country: competition.country,
+                            logoUrl: competition.logoUrl),
                         Card(
                           margin: const EdgeInsets.symmetric(horizontal: 12),
                           clipBehavior: Clip.antiAlias,
@@ -255,11 +269,14 @@ class _CompetitionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Row(
         children: [
-          SportsLogo(url: logoUrl, size: 20, fallback: Icons.emoji_events_outlined),
+          SportsLogo(
+              url: logoUrl, size: 20, fallback: Icons.emoji_events_outlined),
           const SizedBox(width: 8),
           Expanded(child: Text(name, style: theme.textTheme.titleSmall)),
           if (country != null)
-            Text(country!, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            Text(country!,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         ],
       ),
     );

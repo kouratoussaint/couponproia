@@ -19,7 +19,10 @@ const fallbackDisclaimers = [
 /// Interrupteurs des modules, pilotés depuis l'administration sans nouvel APK.
 final featureFlagsProvider = FutureProvider<Map<String, bool>>((ref) async {
   ref.watch(currentUserProvider);
-  final rows = await ref.watch(supabaseClientProvider).from('feature_flags').select('key, enabled');
+  final rows = await ref
+      .watch(supabaseClientProvider)
+      .from('feature_flags')
+      .select('key, enabled');
   return {for (final row in rows) row['key'] as String: row['enabled'] as bool};
 });
 
@@ -32,7 +35,8 @@ final myPermissionsProvider = FutureProvider<Set<String>>((ref) async {
 });
 
 /// Réglages publics (devise, tarifs, mentions…).
-final publicSettingsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+final publicSettingsProvider =
+    FutureProvider<Map<String, dynamic>>((ref) async {
   final rows = await ref
       .watch(supabaseClientProvider)
       .from('app_settings')
@@ -81,20 +85,24 @@ class AppVersionInfo {
 enum UpdateKind { none, optional, required }
 
 /// Compare la version installée à la dernière version publiée.
-UpdateKind updateKindFor({required int installedBuild, AppVersionInfo? latest}) {
+UpdateKind updateKindFor(
+    {required int installedBuild, AppVersionInfo? latest}) {
   if (latest == null || installedBuild <= 0) return UpdateKind.none;
   if (installedBuild < latest.minSupportedBuild) return UpdateKind.required;
   if (installedBuild < latest.buildNumber) return UpdateKind.optional;
   return UpdateKind.none;
 }
 
-final installedPackageProvider = FutureProvider<PackageInfo>((ref) => PackageInfo.fromPlatform());
+final installedPackageProvider =
+    FutureProvider<PackageInfo>((ref) => PackageInfo.fromPlatform());
 
-final latestAndroidVersionProvider = FutureProvider<AppVersionInfo?>((ref) async {
+final latestAndroidVersionProvider =
+    FutureProvider<AppVersionInfo?>((ref) async {
   final row = await ref
       .watch(supabaseClientProvider)
       .from('app_versions')
-      .select('version_name, build_number, min_supported_build, download_url, release_notes')
+      .select(
+          'version_name, build_number, min_supported_build, download_url, release_notes')
       .eq('platform', 'android')
       .order('build_number', ascending: false)
       .limit(1)

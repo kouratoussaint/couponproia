@@ -29,7 +29,10 @@ class _EngineAdminScreenState extends ConsumerState<EngineAdminScreen> {
       ref.invalidate(latestEvaluationProvider);
       if (mounted) showMessage(context, 'Évaluation terminée.');
     } catch (e) {
-      if (mounted) showMessage(context, e is AnalysisException ? e.message : userMessageFor(e), error: true);
+      if (mounted)
+        showMessage(
+            context, e is AnalysisException ? e.message : userMessageFor(e),
+            error: true);
     } finally {
       if (mounted) setState(() => _running = false);
     }
@@ -37,11 +40,14 @@ class _EngineAdminScreenState extends ConsumerState<EngineAdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final permissions = ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
+    final permissions =
+        ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!permissions.contains('ai.configure')) {
       return Scaffold(
         appBar: AppBar(title: const Text('Moteur d’analyse')),
-        body: const InfoMessage(icon: Icons.lock_outline, title: 'Accès réservé aux administrateurs'),
+        body: const InfoMessage(
+            icon: Icons.lock_outline,
+            title: 'Accès réservé aux administrateurs'),
       );
     }
     final evaluation = ref.watch(latestEvaluationProvider);
@@ -67,9 +73,14 @@ class _EngineAdminScreenState extends ConsumerState<EngineAdminScreen> {
           FilledButton.icon(
             onPressed: _running ? null : _evaluate,
             icon: _running
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.fact_check_outlined),
-            label: Text(_running ? 'Évaluation en cours…' : 'Évaluer le moteur sur l’historique'),
+            label: Text(_running
+                ? 'Évaluation en cours…'
+                : 'Évaluer le moteur sur l’historique'),
           ),
           const SizedBox(height: 4),
           Text(
@@ -78,10 +89,16 @@ class _EngineAdminScreenState extends ConsumerState<EngineAdminScreen> {
             textAlign: TextAlign.center,
           ),
           evaluation.when(
-            loading: () => const Padding(padding: EdgeInsets.all(24), child: LinearProgressIndicator()),
-            error: (e, _) => InfoMessage(icon: Icons.cloud_off_outlined, title: 'Indisponible', body: userMessageFor(e)),
+            loading: () => const Padding(
+                padding: EdgeInsets.all(24), child: LinearProgressIndicator()),
+            error: (e, _) => InfoMessage(
+                icon: Icons.cloud_off_outlined,
+                title: 'Indisponible',
+                body: userMessageFor(e)),
             data: (e) => e == null
-                ? const InfoMessage(icon: Icons.query_stats, title: 'Aucune évaluation pour l’instant')
+                ? const InfoMessage(
+                    icon: Icons.query_stats,
+                    title: 'Aucune évaluation pour l’instant')
                 : _EvaluationView(evaluation: e),
           ),
           const SectionTitle('Requêtes IA (7 derniers jours)'),
@@ -105,7 +122,8 @@ class _EvaluationView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final e = evaluation;
-    final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final muted = theme.textTheme.bodySmall
+        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -152,14 +170,22 @@ class _EvaluationView extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 3),
                       child: Row(
                         children: [
-                          Expanded(child: Text('Annoncé ${pct(b.from)}–${pct(b.to)}')),
-                          Text('réalisé ${pct(b.observed)}', style: theme.textTheme.titleSmall),
-                          SizedBox(width: 72, child: Text('(${b.count})', textAlign: TextAlign.end, style: muted)),
+                          Expanded(
+                              child:
+                                  Text('Annoncé ${pct(b.from)}–${pct(b.to)}')),
+                          Text('réalisé ${pct(b.observed)}',
+                              style: theme.textTheme.titleSmall),
+                          SizedBox(
+                              width: 72,
+                              child: Text('(${b.count})',
+                                  textAlign: TextAlign.end, style: muted)),
                         ],
                       ),
                     ),
                   const SizedBox(height: 8),
-                  Text('Un modèle bien calibré réalise à peu près ce qu’il annonce.', style: muted),
+                  Text(
+                      'Un modèle bien calibré réalise à peu près ce qu’il annonce.',
+                      style: muted),
                 ],
               ),
             ),
@@ -179,8 +205,12 @@ class _EvaluationView extends StatelessWidget {
                       '(réf. ${decimal(entry.value.brierBaseline, 3)}) · juste ${pct(entry.value.accuracyModel)}',
                     ),
                     trailing: Icon(
-                      entry.value.beatsBaseline ? Icons.check_circle_outline : Icons.remove_circle_outline,
-                      color: entry.value.beatsBaseline ? theme.colorScheme.primary : theme.colorScheme.error,
+                      entry.value.beatsBaseline
+                          ? Icons.check_circle_outline
+                          : Icons.remove_circle_outline,
+                      color: entry.value.beatsBaseline
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.error,
                     ),
                   ),
               ],
@@ -200,9 +230,10 @@ class _MetricsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final head = theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
-    Widget cell(String text, {TextStyle? style}) =>
-        SizedBox(width: 78, child: Text(text, textAlign: TextAlign.end, style: style));
+    final head = theme.textTheme.labelSmall
+        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    Widget cell(String text, {TextStyle? style}) => SizedBox(
+        width: 78, child: Text(text, textAlign: TextAlign.end, style: style));
     return Column(
       children: [
         Row(
@@ -221,7 +252,9 @@ class _MetricsTable extends StatelessWidget {
               cell(decimal(m.brierModel, 3),
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: m.beatsBaseline ? theme.colorScheme.primary : theme.colorScheme.error,
+                    color: m.beatsBaseline
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.error,
                   )),
               cell(decimal(m.loglossModel, 3)),
               cell(pct(m.accuracyModel)),
@@ -232,7 +265,8 @@ class _MetricsTable extends StatelessWidget {
               Expanded(child: Text('  référence', style: head)),
               cell(decimal(m.brierBaseline, 3), style: head),
               cell(decimal(m.loglossBaseline, 3), style: head),
-              cell(m.accuracyBaseline == null ? '—' : pct(m.accuracyBaseline!), style: head),
+              cell(m.accuracyBaseline == null ? '—' : pct(m.accuracyBaseline!),
+                  style: head),
             ],
           ),
         ],
@@ -250,7 +284,8 @@ class _AiUsage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     if (rows.isEmpty) {
-      return const InfoMessage(icon: Icons.history, title: 'Aucune requête IA sur la période');
+      return const InfoMessage(
+          icon: Icons.history, title: 'Aucune requête IA sur la période');
     }
     final byStatus = <String, int>{};
     var cost = 0.0;
@@ -277,10 +312,13 @@ class _AiUsage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final e in byStatus.entries) Text('${e.value} ${labels[e.key] ?? e.key}'),
+            for (final e in byStatus.entries)
+              Text('${e.value} ${labels[e.key] ?? e.key}'),
             const SizedBox(height: 8),
             Text(
-              costKnown ? 'Coût estimé : ${cost.toStringAsFixed(4).replaceAll('.', ',')} USD' : 'Coût : non estimé',
+              costKnown
+                  ? 'Coût estimé : ${cost.toStringAsFixed(4).replaceAll('.', ',')} USD'
+                  : 'Coût : non estimé',
               style: theme.textTheme.titleSmall,
             ),
             if (lastErrors.isNotEmpty) ...[

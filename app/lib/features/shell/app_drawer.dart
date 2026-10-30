@@ -29,7 +29,8 @@ class DrawerMenuButton extends StatelessWidget {
 /// Menu latéral : les cinq espaces principaux, les espaces secondaires
 /// (avec leur lot de livraison s'ils ne sont pas encore prêts) et l'administration.
 class AppDrawer extends ConsumerWidget {
-  const AppDrawer({super.key, required this.currentIndex, required this.onSelectTab});
+  const AppDrawer(
+      {super.key, required this.currentIndex, required this.onSelectTab});
 
   final int currentIndex;
   final ValueChanged<int> onSelectTab;
@@ -41,7 +42,8 @@ class AppDrawer extends ConsumerWidget {
     final theme = Theme.of(context);
     final profile = ref.watch(myProfileProvider).valueOrNull;
     final user = ref.watch(currentUserProvider);
-    final permissions = ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
+    final permissions =
+        ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     final version = ref.watch(installedPackageProvider).valueOrNull;
 
     void open(String location) {
@@ -63,10 +65,12 @@ class AppDrawer extends ConsumerWidget {
             children: [
               const AppFullLogo(height: 84),
               const SizedBox(height: 12),
-              Text(profile?.displayName ?? '', style: theme.textTheme.titleMedium),
+              Text(profile?.displayName ?? '',
+                  style: theme.textTheme.titleMedium),
               Text(
                 user?.email ?? '',
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -105,10 +109,20 @@ class AppDrawer extends ConsumerWidget {
           title: const Text('Compétitions et classements'),
           onTap: () => open(AppRoutes.competitions),
         ),
-        const _SoonTile(icon: Icons.science_outlined, label: 'Laboratoire IA', lot: 'LOT 6'),
-        const _SoonTile(icon: Icons.insights_outlined, label: 'Performances', lot: 'LOT 8'),
-        const _SoonTile(icon: Icons.workspace_premium_outlined, label: 'Abonnement et crédits', lot: 'LOT 9'),
-        const _SoonTile(icon: Icons.palette_outlined, label: 'Studio graphique', lot: 'LOT 7'),
+        const _SoonTile(
+            icon: Icons.science_outlined,
+            label: 'Laboratoire IA',
+            lot: 'LOT 6'),
+        const _SoonTile(
+            icon: Icons.insights_outlined, label: 'Performances', lot: 'LOT 8'),
+        const _SoonTile(
+            icon: Icons.workspace_premium_outlined,
+            label: 'Abonnement et crédits',
+            lot: 'LOT 9'),
+        const _SoonTile(
+            icon: Icons.palette_outlined,
+            label: 'Studio graphique',
+            lot: 'LOT 7'),
         if (permissions.contains('sports.configure') ||
             permissions.contains('ai.configure') ||
             permissions.contains('generation.manage')) ...[
@@ -160,7 +174,8 @@ class AppDrawer extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(28, 8, 28, 24),
             child: Text(
               'Version ${version.version} (${version.buildNumber})',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
       ],
@@ -180,7 +195,8 @@ class _SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(28, 12, 28, 4),
       child: Text(
         text,
-        style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        style: theme.textTheme.labelLarge
+            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
       ),
     );
   }

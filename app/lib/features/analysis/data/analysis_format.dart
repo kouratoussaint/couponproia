@@ -10,14 +10,16 @@ String edgePoints(double edge) {
   return '${pts > 0 ? '+' : '−'}${pts.abs()} pts';
 }
 
-String decimal(double x, [int digits = 2]) => x.toStringAsFixed(digits).replaceAll('.', ',');
+String decimal(double x, [int digits = 2]) =>
+    x.toStringAsFixed(digits).replaceAll('.', ',');
 
 /// Libellé lisible d'une issue (« 1X2.HOME », « OU.OVER.2.5 »…) avec le nom des équipes.
 String outcomeKeyLabel(String key, String home, String away) {
   final parts = key.split('.');
   final market = parts.first;
   final outcome = parts.length > 1 ? parts[1] : '';
-  final line = parts.length > 2 ? parts.sublist(2).join('.').replaceAll('.', ',') : '';
+  final line =
+      parts.length > 2 ? parts.sublist(2).join('.').replaceAll('.', ',') : '';
   switch (market) {
     case '1X2':
       return switch (outcome) {
@@ -36,7 +38,9 @@ String outcomeKeyLabel(String key, String home, String away) {
     case 'OU':
       return outcome == 'OVER' ? 'Plus de $line buts' : 'Moins de $line buts';
     case 'BTTS':
-      return outcome == 'YES' ? 'Les deux équipes marquent' : 'Au moins une équipe ne marque pas';
+      return outcome == 'YES'
+          ? 'Les deux équipes marquent'
+          : 'Au moins une équipe ne marque pas';
   }
   return key;
 }
@@ -53,11 +57,13 @@ String reliabilityExplanation(AnalysisFiche f) =>
 
 /// Pourquoi le texte de l'IA est absent.
 String statsOnlyReason(String? reason) => switch (reason) {
-      'no_provider' => 'L’analyse rédigée par l’IA n’est pas encore activée. Voici la fiche statistique.',
+      'no_provider' =>
+        'L’analyse rédigée par l’IA n’est pas encore activée. Voici la fiche statistique.',
       'validation_failed' =>
         'Le texte proposé par l’IA n’a pas passé nos contrôles (chiffres vérifiés, aucune promesse de gain). '
             'Voici la fiche statistique seule.',
-      'provider_error' => 'Le service d’IA est momentanément indisponible. Voici la fiche statistique seule.',
+      'provider_error' =>
+        'Le service d’IA est momentanément indisponible. Voici la fiche statistique seule.',
       _ => 'Voici la fiche statistique calculée par le moteur.',
     };
 

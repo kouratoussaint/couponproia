@@ -31,7 +31,9 @@ class ThemeModeController extends Notifier<ThemeMode> {
 
   Future<void> setMode(ThemeMode mode) async {
     state = mode;
-    await ref.read(sharedPreferencesProvider).setString(storageKey, themeModeToName(mode));
+    await ref
+        .read(sharedPreferencesProvider)
+        .setString(storageKey, themeModeToName(mode));
     await _pushRemote(mode);
   }
 
@@ -50,7 +52,9 @@ class ThemeModeController extends Notifier<ThemeMode> {
       final remote = themeModeFromName(row?['theme_mode'] as String?);
       if (remote != state) {
         state = remote;
-        await ref.read(sharedPreferencesProvider).setString(storageKey, themeModeToName(remote));
+        await ref
+            .read(sharedPreferencesProvider)
+            .setString(storageKey, themeModeToName(remote));
       }
     } catch (_) {
       // Hors ligne : on garde la préférence locale.

@@ -26,12 +26,18 @@ class CouponDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final coupon = ref.watch(couponProvider(couponId));
     return Scaffold(
-      appBar: AppBar(title: Text(categoryLabels[coupon.valueOrNull?.category] ?? 'Coupon')),
+      appBar: AppBar(
+          title:
+              Text(categoryLabels[coupon.valueOrNull?.category] ?? 'Coupon')),
       body: coupon.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => InfoMessage(icon: Icons.cloud_off_outlined, title: 'Coupon indisponible', body: userMessageFor(e)),
+        error: (e, _) => InfoMessage(
+            icon: Icons.cloud_off_outlined,
+            title: 'Coupon indisponible',
+            body: userMessageFor(e)),
         data: (c) => c == null
-            ? const InfoMessage(icon: Icons.help_outline, title: 'Coupon introuvable')
+            ? const InfoMessage(
+                icon: Icons.help_outline, title: 'Coupon introuvable')
             : RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(couponProvider(couponId));
@@ -53,9 +59,13 @@ class _CouponBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final c = coupon;
-    final current = ref.watch(currentOddsProvider(c.id)).valueOrNull ?? const <String, double>{};
-    final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
-    final canManage = (ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{}).contains('generation.manage');
+    final current = ref.watch(currentOddsProvider(c.id)).valueOrNull ??
+        const <String, double>{};
+    final muted = theme.textTheme.bodySmall
+        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final canManage =
+        (ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{})
+            .contains('generation.manage');
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
@@ -80,7 +90,9 @@ class _CouponBody extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(c.title, style: theme.textTheme.titleLarge)),
+                    Expanded(
+                        child:
+                            Text(c.title, style: theme.textTheme.titleLarge)),
                   ],
                 ),
                 if (c.description.isNotEmpty) ...[
@@ -96,7 +108,8 @@ class _CouponBody extends ConsumerWidget {
                       children: [
                         Text('Cote totale', style: theme.textTheme.labelMedium),
                         Text(decimal(c.totalOdd),
-                            style: theme.textTheme.headlineMedium?.copyWith(color: theme.colorScheme.primary)),
+                            style: theme.textTheme.headlineMedium
+                                ?.copyWith(color: theme.colorScheme.primary)),
                       ],
                     ),
                     const SizedBox(width: 24),
@@ -104,8 +117,10 @@ class _CouponBody extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Probabilité estimée (modèle)', style: theme.textTheme.labelMedium),
-                          Text(pct(c.combinedProbability), style: theme.textTheme.titleLarge),
+                          Text('Probabilité estimée (modèle)',
+                              style: theme.textTheme.labelMedium),
+                          Text(pct(c.combinedProbability),
+                              style: theme.textTheme.titleLarge),
                         ],
                       ),
                     ),
@@ -117,7 +132,8 @@ class _CouponBody extends ConsumerWidget {
                   runSpacing: 6,
                   children: [
                     RiskBadge(risk: c.riskLevel),
-                    Text('${c.selections.length} sélections', style: theme.textTheme.labelMedium),
+                    Text('${c.selections.length} sélections',
+                        style: theme.textTheme.labelMedium),
                   ],
                 ),
                 if (c.marketNote != null) ...[
@@ -129,7 +145,9 @@ class _CouponBody extends ConsumerWidget {
           ),
         ),
         const SectionTitle('Sélections'),
-        for (final s in c.selections) _SelectionCard(selection: s, currentOdd: current['${s.match.id}:${s.key}']),
+        for (final s in c.selections)
+          _SelectionCard(
+              selection: s, currentOdd: current['${s.match.id}:${s.key}']),
         if (c.summary.isNotEmpty) ...[
           const SectionTitle('Analyse générale'),
           Card(
@@ -141,13 +159,19 @@ class _CouponBody extends ConsumerWidget {
                   Text(c.summary, style: theme.textTheme.bodyMedium),
                   if (c.vigilance.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    Text('Points de vigilance', style: theme.textTheme.labelLarge),
+                    Text('Points de vigilance',
+                        style: theme.textTheme.labelLarge),
                     for (final v in c.vigilance)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [const Text('•  '), Expanded(child: Text(v, style: theme.textTheme.bodySmall))],
+                          children: [
+                            const Text('•  '),
+                            Expanded(
+                                child:
+                                    Text(v, style: theme.textTheme.bodySmall))
+                          ],
                         ),
                       ),
                   ],
@@ -187,8 +211,10 @@ class _CouponBody extends ConsumerWidget {
           [
             'Moteur ${c.engineVersion}',
             'source ${c.dataSource}',
-            if (c.summaryFromAi && c.aiModel != null) 'analyse rédigée par l’IA (${c.aiModel}) et vérifiée',
-            if (c.publishedAt != null) 'publié le ${shortDate(c.publishedAt!)}/${c.publishedAt!.year} à ${timeLabel(c.publishedAt!)}',
+            if (c.summaryFromAi && c.aiModel != null)
+              'analyse rédigée par l’IA (${c.aiModel}) et vérifiée',
+            if (c.publishedAt != null)
+              'publié le ${shortDate(c.publishedAt!)}/${c.publishedAt!.year} à ${timeLabel(c.publishedAt!)}',
           ].join(' · '),
           style: muted,
           textAlign: TextAlign.center,
@@ -213,12 +239,17 @@ class _CouponBody extends ConsumerWidget {
         title: const Text('Retirer le coupon'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(labelText: 'Motif (affiché aux utilisateurs)'),
+          decoration: const InputDecoration(
+              labelText: 'Motif (affiché aux utilisateurs)'),
           maxLines: 2,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-          FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Retirer')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text.trim()),
+              child: const Text('Retirer')),
         ],
       ),
     );
@@ -246,7 +277,8 @@ class _SelectionCard extends StatelessWidget {
     final s = selection;
     final m = s.match;
     final now = DateTime.now();
-    final played = m.homeGoals != null && m.awayGoals != null && m.status != 'scheduled';
+    final played =
+        m.homeGoals != null && m.awayGoals != null && m.status != 'scheduled';
     final changed = currentOdd != null && (currentOdd! - s.odd).abs() >= 0.01;
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -259,7 +291,8 @@ class _SelectionCard extends StatelessWidget {
             children: [
               Text(
                 '${m.competition} · ${dayLabel(m.kickoffAt, now)} ${shortDate(m.kickoffAt)} à ${timeLabel(m.kickoffAt)}',
-                style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 6),
               Row(
@@ -268,7 +301,9 @@ class _SelectionCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      played ? '${m.home} ${m.homeGoals}-${m.awayGoals} ${m.away}' : '${m.home} – ${m.away}',
+                      played
+                          ? '${m.home} ${m.homeGoals}-${m.awayGoals} ${m.away}'
+                          : '${m.home} – ${m.away}',
                       style: theme.textTheme.titleSmall,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -282,9 +317,12 @@ class _SelectionCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(outcomeKeyLabel(s.key, m.home, m.away),
-                        style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                        style: theme.textTheme.bodyLarge
+                            ?.copyWith(fontWeight: FontWeight.w600)),
                   ),
-                  Text(decimal(s.odd), style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
+                  Text(decimal(s.odd),
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(color: theme.colorScheme.primary)),
                 ],
               ),
               const SizedBox(height: 6),
@@ -293,14 +331,20 @@ class _SelectionCard extends StatelessWidget {
                 runSpacing: 6,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  ReliabilityChip(reliability: Reliability.parse(s.reliability)),
-                  Text('Modèle ${pct(s.modelProbability)}', style: theme.textTheme.labelMedium),
-                  if (s.impliedProbability != null) Text('Marché ${pct(s.impliedProbability!)}', style: theme.textTheme.labelMedium),
+                  ReliabilityChip(
+                      reliability: Reliability.parse(s.reliability)),
+                  Text('Modèle ${pct(s.modelProbability)}',
+                      style: theme.textTheme.labelMedium),
+                  if (s.impliedProbability != null)
+                    Text('Marché ${pct(s.impliedProbability!)}',
+                        style: theme.textTheme.labelMedium),
                   if (s.edge != null)
                     Text(
                       'Écart ${edgePoints(s.edge!)}',
                       style: theme.textTheme.labelMedium?.copyWith(
-                        color: s.edge! > 0 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                        color: s.edge! > 0
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                 ],
@@ -311,7 +355,8 @@ class _SelectionCard extends StatelessWidget {
               Text(
                 'Cote médiane de ${s.bookmakers ?? '?'} bookmakers relevée le ${shortDate(s.oddsCapturedAt)} à ${timeLabel(s.oddsCapturedAt)}'
                 '${changed ? ' · cote actuelle ${decimal(currentOdd!)} (la cote publiée est conservée)' : ''}',
-                style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
           ),

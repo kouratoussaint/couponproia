@@ -37,7 +37,9 @@ class AppLogo extends StatelessWidget {
           TextSpan(
             text: 'Coupon Pro ',
             style: style,
-            children: [TextSpan(text: 'IA', style: style.copyWith(color: scheme.primary))],
+            children: [
+              TextSpan(text: 'IA', style: style.copyWith(color: scheme.primary))
+            ],
           ),
         ),
       ],

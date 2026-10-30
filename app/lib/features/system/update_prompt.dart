@@ -9,9 +9,12 @@ String updateMessage(UpdateKind kind, AppVersionInfo latest) {
   final parts = <String>[
     if (kind == UpdateKind.required)
       'Cette version n’est plus prise en charge. Installez la version ${latest.versionName} pour continuer.',
-    if ((latest.releaseNotes ?? '').trim().isNotEmpty) latest.releaseNotes!.trim(),
+    if ((latest.releaseNotes ?? '').trim().isNotEmpty)
+      latest.releaseNotes!.trim(),
   ];
-  return parts.isEmpty ? 'Une nouvelle version est disponible.' : parts.join('\n\n');
+  return parts.isEmpty
+      ? 'Une nouvelle version est disponible.'
+      : parts.join('\n\n');
 }
 
 /// Vérifie une fois par lancement si une nouvelle version de l'APK est publiée
@@ -32,7 +35,9 @@ Future<void> checkForUpdate(BuildContext context, WidgetRef ref) async {
       builder: (dialogContext) => PopScope(
         canPop: optional,
         child: AlertDialog(
-          title: Text(optional ? 'Nouvelle version ${latest.versionName}' : 'Mise à jour obligatoire'),
+          title: Text(optional
+              ? 'Nouvelle version ${latest.versionName}'
+              : 'Mise à jour obligatoire'),
           content: Text(updateMessage(kind, latest)),
           actions: [
             if (optional)

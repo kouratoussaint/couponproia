@@ -40,7 +40,8 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
     try {
       await ref.read(sportsRepositoryProvider).triggerSync(job);
       if (!mounted) return;
-      showMessage(context, 'Synchronisation lancée. Le résultat apparaît dans le journal sous peu.');
+      showMessage(context,
+          'Synchronisation lancée. Le résultat apparaît dans le journal sous peu.');
       await Future<void>.delayed(const Duration(seconds: 4));
       ref.invalidate(syncRunsProvider);
     } catch (e) {
@@ -53,11 +54,14 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final permissions = ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
+    final permissions =
+        ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!permissions.contains('sports.configure')) {
       return Scaffold(
         appBar: AppBar(title: const Text('Données sportives')),
-        body: const InfoMessage(icon: Icons.lock_outline, title: 'Accès réservé aux administrateurs'),
+        body: const InfoMessage(
+            icon: Icons.lock_outline,
+            title: 'Accès réservé aux administrateurs'),
       );
     }
     final runs = ref.watch(syncRunsProvider);
@@ -76,13 +80,21 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
       ),
       body: runs.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => InfoMessage(icon: Icons.cloud_off_outlined, title: 'Journal indisponible', body: userMessageFor(e)),
+        error: (e, _) => InfoMessage(
+            icon: Icons.cloud_off_outlined,
+            title: 'Journal indisponible',
+            body: userMessageFor(e)),
         data: (list) {
           final today = dateOnly(DateTime.now());
           final usedToday = list
-              .where((r) => !r.startedAt.toUtc().isBefore(DateTime.utc(today.year, today.month, today.day)))
+              .where((r) => !r.startedAt
+                  .toUtc()
+                  .isBefore(DateTime.utc(today.year, today.month, today.day)))
               .fold<int>(0, (sum, r) => sum + r.requestsUsed);
-          final remaining = list.where((r) => r.requestsRemaining != null).map((r) => r.requestsRemaining).firstOrNull;
+          final remaining = list
+              .where((r) => r.requestsRemaining != null)
+              .map((r) => r.requestsRemaining)
+              .firstOrNull;
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(syncRunsProvider),
             child: ListView(
@@ -94,14 +106,18 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Fournisseur : API-Football', style: theme.textTheme.titleMedium),
+                        Text('Fournisseur : API-Football',
+                            style: theme.textTheme.titleMedium),
                         const SizedBox(height: 8),
-                        Text('Requêtes aujourd’hui (UTC) : $usedToday${budget == null ? '' : ' / $budget autorisées'}'),
-                        Text('Quota restant annoncé par le fournisseur : ${remaining ?? 'inconnu'}'),
+                        Text(
+                            'Requêtes aujourd’hui (UTC) : $usedToday${budget == null ? '' : ' / $budget autorisées'}'),
+                        Text(
+                            'Quota restant annoncé par le fournisseur : ${remaining ?? 'inconnu'}'),
                         const SizedBox(height: 8),
                         Text(
                           'Planification : calendriers à 4 h, cotes à 7 h et 15 h, scores en direct toutes les 15 min.',
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -112,16 +128,22 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: OutlinedButton.icon(
-                      onPressed: _launching == null ? () => _launch(entry.key) : null,
+                      onPressed:
+                          _launching == null ? () => _launch(entry.key) : null,
                       icon: _launching == entry.key
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2))
                           : const Icon(Icons.play_arrow),
                       label: Text(entry.value),
                     ),
                   ),
                 const SectionTitle('Journal (20 derniers passages)'),
                 if (list.isEmpty)
-                  const InfoMessage(icon: Icons.history, title: 'Aucune synchronisation pour l’instant'),
+                  const InfoMessage(
+                      icon: Icons.history,
+                      title: 'Aucune synchronisation pour l’instant'),
                 for (final r in list) _RunTile(run: r),
               ],
             ),
@@ -157,14 +179,18 @@ class _RunTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(child: Text(_jobLabels[run.job] ?? run.job, style: theme.textTheme.titleSmall)),
+                Expanded(
+                    child: Text(_jobLabels[run.job] ?? run.job,
+                        style: theme.textTheme.titleSmall)),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(_statusLabels[run.status] ?? run.status, style: TextStyle(color: color)),
+                  child: Text(_statusLabels[run.status] ?? run.status,
+                      style: TextStyle(color: color)),
                 ),
               ],
             ),
@@ -177,7 +203,9 @@ class _RunTile extends StatelessWidget {
             ),
             if (run.error != null) ...[
               const SizedBox(height: 4),
-              Text(run.error!, style: theme.textTheme.bodySmall?.copyWith(color: scheme.error)),
+              Text(run.error!,
+                  style:
+                      theme.textTheme.bodySmall?.copyWith(color: scheme.error)),
             ],
           ],
         ),

@@ -37,7 +37,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_adult || !_acceptedTerms) {
-      showMessage(context, 'Cochez les deux cases pour continuer.', error: true);
+      showMessage(context, 'Cochez les deux cases pour continuer.',
+          error: true);
       return;
     }
     setState(() => _busy = true);
@@ -105,7 +106,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 controller: _confirm,
                 label: 'Confirmer le mot de passe',
                 autofillHints: const [AutofillHints.newPassword],
-                validator: (v) => v != _password.text ? 'Les mots de passe ne correspondent pas.' : null,
+                validator: (v) => v != _password.text
+                    ? 'Les mots de passe ne correspondent pas.'
+                    : null,
                 onSubmitted: (_) => _submit(),
               ),
               const SizedBox(height: 12),
@@ -127,7 +130,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              BusyButton(label: 'Créer mon compte', busy: _busy, onPressed: _submit),
+              BusyButton(
+                  label: 'Créer mon compte', busy: _busy, onPressed: _submit),
             ],
           ),
         ),

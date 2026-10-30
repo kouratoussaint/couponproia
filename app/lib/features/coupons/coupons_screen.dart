@@ -19,7 +19,8 @@ class CouponsScreen extends ConsumerStatefulWidget {
   ConsumerState<CouponsScreen> createState() => _CouponsScreenState();
 }
 
-class _CouponsScreenState extends ConsumerState<CouponsScreen> with AutomaticKeepAliveClientMixin {
+class _CouponsScreenState extends ConsumerState<CouponsScreen>
+    with AutomaticKeepAliveClientMixin {
   String? _category;
 
   @override
@@ -29,7 +30,8 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> with AutomaticKee
   Widget build(BuildContext context) {
     super.build(context);
     final theme = Theme.of(context);
-    final flags = ref.watch(featureFlagsProvider).valueOrNull ?? const <String, bool>{};
+    final flags =
+        ref.watch(featureFlagsProvider).valueOrNull ?? const <String, bool>{};
     final coupons = ref.watch(publishedCouponsProvider);
 
     Future<void> refresh() async {
@@ -41,25 +43,39 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> with AutomaticKee
       appBar: AppBar(
         leading: const DrawerMenuButton(),
         title: const Text('Coupons'),
-        actions: [IconButton(tooltip: 'Actualiser', icon: const Icon(Icons.refresh), onPressed: refresh)],
+        actions: [
+          IconButton(
+              tooltip: 'Actualiser',
+              icon: const Icon(Icons.refresh),
+              onPressed: refresh)
+        ],
       ),
       body: flags['platform_coupons'] == false
-          ? const InfoMessage(icon: Icons.pause_circle_outline, title: 'Coupons momentanément indisponibles')
+          ? const InfoMessage(
+              icon: Icons.pause_circle_outline,
+              title: 'Coupons momentanément indisponibles')
           : coupons.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => InfoMessage(
                 icon: Icons.cloud_off_outlined,
                 title: 'Coupons indisponibles',
                 body: userMessageFor(e),
-                action: FilledButton(onPressed: refresh, child: const Text('Réessayer')),
+                action: FilledButton(
+                    onPressed: refresh, child: const Text('Réessayer')),
               ),
               data: (all) {
                 final now = DateTime.now();
                 final categories = {for (final c in all) c.category}.toList()
-                  ..sort((a, b) => categoryLabels.keys.toList().indexOf(a).compareTo(categoryLabels.keys.toList().indexOf(b)));
-                final list = _category == null ? all : all.where((c) => c.category == _category).toList();
+                  ..sort((a, b) => categoryLabels.keys
+                      .toList()
+                      .indexOf(a)
+                      .compareTo(categoryLabels.keys.toList().indexOf(b)));
+                final list = _category == null
+                    ? all
+                    : all.where((c) => c.category == _category).toList();
                 final open = list.where((c) => c.isOpen(now)).toList()
-                  ..sort((a, b) => a.firstKickoffAt.compareTo(b.firstKickoffAt));
+                  ..sort(
+                      (a, b) => a.firstKickoffAt.compareTo(b.firstKickoffAt));
                 final past = list.where((c) => !c.isOpen(now)).toList();
                 return RefreshIndicator(
                   onRefresh: refresh,
@@ -77,7 +93,8 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> with AutomaticKee
                                 child: ChoiceChip(
                                   label: const Text('Tous'),
                                   selected: _category == null,
-                                  onSelected: (_) => setState(() => _category = null),
+                                  onSelected: (_) =>
+                                      setState(() => _category = null),
                                 ),
                               ),
                               for (final cat in categories)
@@ -86,7 +103,9 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> with AutomaticKee
                                   child: ChoiceChip(
                                     label: Text(categoryLabels[cat] ?? cat),
                                     selected: _category == cat,
-                                    onSelected: (_) => setState(() => _category = _category == cat ? null : cat),
+                                    onSelected: (_) => setState(() =>
+                                        _category =
+                                            _category == cat ? null : cat),
                                   ),
                                 ),
                             ],
@@ -96,21 +115,30 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> with AutomaticKee
                         const InfoMessage(
                           icon: Icons.receipt_long,
                           title: 'Aucun coupon publié pour l’instant',
-                          body: 'Le moteur publie des coupons seulement quand des matchs à venir ont des cotes '
+                          body:
+                              'Le moteur publie des coupons seulement quand des matchs à venir ont des cotes '
                               'récentes et que des sélections remplissent ses critères. Sinon, il s’abstient.',
                         ),
-                      if (open.isNotEmpty) const SectionTitle('En cours et à venir'),
+                      if (open.isNotEmpty)
+                        const SectionTitle('En cours et à venir'),
                       for (final c in open)
-                        CouponCard(coupon: c, onTap: () => context.push(AppRoutes.couponDetailFor(c.id))),
+                        CouponCard(
+                            coupon: c,
+                            onTap: () =>
+                                context.push(AppRoutes.couponDetailFor(c.id))),
                       if (past.isNotEmpty) const SectionTitle('Précédents'),
                       for (final c in past)
-                        CouponCard(coupon: c, onTap: () => context.push(AppRoutes.couponDetailFor(c.id))),
+                        CouponCard(
+                            coupon: c,
+                            onTap: () =>
+                                context.push(AppRoutes.couponDetailFor(c.id))),
                       if (all.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Text(
                           'Coupons composés par le moteur statistique de la plateforme, contrôlés avant publication. '
                           'Les probabilités sont des estimations : aucun gain n’est garanti. Pariez de façon responsable.',
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant),
                           textAlign: TextAlign.center,
                         ),
                       ],

@@ -28,15 +28,24 @@ class _AnalysisSectionState extends ConsumerState<AnalysisSection> {
 
   MatchSummary get match => widget.match;
 
-  bool get _analyzable => !{MatchStatus.postponed, MatchStatus.cancelled, MatchStatus.abandoned}.contains(match.status);
+  bool get _analyzable => !{
+        MatchStatus.postponed,
+        MatchStatus.cancelled,
+        MatchStatus.abandoned
+      }.contains(match.status);
 
   Future<void> _run({bool force = false}) async {
     setState(() => _running = true);
     try {
-      final result = await ref.read(analysisRepositoryProvider).analyze(match.id, force: force);
+      final result = await ref
+          .read(analysisRepositoryProvider)
+          .analyze(match.id, force: force);
       if (mounted) setState(() => _fresh = result);
     } catch (e) {
-      if (mounted) showMessage(context, e is AnalysisException ? e.message : userMessageFor(e), error: true);
+      if (mounted)
+        showMessage(
+            context, e is AnalysisException ? e.message : userMessageFor(e),
+            error: true);
     } finally {
       if (mounted) setState(() => _running = false);
     }
@@ -48,14 +57,19 @@ class _AnalysisSectionState extends ConsumerState<AnalysisSection> {
     if (flags['match_analysis'] == false) return const SizedBox.shrink();
     final stored = ref.watch(storedAnalysisProvider(match.id));
     final analysis = _fresh ?? stored.valueOrNull;
-    final isAdmin = (ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{}).contains('ai.configure');
+    final isAdmin =
+        (ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{})
+            .contains('ai.configure');
 
-    final played = match.status == MatchStatus.finished || match.status == MatchStatus.awarded;
+    final played = match.status == MatchStatus.finished ||
+        match.status == MatchStatus.awarded;
     final canRefresh = analysis == null || analysis.status != 'ok' || !played;
 
     Widget button() {
       if (!_analyzable) {
-        return const FilledButton.tonal(onPressed: null, child: Text('Analyse indisponible (match reporté ou annulé)'));
+        return const FilledButton.tonal(
+            onPressed: null,
+            child: Text('Analyse indisponible (match reporté ou annulé)'));
       }
       if (_running) {
         return const FilledButton.tonal(
@@ -63,7 +77,10 @@ class _AnalysisSectionState extends ConsumerState<AnalysisSection> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+              SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2)),
               SizedBox(width: 12),
               Text('Analyse en cours…'),
             ],
@@ -102,7 +119,10 @@ class _AnalysisSectionState extends ConsumerState<AnalysisSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (stored.isLoading && _fresh == null) const LinearProgressIndicator() else button(),
+        if (stored.isLoading && _fresh == null)
+          const LinearProgressIndicator()
+        else
+          button(),
         if (analysis != null) AnalysisView(analysis: analysis, match: match),
       ],
     );
@@ -123,9 +143,12 @@ class AnalysisView extends ConsumerWidget {
     final ai = analysis.ai;
     final home = match.home.name;
     final away = match.away.name;
-    final played = match.hasScore && (match.status == MatchStatus.finished || match.status == MatchStatus.awarded);
+    final played = match.hasScore &&
+        (match.status == MatchStatus.finished ||
+            match.status == MatchStatus.awarded);
     final evaluation = ref.watch(latestEvaluationProvider).valueOrNull;
-    final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final muted = theme.textTheme.bodySmall
+        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
     final missing = mergedMissing(f, ai);
 
     return Column(
@@ -143,32 +166,63 @@ class AnalysisView extends ConsumerWidget {
             ),
           )
         else
-          _Notice(icon: Icons.info_outline, text: statsOnlyReason(analysis.statusReason)),
+          _Notice(
+              icon: Icons.info_outline,
+              text: statsOnlyReason(analysis.statusReason)),
         if (played) _ActualResult(fiche: f, match: match),
         ProbabilitiesCard(fiche: f, home: home, away: away),
-        if (f.comparableLines.isNotEmpty) _MarketCard(fiche: f, home: home, away: away),
+        if (f.comparableLines.isNotEmpty)
+          _MarketCard(fiche: f, home: home, away: away),
         if (ai != null) ...[
-          if (ai.form.isNotEmpty) _TextCard(title: 'Forme', body: ai.form, form: (f.homeForm, f.awayForm, home, away)),
-          if (ai.homeFactors.isNotEmpty) _ListCard(title: 'Atouts de $home', items: ai.homeFactors, icon: Icons.home_outlined),
-          if (ai.awayFactors.isNotEmpty) _ListCard(title: 'Atouts de $away', items: ai.awayFactors, icon: Icons.flight_takeoff),
-          if (ai.trends.isNotEmpty) _ListCard(title: 'Tendances', items: ai.trends, icon: Icons.trending_up),
-          if (ai.picks.isNotEmpty) _PicksCard(picks: ai.picks, home: home, away: away),
-          if (ai.risks.isNotEmpty) _ListCard(title: 'Risques', items: ai.risks, icon: Icons.warning_amber_outlined),
+          if (ai.form.isNotEmpty)
+            _TextCard(
+                title: 'Forme',
+                body: ai.form,
+                form: (f.homeForm, f.awayForm, home, away)),
+          if (ai.homeFactors.isNotEmpty)
+            _ListCard(
+                title: 'Atouts de $home',
+                items: ai.homeFactors,
+                icon: Icons.home_outlined),
+          if (ai.awayFactors.isNotEmpty)
+            _ListCard(
+                title: 'Atouts de $away',
+                items: ai.awayFactors,
+                icon: Icons.flight_takeoff),
+          if (ai.trends.isNotEmpty)
+            _ListCard(
+                title: 'Tendances', items: ai.trends, icon: Icons.trending_up),
+          if (ai.picks.isNotEmpty)
+            _PicksCard(picks: ai.picks, home: home, away: away),
+          if (ai.risks.isNotEmpty)
+            _ListCard(
+                title: 'Risques',
+                items: ai.risks,
+                icon: Icons.warning_amber_outlined),
         ] else if (f.homeForm.isNotEmpty || f.awayForm.isNotEmpty)
-          _TextCard(title: 'Forme', body: null, form: (f.homeForm, f.awayForm, home, away)),
-        if (missing.isNotEmpty) _ListCard(title: 'Informations manquantes', items: missing, icon: Icons.help_outline),
+          _TextCard(
+              title: 'Forme',
+              body: null,
+              form: (f.homeForm, f.awayForm, home, away)),
+        if (missing.isNotEmpty)
+          _ListCard(
+              title: 'Informations manquantes',
+              items: missing,
+              icon: Icons.help_outline),
         if (ai != null && ai.conclusion.isNotEmpty)
           _TextCard(title: 'Conclusion', body: ai.conclusion),
         if (ai != null && !ai.recommendationPossible)
           const _Notice(
             icon: Icons.do_not_disturb_on_outlined,
-            text: 'Pas de recommandation pour ce match : données insuffisantes ou estimation trop fragile.',
+            text:
+                'Pas de recommandation pour ce match : données insuffisantes ou estimation trop fragile.',
           ),
         const SizedBox(height: 8),
         Text(
           [
             'Moteur ${analysis.engineVersion}',
-            if (analysis.provider != null) 'IA ${analysis.provider} (${analysis.model})',
+            if (analysis.provider != null)
+              'IA ${analysis.provider} (${analysis.model})',
             'analyse du ${shortDate(analysis.createdAt)}/${analysis.createdAt.year} à ${timeLabel(analysis.createdAt)}',
           ].join(' · '),
           style: muted,
@@ -215,7 +269,9 @@ class ReliabilityChip extends StatelessWidget {
         color: color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(reliabilityLabel(reliability), style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
+      child: Text(reliabilityLabel(reliability),
+          style: TextStyle(
+              color: color, fontWeight: FontWeight.w600, fontSize: 12)),
     );
   }
 }
@@ -248,7 +304,11 @@ class _Notice extends StatelessWidget {
 
 /// Barre de probabilité avec libellé et pourcentage.
 class ProbabilityBar extends StatelessWidget {
-  const ProbabilityBar({super.key, required this.label, required this.probability, this.highlight = false});
+  const ProbabilityBar(
+      {super.key,
+      required this.label,
+      required this.probability,
+      this.highlight = false});
 
   final String label;
   final double probability;
@@ -257,7 +317,9 @@ class ProbabilityBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = highlight ? theme.colorScheme.primary : theme.colorScheme.primary.withValues(alpha: 0.55);
+    final color = highlight
+        ? theme.colorScheme.primary
+        : theme.colorScheme.primary.withValues(alpha: 0.55);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Column(
@@ -265,8 +327,13 @@ class ProbabilityBar extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(label, style: theme.textTheme.bodyMedium, overflow: TextOverflow.ellipsis)),
-              Text(pct(probability), style: theme.textTheme.titleSmall?.copyWith(color: highlight ? color : null)),
+              Expanded(
+                  child: Text(label,
+                      style: theme.textTheme.bodyMedium,
+                      overflow: TextOverflow.ellipsis)),
+              Text(pct(probability),
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(color: highlight ? color : null)),
             ],
           ),
           const SizedBox(height: 4),
@@ -286,7 +353,8 @@ class ProbabilityBar extends StatelessWidget {
 }
 
 class ProbabilitiesCard extends StatelessWidget {
-  const ProbabilitiesCard({super.key, required this.fiche, required this.home, required this.away});
+  const ProbabilitiesCard(
+      {super.key, required this.fiche, required this.home, required this.away});
 
   final AnalysisFiche fiche;
   final String home;
@@ -301,7 +369,14 @@ class ProbabilitiesCard extends StatelessWidget {
           null,
           (b, k) => b == null || f.p(k)! > f.p(b)! ? k : b,
         );
-    const others = ['DC.1X', 'DC.X2', 'OU.OVER.1.5', 'OU.OVER.2.5', 'OU.UNDER.2.5', 'BTTS.YES'];
+    const others = [
+      'DC.1X',
+      'DC.X2',
+      'OU.OVER.1.5',
+      'OU.OVER.2.5',
+      'OU.UNDER.2.5',
+      'BTTS.YES'
+    ];
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -311,23 +386,34 @@ class ProbabilitiesCard extends StatelessWidget {
             Text('Probabilités du modèle', style: theme.textTheme.labelLarge),
             const SizedBox(height: 6),
             for (final k in oneXTwo)
-              if (f.p(k) != null) ProbabilityBar(label: outcomeKeyLabel(k, home, away), probability: f.p(k)!, highlight: k == best),
+              if (f.p(k) != null)
+                ProbabilityBar(
+                    label: outcomeKeyLabel(k, home, away),
+                    probability: f.p(k)!,
+                    highlight: k == best),
             const Divider(height: 24),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 for (final k in others)
-                  if (f.p(k) != null) _Pill(label: outcomeKeyLabel(k, home, away), value: pct(f.p(k)!)),
+                  if (f.p(k) != null)
+                    _Pill(
+                        label: outcomeKeyLabel(k, home, away),
+                        value: pct(f.p(k)!)),
               ],
             ),
             if (f.weakGroups.any((g) => g == 'OU' || g == 'BTTS')) ...[
               const SizedBox(height: 8),
               Text(
                 'Prudence : sur l’historique, le moteur ne fait pas mieux qu’une simple fréquence pour '
-                '${[if (f.weakGroups.contains('OU')) 'le nombre de buts', if (f.weakGroups.contains('BTTS')) '« les deux marquent »'].join(' et ')}. '
+                '${[
+                  if (f.weakGroups.contains('OU')) 'le nombre de buts',
+                  if (f.weakGroups.contains('BTTS')) '« les deux marquent »'
+                ].join(' et ')}. '
                 'Ces chiffres sont indicatifs.',
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.error),
               ),
             ],
             const SizedBox(height: 14),
@@ -367,7 +453,10 @@ class _Pill extends StatelessWidget {
       child: Text.rich(
         TextSpan(children: [
           TextSpan(text: '$label  ', style: theme.textTheme.labelMedium),
-          TextSpan(text: value, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary)),
+          TextSpan(
+              text: value,
+              style: theme.textTheme.labelLarge
+                  ?.copyWith(color: theme.colorScheme.primary)),
         ]),
       ),
     );
@@ -375,7 +464,8 @@ class _Pill extends StatelessWidget {
 }
 
 class _MarketCard extends StatelessWidget {
-  const _MarketCard({required this.fiche, required this.home, required this.away});
+  const _MarketCard(
+      {required this.fiche, required this.home, required this.away});
 
   final AnalysisFiche fiche;
   final String home;
@@ -385,7 +475,8 @@ class _MarketCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lines = fiche.comparableLines;
-    final head = theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final head = theme.textTheme.labelSmall
+        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -397,10 +488,21 @@ class _MarketCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(child: Text('Issue', style: head)),
-                SizedBox(width: 48, child: Text('Cote', style: head, textAlign: TextAlign.end)),
-                SizedBox(width: 56, child: Text('Marché', style: head, textAlign: TextAlign.end)),
-                SizedBox(width: 56, child: Text('Modèle', style: head, textAlign: TextAlign.end)),
-                SizedBox(width: 60, child: Text('Écart', style: head, textAlign: TextAlign.end)),
+                SizedBox(
+                    width: 48,
+                    child: Text('Cote', style: head, textAlign: TextAlign.end)),
+                SizedBox(
+                    width: 56,
+                    child:
+                        Text('Marché', style: head, textAlign: TextAlign.end)),
+                SizedBox(
+                    width: 56,
+                    child:
+                        Text('Modèle', style: head, textAlign: TextAlign.end)),
+                SizedBox(
+                    width: 60,
+                    child:
+                        Text('Écart', style: head, textAlign: TextAlign.end)),
               ],
             ),
             for (final l in lines)
@@ -410,11 +512,21 @@ class _MarketCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(outcomeKeyLabel(l.key, home, away),
-                          style: theme.textTheme.bodySmall, overflow: TextOverflow.ellipsis),
+                          style: theme.textTheme.bodySmall,
+                          overflow: TextOverflow.ellipsis),
                     ),
-                    SizedBox(width: 48, child: Text(decimal(l.oddMedian), textAlign: TextAlign.end)),
-                    SizedBox(width: 56, child: Text(pct(l.impliedProbability!), textAlign: TextAlign.end)),
-                    SizedBox(width: 56, child: Text(pct(l.modelProbability!), textAlign: TextAlign.end)),
+                    SizedBox(
+                        width: 48,
+                        child: Text(decimal(l.oddMedian),
+                            textAlign: TextAlign.end)),
+                    SizedBox(
+                        width: 56,
+                        child: Text(pct(l.impliedProbability!),
+                            textAlign: TextAlign.end)),
+                    SizedBox(
+                        width: 56,
+                        child: Text(pct(l.modelProbability!),
+                            textAlign: TextAlign.end)),
                     SizedBox(
                       width: 60,
                       child: Text(
@@ -422,7 +534,9 @@ class _MarketCard extends StatelessWidget {
                         textAlign: TextAlign.end,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: (l.edge ?? 0) > 0 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                          color: (l.edge ?? 0) > 0
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -434,7 +548,8 @@ class _MarketCard extends StatelessWidget {
               'Marché : probabilité implicite de la cote médiane, marge des bookmakers retirée. '
               'Un écart positif signifie que le modèle estime l’issue plus probable que le marché ; '
               'ce n’est pas une garantie.',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -486,7 +601,8 @@ class _TextCard extends StatelessWidget {
 }
 
 class _ListCard extends StatelessWidget {
-  const _ListCard({required this.title, required this.items, required this.icon});
+  const _ListCard(
+      {required this.title, required this.items, required this.icon});
 
   final String title;
   final List<String> items;
@@ -516,7 +632,8 @@ class _ListCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('•  '),
-                    Expanded(child: Text(item, style: theme.textTheme.bodyMedium)),
+                    Expanded(
+                        child: Text(item, style: theme.textTheme.bodyMedium)),
                   ],
                 ),
               ),
@@ -528,7 +645,8 @@ class _ListCard extends StatelessWidget {
 }
 
 class _PicksCard extends StatelessWidget {
-  const _PicksCard({required this.picks, required this.home, required this.away});
+  const _PicksCard(
+      {required this.picks, required this.home, required this.away});
 
   final List<MarketPick> picks;
   final String home;
@@ -557,9 +675,12 @@ class _PicksCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: Text(outcomeKeyLabel(p.key, home, away), style: theme.textTheme.titleSmall)),
+                        Expanded(
+                            child: Text(outcomeKeyLabel(p.key, home, away),
+                                style: theme.textTheme.titleSmall)),
                         Text(pct(p.modelProbability),
-                            style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
+                            style: theme.textTheme.titleSmall
+                                ?.copyWith(color: theme.colorScheme.primary)),
                       ],
                     ),
                     if (p.oddMedian != null)

@@ -19,7 +19,8 @@ class SwipeBranchContainer extends StatefulWidget {
 }
 
 class _SwipeBranchContainerState extends State<SwipeBranchContainer> {
-  late final PageController _controller = PageController(initialPage: widget.currentIndex);
+  late final PageController _controller =
+      PageController(initialPage: widget.currentIndex);
 
   /// Vrai pendant un changement d'onglet déclenché par un toucher (barre ou menu) :
   /// les pages traversées pendant l'animation ne doivent pas changer l'onglet.
@@ -58,7 +59,8 @@ class _SwipeBranchContainerState extends State<SwipeBranchContainer> {
     return PageView(
       controller: _controller,
       onPageChanged: (index) {
-        if (!_programmatic && index != widget.currentIndex) widget.onPageChanged(index);
+        if (!_programmatic && index != widget.currentIndex)
+          widget.onPageChanged(index);
       },
       children: [for (final child in widget.children) _KeepAlive(child: child)],
     );
@@ -74,7 +76,8 @@ class _KeepAlive extends StatefulWidget {
   State<_KeepAlive> createState() => _KeepAliveState();
 }
 
-class _KeepAliveState extends State<_KeepAlive> with AutomaticKeepAliveClientMixin {
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 

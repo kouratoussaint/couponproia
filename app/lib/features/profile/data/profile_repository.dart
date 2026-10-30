@@ -27,10 +27,15 @@ class Profile {
   final String? avatarUrl;
 
   String get initials {
-    final parts = displayName.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = displayName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
   }
 }
 
@@ -53,12 +58,15 @@ class ProfileRepository {
   Future<void> updateDisplayName(String name) async {
     final user = _client.auth.currentUser;
     if (user == null) throw AuthException('Session expirée');
-    await _client.from('profiles').update({'display_name': name.trim()}).eq('id', user.id);
+    await _client
+        .from('profiles')
+        .update({'display_name': name.trim()}).eq('id', user.id);
   }
 
   /// Suppression définitive, exécutée côté serveur (Edge Function `delete-account`).
   Future<void> deleteAccount() async {
-    await _client.functions.invoke('delete-account', body: {'confirmation': 'SUPPRIMER'});
+    await _client.functions
+        .invoke('delete-account', body: {'confirmation': 'SUPPRIMER'});
     await _client.auth.signOut();
   }
 }

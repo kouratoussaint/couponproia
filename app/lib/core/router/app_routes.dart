@@ -32,7 +32,13 @@ abstract final class AppRoutes {
   static String matchDetailFor(int id) => '/match/$id';
   static String standingsFor(int id) => '/competitions/$id';
 
-  static const publicRoutes = {signIn, signUp, verifyEmail, forgotPassword, resetPassword};
+  static const publicRoutes = {
+    signIn,
+    signUp,
+    verifyEmail,
+    forgotPassword,
+    resetPassword
+  };
 
   static String verifyEmailFor(String email) =>
       Uri(path: verifyEmail, queryParameters: {'email': email}).toString();

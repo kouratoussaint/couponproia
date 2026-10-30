@@ -23,12 +23,17 @@ class MatchDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final match = ref.watch(matchProvider(matchId));
     return Scaffold(
-      appBar: AppBar(title: Text(match.valueOrNull?.competition.name ?? 'Match')),
+      appBar:
+          AppBar(title: Text(match.valueOrNull?.competition.name ?? 'Match')),
       body: match.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => InfoMessage(icon: Icons.cloud_off_outlined, title: 'Match indisponible', body: userMessageFor(e)),
+        error: (e, _) => InfoMessage(
+            icon: Icons.cloud_off_outlined,
+            title: 'Match indisponible',
+            body: userMessageFor(e)),
         data: (m) => m == null
-            ? const InfoMessage(icon: Icons.help_outline, title: 'Match introuvable')
+            ? const InfoMessage(
+                icon: Icons.help_outline, title: 'Match introuvable')
             : RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(matchProvider(matchId));
@@ -51,7 +56,8 @@ class MatchDetailScreen extends ConsumerWidget {
                       'Source : API-Football · données mises à jour le ${shortDate(m.sourceUpdatedAt)} '
                       'à ${timeLabel(m.sourceUpdatedAt)}. Les pronostics sont des estimations ; aucun gain n’est garanti.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                       textAlign: TextAlign.center,
                     ),
@@ -77,22 +83,27 @@ class _Header extends StatelessWidget {
             children: [
               SportsLogo(url: t.logoUrl, size: 56),
               const SizedBox(height: 8),
-              Text(t.name, textAlign: TextAlign.center, style: theme.textTheme.titleSmall, maxLines: 2),
+              Text(t.name,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleSmall,
+                  maxLines: 2),
             ],
           ),
         );
-    final center = m.hasScore
-        ? '${m.homeGoals} - ${m.awayGoals}'
-        : timeLabel(m.kickoffAt);
+    final center =
+        m.hasScore ? '${m.homeGoals} - ${m.awayGoals}' : timeLabel(m.kickoffAt);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Text(
-              [if (m.round != null) m.round!, '${dayLabel(m.kickoffAt, DateTime.now())} ${shortDate(m.kickoffAt)}']
-                  .join(' · '),
-              style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              [
+                if (m.round != null) m.round!,
+                '${dayLabel(m.kickoffAt, DateTime.now())} ${shortDate(m.kickoffAt)}'
+              ].join(' · '),
+              style: theme.textTheme.labelMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -101,15 +112,20 @@ class _Header extends StatelessWidget {
               children: [
                 team(m.home),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                   child: Column(
                     children: [
-                      Text(center, style: theme.textTheme.headlineMedium?.copyWith(
-                        color: m.isLive ? theme.colorScheme.primary : null,
-                      )),
+                      Text(center,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: m.isLive ? theme.colorScheme.primary : null,
+                          )),
                       Text(statusLabel(m), style: theme.textTheme.labelMedium),
-                      if (m.htHomeGoals != null && m.htAwayGoals != null && m.status != MatchStatus.scheduled)
-                        Text('Mi-temps ${m.htHomeGoals}-${m.htAwayGoals}', style: theme.textTheme.labelSmall),
+                      if (m.htHomeGoals != null &&
+                          m.htAwayGoals != null &&
+                          m.status != MatchStatus.scheduled)
+                        Text('Mi-temps ${m.htHomeGoals}-${m.htAwayGoals}',
+                            style: theme.textTheme.labelSmall),
                     ],
                   ),
                 ),
@@ -119,8 +135,12 @@ class _Header extends StatelessWidget {
             if (m.venue != null || m.referee != null) ...[
               const SizedBox(height: 12),
               Text(
-                [if (m.venue != null) m.venue!, if (m.referee != null) 'Arbitre : ${m.referee}'].join(' · '),
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                [
+                  if (m.venue != null) m.venue!,
+                  if (m.referee != null) 'Arbitre : ${m.referee}'
+                ].join(' · '),
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -161,8 +181,11 @@ class _OddsSection extends ConsumerWidget {
               );
             }
             final byMarket = oddsByMarket(list);
-            final latest = list.map((o) => o.capturedAt).reduce((a, b) => a.isAfter(b) ? a : b);
-            final books = list.map((o) => o.bookmakers).reduce((a, b) => a > b ? a : b);
+            final latest = list
+                .map((o) => o.capturedAt)
+                .reduce((a, b) => a.isAfter(b) ? a : b);
+            final books =
+                list.map((o) => o.bookmakers).reduce((a, b) => a > b ? a : b);
             return Card(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -172,12 +195,15 @@ class _OddsSection extends ConsumerWidget {
                     for (final entry in byMarket.entries) ...[
                       Padding(
                         padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
-                        child: Text(marketTitles[entry.key] ?? entry.key, style: theme.textTheme.labelLarge),
+                        child: Text(marketTitles[entry.key] ?? entry.key,
+                            style: theme.textTheme.labelLarge),
                       ),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: [for (final o in entry.value) _OddTile(odd: o)],
+                        children: [
+                          for (final o in entry.value) _OddTile(odd: o)
+                        ],
                       ),
                     ],
                     const SizedBox(height: 12),
@@ -185,7 +211,8 @@ class _OddsSection extends ConsumerWidget {
                       'Cote médiane de $books bookmakers au maximum (« max » = meilleure cote), '
                       'relevé du ${shortDate(latest)} à ${timeLabel(latest)}. '
                       'Les cotes changent et peuvent différer de celles de votre opérateur.',
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -216,8 +243,12 @@ class _OddTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(outcomeLabel(odd), style: theme.textTheme.labelMedium, overflow: TextOverflow.ellipsis),
-          Text(formatOdd(odd.median), style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
+          Text(outcomeLabel(odd),
+              style: theme.textTheme.labelMedium,
+              overflow: TextOverflow.ellipsis),
+          Text(formatOdd(odd.median),
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(color: theme.colorScheme.primary)),
           Text('max ${formatOdd(odd.best)}', style: theme.textTheme.labelSmall),
         ],
       ),
@@ -233,7 +264,8 @@ class _FormSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     Widget teamForm(TeamRef team) {
-      final recent = ref.watch(recentMatchesProvider((team.id, match.kickoffAt)));
+      final recent =
+          ref.watch(recentMatchesProvider((team.id, match.kickoffAt)));
       return ListTile(
         contentPadding: EdgeInsets.zero,
         leading: SportsLogo(url: team.logoUrl, size: 28),
@@ -244,8 +276,11 @@ class _FormSection extends ConsumerWidget {
           data: (list) {
             final form = formFor(team.id, list);
             return form.isEmpty
-                ? const Text('Aucun match terminé dans les données synchronisées')
-                : Padding(padding: const EdgeInsets.only(top: 6), child: FormChips(results: form));
+                ? const Text(
+                    'Aucun match terminé dans les données synchronisées')
+                : Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: FormChips(results: form));
           },
         ),
       );
@@ -258,7 +293,8 @@ class _FormSection extends ConsumerWidget {
         Card(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Column(children: [teamForm(match.home), teamForm(match.away)]),
+            child:
+                Column(children: [teamForm(match.home), teamForm(match.away)]),
           ),
         ),
       ],
@@ -274,15 +310,19 @@ class _HeadToHeadSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final h2h = ref.watch(headToHeadProvider((match.home.id, match.away.id, match.kickoffAt)));
+    final h2h = ref.watch(
+        headToHeadProvider((match.home.id, match.away.id, match.kickoffAt)));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SectionTitle('Confrontations directes'),
         Card(
           child: h2h.when(
-            loading: () => const Padding(padding: EdgeInsets.all(16), child: LinearProgressIndicator()),
-            error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text(userMessageFor(e))),
+            loading: () => const Padding(
+                padding: EdgeInsets.all(16), child: LinearProgressIndicator()),
+            error: (e, _) => Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(userMessageFor(e))),
             data: (list) => list.isEmpty
                 ? Padding(
                     padding: const EdgeInsets.all(16),
@@ -296,9 +336,12 @@ class _HeadToHeadSection extends ConsumerWidget {
                       for (final m in list)
                         ListTile(
                           dense: true,
-                          title: Text('${m.home.name}  ${m.homeGoals} - ${m.awayGoals}  ${m.away.name}'),
-                          subtitle: Text('${shortDate(m.kickoffAt)}/${m.kickoffAt.year} · ${m.competition.name}'),
-                          onTap: () => context.push(AppRoutes.matchDetailFor(m.id)),
+                          title: Text(
+                              '${m.home.name}  ${m.homeGoals} - ${m.awayGoals}  ${m.away.name}'),
+                          subtitle: Text(
+                              '${shortDate(m.kickoffAt)}/${m.kickoffAt.year} · ${m.competition.name}'),
+                          onTap: () =>
+                              context.push(AppRoutes.matchDetailFor(m.id)),
                         ),
                     ],
                   ),
@@ -317,10 +360,14 @@ class _StandingsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final table = ref.watch(standingsProvider((match.competition.id, match.season)));
+    final table =
+        ref.watch(standingsProvider((match.competition.id, match.season)));
     return table.maybeWhen(
       data: (rows) {
-        final mine = rows.where((r) => r.team.id == match.home.id || r.team.id == match.away.id).toList();
+        final mine = rows
+            .where(
+                (r) => r.team.id == match.home.id || r.team.id == match.away.id)
+            .toList();
         if (mine.isEmpty) return const SizedBox.shrink();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -328,7 +375,8 @@ class _StandingsSection extends ConsumerWidget {
             SectionTitle(
               'Classement',
               trailing: TextButton(
-                onPressed: () => context.push(AppRoutes.standingsFor(match.competition.id)),
+                onPressed: () =>
+                    context.push(AppRoutes.standingsFor(match.competition.id)),
                 child: const Text('Tout voir'),
               ),
             ),
@@ -339,15 +387,18 @@ class _StandingsSection extends ConsumerWidget {
                     ListTile(
                       leading: CircleAvatar(
                         radius: 14,
-                        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.15),
-                        child: Text('${r.rank}', style: theme.textTheme.labelMedium),
+                        backgroundColor:
+                            theme.colorScheme.primary.withValues(alpha: 0.15),
+                        child: Text('${r.rank}',
+                            style: theme.textTheme.labelMedium),
                       ),
                       title: Text(r.team.name, overflow: TextOverflow.ellipsis),
                       subtitle: Text(
                         '${r.played} J · ${r.win} G ${r.draw} N ${r.lose} P · diff. ${r.goalDiff > 0 ? '+' : ''}${r.goalDiff}'
                         '${r.group.isNotEmpty && rows.map((x) => x.group).toSet().length > 1 ? ' · ${r.group}' : ''}',
                       ),
-                      trailing: Text('${r.points} pts', style: theme.textTheme.titleSmall),
+                      trailing: Text('${r.points} pts',
+                          style: theme.textTheme.titleSmall),
                     ),
                 ],
               ),

@@ -3,7 +3,9 @@ import 'package:coupon_pro_ia/features/analysis/data/analysis_models.dart';
 import 'package:coupon_pro_ia/features/analysis/data/analysis_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Map<String, dynamic> _row({Map<String, dynamic>? analysis, String status = 'ok'}) => {
+Map<String, dynamic> _row(
+        {Map<String, dynamic>? analysis, String status = 'ok'}) =>
+    {
       'id': 7,
       'match_id': 42,
       'engine_version': 'poisson-1.0',
@@ -16,11 +18,20 @@ Map<String, dynamic> _row({Map<String, dynamic>? analysis, String status = 'ok'}
       'stats': {
         'engine_version': 'poisson-1.0',
         'reliability': 'moyenne',
-        'sample': {'competition_matches': 120, 'home_team_home_matches': 6, 'away_team_away_matches': 7},
+        'sample': {
+          'competition_matches': 120,
+          'home_team_home_matches': 6,
+          'away_team_away_matches': 7
+        },
         'model': {
           'expected_goals_home': 1.62,
           'expected_goals_away': 1.05,
-          'probabilities': {'1X2.HOME': 0.532, '1X2.DRAW': 0.241, '1X2.AWAY': 0.227, 'OU.OVER.2.5': 0.51},
+          'probabilities': {
+            '1X2.HOME': 0.532,
+            '1X2.DRAW': 0.241,
+            '1X2.AWAY': 0.227,
+            'OU.OVER.2.5': 0.51
+          },
           'top_scores': [
             {'score': '1-0', 'probability': 0.112},
           ],
@@ -56,7 +67,9 @@ Map<String, dynamic> _row({Map<String, dynamic>? analysis, String status = 'ok'}
           'evaluated_matches': 2210,
           'beats_baseline': {'1X2': true, 'OU': false, 'BTTS': false},
         },
-        'missing': ['Compositions, blessures et suspensions : non fournies par la source de données'],
+        'missing': [
+          'Compositions, blessures et suspensions : non fournies par la source de données'
+        ],
       },
       'analysis': analysis,
     };
@@ -70,10 +83,18 @@ void main() {
       'facteurs_exterieur': ['B'],
       'tendances': [],
       'marches_envisageables': [
-        {'cle': '1X2.HOME', 'probabilite_modele': 0.532, 'justification': 'J', 'cote_mediane': 1.95, 'ecart': 0.042},
+        {
+          'cle': '1X2.HOME',
+          'probabilite_modele': 0.532,
+          'justification': 'J',
+          'cote_mediane': 1.95,
+          'ecart': 0.042
+        },
       ],
       'risques': ['R'],
-      'informations_manquantes': ['compositions, blessures et suspensions : non fournies par la source de données'],
+      'informations_manquantes': [
+        'compositions, blessures et suspensions : non fournies par la source de données'
+      ],
       'conclusion': 'C',
       'recommandation_possible': true,
     }));
@@ -100,7 +121,8 @@ void main() {
     expect(outcomeKeyLabel('1X2.DRAW', 'Alpha', 'Beta'), 'Match nul');
     expect(outcomeKeyLabel('DC.X2', 'Alpha', 'Beta'), 'Nul ou Beta');
     expect(outcomeKeyLabel('OU.OVER.2.5', 'Alpha', 'Beta'), 'Plus de 2,5 buts');
-    expect(outcomeKeyLabel('BTTS.NO', 'Alpha', 'Beta'), 'Au moins une équipe ne marque pas');
+    expect(outcomeKeyLabel('BTTS.NO', 'Alpha', 'Beta'),
+        'Au moins une équipe ne marque pas');
   });
 
   test('pourcentages, écarts et résultat réel', () {
@@ -113,7 +135,8 @@ void main() {
   });
 
   test('erreurs de la fonction traduites pour l’utilisateur', () {
-    expect(analysisErrorMessage(429, {'error': 'daily_limit', 'limit': 20}), contains('20 nouvelles analyses'));
+    expect(analysisErrorMessage(429, {'error': 'daily_limit', 'limit': 20}),
+        contains('20 nouvelles analyses'));
     expect(analysisErrorMessage(500, 'oops'), contains('Réessayez'));
   });
 }

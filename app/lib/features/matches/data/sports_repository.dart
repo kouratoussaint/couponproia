@@ -5,7 +5,8 @@ import '../../../core/providers.dart';
 import 'sports_format.dart';
 import 'sports_models.dart';
 
-const _matchColumns = 'id, season, round, kickoff_at, status, status_short, elapsed, '
+const _matchColumns =
+    'id, season, round, kickoff_at, status, status_short, elapsed, '
     'home_goals, away_goals, ht_home_goals, ht_away_goals, venue, referee, source_updated_at, '
     'competition:competitions(id, name, country, logo_url, current_season), '
     'home:teams!matches_home_team_fk(id, name, logo_url), '
@@ -18,8 +19,9 @@ class SportsRepository {
 
   final SupabaseClient _client;
 
-  List<MatchSummary> _matches(List<dynamic> rows) =>
-      rows.map((r) => MatchSummary.fromJson(r as Map<String, dynamic>)).toList();
+  List<MatchSummary> _matches(List<dynamic> rows) => rows
+      .map((r) => MatchSummary.fromJson(r as Map<String, dynamic>))
+      .toList();
 
   Future<List<MatchSummary>> matchesOfDay(DateTime day) async {
     final (from, to) = utcRangeForLocalDay(day);
@@ -34,20 +36,26 @@ class SportsRepository {
   }
 
   Future<MatchSummary?> match(int id) async {
-    final row = await _client.from('matches').select(_matchColumns).eq('id', id).maybeSingle();
+    final row = await _client
+        .from('matches')
+        .select(_matchColumns)
+        .eq('id', id)
+        .maybeSingle();
     return row == null ? null : MatchSummary.fromJson(row);
   }
 
   Future<List<OddsLine>> latestOdds(int matchId) async {
     final rows = await _client
         .from('latest_odds')
-        .select('market_code, outcome_code, line, odd_median, odd_best, bookmakers_count, captured_at')
+        .select(
+            'market_code, outcome_code, line, odd_median, odd_best, bookmakers_count, captured_at')
         .eq('match_id', matchId);
     return rows.map(OddsLine.fromJson).toList();
   }
 
   /// Derniers matchs terminés d'une équipe, avant une date.
-  Future<List<MatchSummary>> recentMatches(int teamId, DateTime before, {int limit = 5}) async {
+  Future<List<MatchSummary>> recentMatches(int teamId, DateTime before,
+      {int limit = 5}) async {
     final rows = await _client
         .from('matches')
         .select(_matchColumns)
@@ -60,7 +68,8 @@ class SportsRepository {
   }
 
   /// Confrontations directes présentes dans les données synchronisées.
-  Future<List<MatchSummary>> headToHead(int teamA, int teamB, DateTime before, {int limit = 5}) async {
+  Future<List<MatchSummary>> headToHead(int teamA, int teamB, DateTime before,
+      {int limit = 5}) async {
     final rows = await _client
         .from('matches')
         .select(_matchColumns)
@@ -93,7 +102,8 @@ class SportsRepository {
   Future<List<StandingRow>> standings(int competitionId, int season) async {
     final rows = await _client
         .from('standings')
-        .select('group_name, rank, points, played, win, draw, lose, goals_for, goals_against, '
+        .select(
+            'group_name, rank, points, played, win, draw, lose, goals_for, goals_against, '
             'goal_diff, form, description, team:teams(id, name, logo_url)')
         .eq('competition_id', competitionId)
         .eq('season', season)
@@ -105,7 +115,8 @@ class SportsRepository {
   Future<List<SyncRun>> syncRuns({int limit = 20}) async {
     final rows = await _client
         .from('sync_runs')
-        .select('id, job, status, started_at, finished_at, requests_used, requests_remaining, items_upserted, error')
+        .select(
+            'id, job, status, started_at, finished_at, requests_used, requests_remaining, items_upserted, error')
         .order('started_at', ascending: false)
         .limit(limit);
     return rows.map(SyncRun.fromJson).toList();
@@ -130,7 +141,8 @@ final sportsRepositoryProvider = Provider<SportsRepository>(
   (ref) => SportsRepository(ref.watch(supabaseClientProvider)),
 );
 
-final matchesOfDayProvider = FutureProvider.family<List<MatchSummary>, DateTime>(
+final matchesOfDayProvider =
+    FutureProvider.family<List<MatchSummary>, DateTime>(
   (ref, day) => ref.watch(sportsRepositoryProvider).matchesOfDay(day),
 );
 
@@ -142,12 +154,16 @@ final latestOddsProvider = FutureProvider.family<List<OddsLine>, int>(
   (ref, matchId) => ref.watch(sportsRepositoryProvider).latestOdds(matchId),
 );
 
-final recentMatchesProvider = FutureProvider.family<List<MatchSummary>, (int, DateTime)>(
-  (ref, key) => ref.watch(sportsRepositoryProvider).recentMatches(key.$1, key.$2),
+final recentMatchesProvider =
+    FutureProvider.family<List<MatchSummary>, (int, DateTime)>(
+  (ref, key) =>
+      ref.watch(sportsRepositoryProvider).recentMatches(key.$1, key.$2),
 );
 
-final headToHeadProvider = FutureProvider.family<List<MatchSummary>, (int, int, DateTime)>(
-  (ref, key) => ref.watch(sportsRepositoryProvider).headToHead(key.$1, key.$2, key.$3),
+final headToHeadProvider =
+    FutureProvider.family<List<MatchSummary>, (int, int, DateTime)>(
+  (ref, key) =>
+      ref.watch(sportsRepositoryProvider).headToHead(key.$1, key.$2, key.$3),
 );
 
 final competitionsProvider = FutureProvider<List<CompetitionRef>>(

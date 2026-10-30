@@ -20,21 +20,32 @@ class CompetitionsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Compétitions')),
       body: competitions.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => InfoMessage(icon: Icons.cloud_off_outlined, title: 'Indisponible', body: userMessageFor(e)),
+        error: (e, _) => InfoMessage(
+            icon: Icons.cloud_off_outlined,
+            title: 'Indisponible',
+            body: userMessageFor(e)),
         data: (list) => list.isEmpty
-            ? const InfoMessage(icon: Icons.emoji_events_outlined, title: 'Aucune compétition suivie')
+            ? const InfoMessage(
+                icon: Icons.emoji_events_outlined,
+                title: 'Aucune compétition suivie')
             : ListView.separated(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 itemCount: list.length,
-                separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+                separatorBuilder: (_, __) =>
+                    const Divider(height: 1, indent: 72),
                 itemBuilder: (context, i) {
                   final c = list[i];
                   return ListTile(
-                    leading: SportsLogo(url: c.logoUrl, size: 36, fallback: Icons.emoji_events_outlined),
+                    leading: SportsLogo(
+                        url: c.logoUrl,
+                        size: 36,
+                        fallback: Icons.emoji_events_outlined),
                     title: Text(c.name),
                     subtitle: Text([
                       if (c.country != null) c.country!,
-                      c.currentSeason == null ? 'saison non synchronisée' : 'saison ${seasonLabel(c.currentSeason!)}',
+                      c.currentSeason == null
+                          ? 'saison non synchronisée'
+                          : 'saison ${seasonLabel(c.currentSeason!)}',
                     ].join(' · ')),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.standingsFor(c.id)),
@@ -46,7 +57,6 @@ class CompetitionsScreen extends ConsumerWidget {
   }
 }
 
-
 /// Classement d'une compétition (par groupe pour les phases de groupes).
 class StandingsScreen extends ConsumerWidget {
   const StandingsScreen({super.key, required this.competitionId});
@@ -57,17 +67,24 @@ class StandingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final competition = ref.watch(competitionProvider(competitionId));
     return Scaffold(
-      appBar: AppBar(title: Text(competition.valueOrNull?.name ?? 'Classement')),
+      appBar:
+          AppBar(title: Text(competition.valueOrNull?.name ?? 'Classement')),
       body: competition.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => InfoMessage(icon: Icons.cloud_off_outlined, title: 'Indisponible', body: userMessageFor(e)),
+        error: (e, _) => InfoMessage(
+            icon: Icons.cloud_off_outlined,
+            title: 'Indisponible',
+            body: userMessageFor(e)),
         data: (c) {
-          if (c == null) return const InfoMessage(icon: Icons.help_outline, title: 'Compétition introuvable');
+          if (c == null)
+            return const InfoMessage(
+                icon: Icons.help_outline, title: 'Compétition introuvable');
           if (c.currentSeason == null) {
             return const InfoMessage(
               icon: Icons.hourglass_empty,
               title: 'Saison pas encore synchronisée',
-              body: 'Le classement apparaîtra après la prochaine synchronisation quotidienne.',
+              body:
+                  'Le classement apparaîtra après la prochaine synchronisation quotidienne.',
             );
           }
           return _StandingsTable(competition: c);
@@ -85,29 +102,38 @@ class _StandingsTable extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final rows = ref.watch(standingsProvider((competition.id, competition.currentSeason!)));
+    final rows = ref
+        .watch(standingsProvider((competition.id, competition.currentSeason!)));
     return rows.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => InfoMessage(icon: Icons.cloud_off_outlined, title: 'Indisponible', body: userMessageFor(e)),
+      error: (e, _) => InfoMessage(
+          icon: Icons.cloud_off_outlined,
+          title: 'Indisponible',
+          body: userMessageFor(e)),
       data: (list) {
         if (list.isEmpty) {
           return const InfoMessage(
             icon: Icons.table_rows_outlined,
             title: 'Pas de classement',
-            body: 'Le fournisseur ne publie pas de classement pour cette compétition, ou pas encore pour cette saison.',
+            body:
+                'Le fournisseur ne publie pas de classement pour cette compétition, ou pas encore pour cette saison.',
           );
         }
         final groups = <String, List<StandingRow>>{};
         for (final r in list) {
           groups.putIfAbsent(r.group, () => []).add(r);
         }
-        final header = theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
-        Widget cell(String text, {double width = 30, TextStyle? style, bool bold = false}) => SizedBox(
+        final header = theme.textTheme.labelSmall
+            ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+        Widget cell(String text,
+                {double width = 30, TextStyle? style, bool bold = false}) =>
+            SizedBox(
               width: width,
               child: Text(
                 text,
                 textAlign: TextAlign.center,
-                style: (style ?? theme.textTheme.bodyMedium)?.copyWith(fontWeight: bold ? FontWeight.w700 : null),
+                style: (style ?? theme.textTheme.bodyMedium)
+                    ?.copyWith(fontWeight: bold ? FontWeight.w700 : null),
               ),
             );
         return ListView(
@@ -125,7 +151,8 @@ class _StandingsTable extends ConsumerWidget {
                   child: Column(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         child: Row(
                           children: [
                             cell('#', width: 28, style: header),
@@ -141,7 +168,8 @@ class _StandingsTable extends ConsumerWidget {
                       ),
                       for (final r in entry.value)
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
                           child: Row(
                             children: [
                               cell('${r.rank}', width: 28),
@@ -150,7 +178,9 @@ class _StandingsTable extends ConsumerWidget {
                                   children: [
                                     SportsLogo(url: r.team.logoUrl, size: 18),
                                     const SizedBox(width: 6),
-                                    Expanded(child: Text(r.team.name, overflow: TextOverflow.ellipsis)),
+                                    Expanded(
+                                        child: Text(r.team.name,
+                                            overflow: TextOverflow.ellipsis)),
                                   ],
                                 ),
                               ),
@@ -158,7 +188,8 @@ class _StandingsTable extends ConsumerWidget {
                               cell('${r.win}'),
                               cell('${r.draw}'),
                               cell('${r.lose}'),
-                              cell('${r.goalDiff > 0 ? '+' : ''}${r.goalDiff}', width: 38),
+                              cell('${r.goalDiff > 0 ? '+' : ''}${r.goalDiff}',
+                                  width: 38),
                               cell('${r.points}', width: 36, bold: true),
                             ],
                           ),
@@ -172,7 +203,8 @@ class _StandingsTable extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               child: Text(
                 'Source : API-Football · J joués, G gagnés, N nuls, P perdus.',
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
             ),

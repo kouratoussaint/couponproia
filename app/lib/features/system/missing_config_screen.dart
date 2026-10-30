@@ -18,15 +18,18 @@ class MissingConfigScreen extends StatelessWidget {
             children: [
               const AppLogo(size: 40),
               const Spacer(),
-              Icon(Icons.settings_suggest_outlined, size: 48, color: theme.colorScheme.secondary),
+              Icon(Icons.settings_suggest_outlined,
+                  size: 48, color: theme.colorScheme.secondary),
               const SizedBox(height: 16),
-              Text('Configuration serveur manquante', style: theme.textTheme.headlineSmall),
+              Text('Configuration serveur manquante',
+                  style: theme.textTheme.headlineSmall),
               const SizedBox(height: 12),
               Text(
                 'Cette version a été compilée sans l’adresse du serveur Supabase. '
                 'Elle permet de vérifier l’installation et l’interface, mais pas de se connecter. '
                 'Installez une version compilée avec SUPABASE_URL et SUPABASE_ANON_KEY.',
-                style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodyLarge
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
               const Spacer(flex: 2),
             ],

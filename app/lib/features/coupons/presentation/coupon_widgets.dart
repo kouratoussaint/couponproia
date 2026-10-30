@@ -20,12 +20,21 @@ class RiskBadge extends StatelessWidget {
       _ => scheme.error,
     };
     final text = compact
-        ? const {'prudent': 'Prudent', 'equilibre': 'Équilibré', 'audacieux': 'Audacieux'}[risk] ?? risk
+        ? const {
+              'prudent': 'Prudent',
+              'equilibre': 'Équilibré',
+              'audacieux': 'Audacieux'
+            }[risk] ??
+            risk
         : riskLabels[risk] ?? risk;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(20)),
-      child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(20)),
+      child: Text(text,
+          style: TextStyle(
+              color: color, fontWeight: FontWeight.w600, fontSize: 12)),
     );
   }
 }
@@ -34,7 +43,8 @@ String couponDateLabel(DateTime local, DateTime now) =>
     '${dayLabel(local, now)} ${shortDate(local)} · ${timeLabel(local)}';
 
 class CouponCard extends StatelessWidget {
-  const CouponCard({super.key, required this.coupon, required this.onTap, this.trailing});
+  const CouponCard(
+      {super.key, required this.coupon, required this.onTap, this.trailing});
 
   final Coupon coupon;
   final VoidCallback onTap;
@@ -58,10 +68,13 @@ class CouponCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(categoryLabels[c.category] ?? c.category,
-                        style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary)),
+                        style: theme.textTheme.labelMedium
+                            ?.copyWith(color: theme.colorScheme.primary)),
                   ),
                   if (c.isWithdrawn)
-                    Text('Retiré', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.error))
+                    Text('Retiré',
+                        style: theme.textTheme.labelMedium
+                            ?.copyWith(color: theme.colorScheme.error))
                   else
                     RiskBadge(risk: c.riskLevel, compact: true),
                 ],
@@ -79,14 +92,17 @@ class CouponCard extends StatelessWidget {
                   ),
                 ),
               if (c.selections.length > 4)
-                Text('+ ${c.selections.length - 4} autre(s)', style: theme.textTheme.bodySmall),
+                Text('+ ${c.selections.length - 4} autre(s)',
+                    style: theme.textTheme.bodySmall),
               const Divider(height: 18),
               Row(
                 children: [
                   Text('Cote ${decimal(c.totalOdd)}',
-                      style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(color: theme.colorScheme.primary)),
                   const SizedBox(width: 12),
-                  Text('Modèle ${pct(c.combinedProbability)}', style: theme.textTheme.bodySmall),
+                  Text('Modèle ${pct(c.combinedProbability)}',
+                      style: theme.textTheme.bodySmall),
                   const Spacer(),
                   trailing ??
                       Text(

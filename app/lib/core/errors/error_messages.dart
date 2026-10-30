@@ -41,17 +41,22 @@ String userMessageFor(Object error) {
         return 'Ce compte est suspendu. Contactez le support.';
     }
     final message = error.message.toLowerCase();
-    if (message.contains('invalid login')) return 'Email ou mot de passe incorrect.';
-    if (message.contains('not confirmed')) return 'Confirmez d’abord votre email avec le code reçu.';
-    if (message.contains('expired') || (message.contains('invalid') && message.contains('token'))) {
+    if (message.contains('invalid login'))
+      return 'Email ou mot de passe incorrect.';
+    if (message.contains('not confirmed'))
+      return 'Confirmez d’abord votre email avec le code reçu.';
+    if (message.contains('expired') ||
+        (message.contains('invalid') && message.contains('token'))) {
       return 'Code invalide ou expiré. Demandez un nouveau code.';
     }
-    if (_looksLikeNetwork(message)) return 'Connexion internet indisponible. Réessayez.';
+    if (_looksLikeNetwork(message))
+      return 'Connexion internet indisponible. Réessayez.';
     return 'L’authentification a échoué. Réessayez.';
   }
   if (error is PostgrestException) {
     if (error.code == '42501') return 'Action non autorisée.';
-    if (_looksLikeNetwork(error.message)) return 'Connexion internet indisponible. Réessayez.';
+    if (_looksLikeNetwork(error.message))
+      return 'Connexion internet indisponible. Réessayez.';
     return 'Le serveur a refusé la demande. Réessayez plus tard.';
   }
   if (error is FunctionException) {
