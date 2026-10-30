@@ -6,8 +6,10 @@ import '../../core/theme/theme_mode_controller.dart';
 import '../system/maintenance_screen.dart';
 import '../system/system_providers.dart';
 import '../system/update_prompt.dart';
+import 'app_drawer.dart';
 
-/// Barre de navigation à cinq onglets : Accueil, Matchs, Coupons, Assistant IA, Profil.
+/// Coque de l'app : menu latéral, barre à cinq onglets (Accueil, Matchs, Coupons,
+/// Assistant IA, Profil) et balayage gauche / droite entre les onglets.
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key, required this.navigationShell});
 
@@ -28,7 +30,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     });
   }
 
-  void _onSelect(int index) {
+  void _selectTab(int index) {
     widget.navigationShell.goBranch(
       index,
       initialLocation: index == widget.navigationShell.currentIndex,
@@ -44,10 +46,16 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     }
 
     return Scaffold(
+      key: shellScaffoldKey,
+      drawer: AppDrawer(
+        currentIndex: widget.navigationShell.currentIndex,
+        onSelectTab: _selectTab,
+      ),
+      drawerEdgeDragWidth: 24,
       body: widget.navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: widget.navigationShell.currentIndex,
-        onDestinationSelected: _onSelect,
+        onDestinationSelected: _selectTab,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),

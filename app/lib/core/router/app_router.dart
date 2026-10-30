@@ -11,10 +11,14 @@ import '../../features/auth/presentation/sign_up_screen.dart';
 import '../../features/auth/presentation/verify_email_screen.dart';
 import '../../features/coupons/coupons_screen.dart';
 import '../../features/home/home_screen.dart';
-import '../../features/matches/matches_screen.dart';
+import '../../features/matches/presentation/competitions_screen.dart';
+import '../../features/matches/presentation/match_detail_screen.dart';
+import '../../features/matches/presentation/matches_screen.dart';
+import '../../features/matches/presentation/sports_admin_screen.dart';
 import '../../features/profile/presentation/legal_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/shell/home_shell.dart';
+import '../../features/shell/swipe_branch_container.dart';
 import '../../features/system/missing_config_screen.dart';
 import '../providers.dart';
 import 'app_routes.dart';
@@ -91,9 +95,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             ResetPasswordScreen(email: state.uri.queryParameters['email'] ?? ''),
       ),
-      StatefulShellRoute.indexedStack(
+      GoRoute(
+        path: AppRoutes.matchDetail,
+        builder: (context, state) =>
+            MatchDetailScreen(matchId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+      ),
+      GoRoute(
+        path: AppRoutes.competitions,
+        builder: (context, state) => const CompetitionsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.standings,
+        builder: (context, state) =>
+            StandingsScreen(competitionId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+      ),
+      GoRoute(
+        path: AppRoutes.sportsAdmin,
+        builder: (context, state) => const SportsAdminScreen(),
+      ),
+      StatefulShellRoute(
         builder: (context, state, navigationShell) =>
             HomeShell(navigationShell: navigationShell),
+        navigatorContainerBuilder: (context, navigationShell, children) => SwipeBranchContainer(
+          currentIndex: navigationShell.currentIndex,
+          onPageChanged: (index) => navigationShell.goBranch(index),
+          children: children,
+        ),
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(path: AppRoutes.home, builder: (context, state) => const HomeScreen()),

@@ -18,6 +18,15 @@ abstract final class AppRoutes {
   static const profile = '/profil';
   static const legal = '/profil/mentions';
 
+  // Écrans plein écran (au-dessus des onglets)
+  static const matchDetail = '/match/:id';
+  static const competitions = '/competitions';
+  static const standings = '/competitions/:id';
+  static const sportsAdmin = '/admin/donnees';
+
+  static String matchDetailFor(int id) => '/match/$id';
+  static String standingsFor(int id) => '/competitions/$id';
+
   static const publicRoutes = {signIn, signUp, verifyEmail, forgotPassword, resetPassword};
 
   static String verifyEmailFor(String email) =>

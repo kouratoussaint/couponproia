@@ -58,3 +58,13 @@ Après chaque release, insérer la version pour que l'app la propose :
 insert into public.app_versions (platform, version_name, build_number, min_supported_build, download_url, release_notes)
 values ('android', '0.1.0', 101, 101, 'https://…/coupon-pro-ia-0.1.0-arm64-v8a.apk', 'Première version de test.');
 ```
+
+## 5. Données football (LOT 2)
+
+1. Créer un compte sur dashboard.api-football.com et copier la clé API.
+2. Ajouter le secret GitHub `API_FOOTBALL_KEY`.
+3. Actions > « Déployer Supabase » > Run workflow, avec `sync = daily` pour une première
+   synchronisation immédiate. Ensuite, pg_cron s'en charge seul :
+   calendriers et classements à 4 h, cotes à 7 h et 15 h, scores en direct toutes les 15 min.
+4. Offre gratuite : 100 requêtes par jour (budget réglé à 95 dans `app_settings`,
+   clé `sports.daily_request_budget`). Avec l'offre Pro, passer ce budget à 7000.

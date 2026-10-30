@@ -11,6 +11,7 @@ import '../../../core/widgets/form_widgets.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../system/system_providers.dart';
 import '../data/profile_repository.dart';
+import '../../shell/app_drawer.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -25,7 +26,7 @@ class ProfileScreen extends ConsumerWidget {
     final version = ref.watch(installedPackageProvider).valueOrNull;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profil')),
+      appBar: AppBar(leading: const DrawerMenuButton(), title: const Text('Profil')),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(myProfileProvider);

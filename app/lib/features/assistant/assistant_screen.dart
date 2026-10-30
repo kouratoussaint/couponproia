@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/widgets/coming_soon_view.dart';
+import '../shell/app_drawer.dart';
 
 class AssistantScreen extends StatelessWidget {
   const AssistantScreen({super.key});
@@ -8,7 +9,7 @@ class AssistantScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Assistant IA')),
+      appBar: AppBar(leading: const DrawerMenuButton(), title: const Text('Assistant IA')),
       body: const ComingSoonView(
         icon: Icons.smart_toy,
         title: 'Mon Assistant IA',

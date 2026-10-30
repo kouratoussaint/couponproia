@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/widgets/coming_soon_view.dart';
+import '../shell/app_drawer.dart';
 
 class CouponsScreen extends StatelessWidget {
   const CouponsScreen({super.key});
@@ -8,7 +9,7 @@ class CouponsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Coupons')),
+      appBar: AppBar(leading: const DrawerMenuButton(), title: const Text('Coupons')),
       body: const ComingSoonView(
         icon: Icons.receipt_long,
         title: 'Coupons',

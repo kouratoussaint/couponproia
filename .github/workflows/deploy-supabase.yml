@@ -4,6 +4,8 @@
 # Secrets GitHub requis :
 #   SUPABASE_ACCESS_TOKEN  jeton personnel (supabase.com > Account > Access Tokens)
 #   SUPABASE_DB_PASSWORD   mot de passe de la base choisi à la création du projet
+#   API_FOOTBALL_KEY       clé API-Football (dashboard.api-football.com) ; sans elle, la
+#                          synchronisation est journalisée « ignorée »
 # Facultatifs (envoi d'emails via un SMTP, ex. Brevo) : SMTP_USER, SMTP_PASS,
 #   SMTP_SENDER_EMAIL, et éventuellement SMTP_HOST / SMTP_PORT (défaut : Brevo, 587).
 #   Sans eux, Supabase n'envoie qu'aux membres de l'équipe, 2 emails/heure, avec un
@@ -12,6 +14,11 @@ name: Déployer Supabase
 
 on:
   workflow_dispatch:
+    inputs:
+      sync:
+        description: 'Synchronisation à lancer après le déploiement (aucune, daily, odds, live)'
+        required: false
+        default: 'aucune'
   push:
     branches: [main]
     paths: ['supabase/migrations/**', 'supabase/functions/**', 'supabase/templates/**']
@@ -61,6 +68,47 @@ jobs:
           supabase migration list --password "$SUPABASE_DB_PASSWORD" || true
           supabase db push --password "$SUPABASE_DB_PASSWORD" --yes
 
+      - name: Secrets des fonctions et de la planification
+        env:
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          REF: ${{ steps.project.outputs.ref }}
+        run: |
+          CRON_SECRET="$(openssl rand -hex 32)"
+          echo "::add-mask::$CRON_SECRET"
+          echo "CRON_SECRET=$CRON_SECRET" >> "$GITHUB_ENV"
+          args=("CRON_SECRET=$CRON_SECRET")
+          if [ -n "$API_FOOTBALL_KEY" ]; then
+            args+=("API_FOOTBALL_KEY=$API_FOOTBALL_KEY")
+          else
+            echo "::warning::Secret API_FOOTBALL_KEY absent : les synchronisations seront ignorées."
+          fi
+          supabase secrets set --project-ref "$REF" "${args[@]}"
+          # URL du projet et secret partagé dans Vault, lus par pg_cron (app_private.invoke_sports_sync)
+          python3 - <<'PY' > vault.json
+          import json, os
+          url = f"https://{os.environ['REF']}.supabase.co"
+          secret = os.environ["CRON_SECRET"]
+          sql = f"""
+          do $$
+          begin
+            perform vault.update_secret(id, '{url}') from vault.secrets where name = 'project_url';
+            if not found then perform vault.create_secret('{url}', 'project_url'); end if;
+            perform vault.update_secret(id, '{secret}') from vault.secrets where name = 'sports_cron_secret';
+            if not found then perform vault.create_secret('{secret}', 'sports_cron_secret'); end if;
+          end $$;
+          """
+          print(json.dumps({"query": sql}))
+          PY
+          status="$(curl -s -o vault_response.json -w '%{http_code}' -X POST \
+            "https://api.supabase.com/v1/projects/$REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" \
+            --data @vault.json)"
+          rm -f vault.json
+          if [ "${status:0:1}" != "2" ]; then
+            echo "::error::Écriture Vault refusée (HTTP $status) : $(head -c 300 vault_response.json)"; exit 1
+          fi
+          echo "::notice::Secrets de planification enregistrés (Vault + fonction)"
+
       - name: Edge Functions
         run: |
           for dir in supabase/functions/*/; do
@@ -96,3 +144,25 @@ jobs:
 
       - name: Vérification avec la clé publique
         run: bash scripts/supabase/smoke_test.sh app/env/prod.json
+
+      - name: Planification active
+        env:
+          REF: ${{ steps.project.outputs.ref }}
+        run: |
+          curl -s -o cron.json -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" \
+            --data '{"query": "select jobname, schedule, active from cron.job order by jobname"}'
+          echo "::notice::Tâches planifiées : $(jq -c '[.[] | {jobname, schedule, active}]' cron.json 2>/dev/null || head -c 300 cron.json)"
+
+      - name: Synchronisation initiale
+        if: ${{ inputs.sync != '' && inputs.sync != 'aucune' }}
+        env:
+          JOB: ${{ inputs.sync }}
+        run: |
+          URL="$(jq -r .SUPABASE_URL app/env/prod.json)"
+          sleep 5
+          status="$(curl -s -o sync.json -w '%{http_code}' -X POST "$URL/functions/v1/sports-sync" \
+            -H "Content-Type: application/json" -H "x-cron-secret: $CRON_SECRET" \
+            --data "{\"job\": \"$JOB\"}")"
+          echo "::notice::Synchronisation $JOB : HTTP $status $(head -c 300 sync.json)"
+          [ "${status:0:1}" = "2" ]

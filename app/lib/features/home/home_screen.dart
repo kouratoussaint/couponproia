@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/router/app_routes.dart';
 
 import '../../core/widgets/app_logo.dart';
 import '../profile/data/profile_repository.dart';
 import '../system/system_providers.dart';
+import '../shell/app_drawer.dart';
 
 /// Modules affichés sur l'accueil avec leur lot de livraison et leur flag.
 const _modules = [
-  (flag: 'match_analysis', title: 'Matchs et analyses IA', lot: 'LOTS 2-3', icon: Icons.sports_soccer),
+  (flag: 'matches', title: 'Matchs, classements et cotes', lot: 'LOT 2', icon: Icons.sports_soccer),
+  (flag: 'match_analysis', title: 'Analyses IA des matchs', lot: 'LOT 3', icon: Icons.psychology),
   (flag: 'auto_generation_scheduled', title: 'Coupons IA de la plateforme', lot: 'LOT 4', icon: Icons.receipt_long),
   (flag: 'assistant_ia', title: 'Mon Assistant IA', lot: 'LOT 5', icon: Icons.smart_toy),
   (flag: 'ai_lab', title: 'Laboratoire IA', lot: 'LOT 6', icon: Icons.science),
@@ -26,7 +31,7 @@ class HomeScreen extends ConsumerWidget {
     final flags = ref.watch(featureFlagsProvider).valueOrNull ?? const <String, bool>{};
 
     return Scaffold(
-      appBar: AppBar(title: const AppLogo(size: 30)),
+      appBar: AppBar(leading: const DrawerMenuButton(), title: const AppLogo(size: 30)),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(featureFlagsProvider);
@@ -57,13 +62,23 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Version de fondation (LOT 1) : compte, profil et thèmes sont en place. '
-                        'Les modules d’analyse arrivent lot par lot ; aucune donnée affichée ici n’est fictive.',
+                        'Matchs, classements et cotes réels sont disponibles (LOT 2). '
+                        'Les analyses IA arrivent au LOT 3 ; aucune donnée affichée ici n’est fictive.',
                         style: theme.textTheme.bodyMedium,
                       ),
                     ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: Icon(Icons.today_outlined, color: scheme.primary),
+                title: const Text('Matchs du jour'),
+                subtitle: const Text('Calendrier, scores, cotes et classements'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.go(AppRoutes.matches),
               ),
             ),
             const SizedBox(height: 20),
