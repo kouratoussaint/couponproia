@@ -347,6 +347,42 @@ class CouponEngine {
   }
 
   // -------------------------------------------------------------------------
+  /** Aperçu sans écriture : ce que le profil produirait maintenant. */
+  async preview(profile: Profile) {
+    const criteria = parseCriteria(profile.criteria);
+    const load = await this.candidates(criteria.window_hours);
+    const { kept, excluded } = filterCandidates(
+      load.candidates,
+      criteria,
+      this.now,
+      this.quality?.beatsBaseline ?? null,
+      this.quality?.competitions ?? {},
+    );
+    const proposals = buildCoupons(kept, criteria, await liveFingerprints(this.db));
+    return {
+      profile: profile.key,
+      candidates: load.candidates.length,
+      kept: kept.length,
+      excluded,
+      coupons: proposals.map((p) => ({
+        total_odd: p.totalOdd,
+        combined_probability: p.combinedProbability,
+        implied_probability: p.impliedProbability,
+        selections: p.selections.map((x) => ({
+          match: `${x.home} – ${x.away}`,
+          competition: x.competitionName,
+          selection: outcomeLabel(x.key, x.home, x.away),
+          odd: x.odd,
+          model: x.modelProbability,
+          market: x.impliedProbability,
+          edge: x.edge,
+          reliability: x.reliability,
+        })),
+      })),
+    };
+  }
+
+  // -------------------------------------------------------------------------
   /** Publie les coupons prêts dont l'heure est venue ; expire ceux devenus impossibles. */
   async publishDue(): Promise<{ published: number; expired: number }> {
     let published = 0;
@@ -472,7 +508,13 @@ Deno.serve(async (req) => {
       });
       return json({ run, ...publication });
     }
-    return json({ error: "unknown_job", allowed: ["tick", "generate"] }, 400);
+    if (job === "preview") {
+      const { data: profile } = await ctx.db.from("coupon_profiles").select("*").eq("id", Number(body?.profile_id)).maybeSingle();
+      if (!profile) return json({ error: "profile_not_found" }, 404);
+      await engine.init();
+      return json(await engine.preview(profile as Profile));
+    }
+    return json({ error: "unknown_job", allowed: ["tick", "generate", "preview"] }, 400);
   } catch (e) {
     console.error("coupon-engine", e);
     return json({ error: "internal_error", message: String((e as Error).message ?? e).slice(0, 200) }, 500);
