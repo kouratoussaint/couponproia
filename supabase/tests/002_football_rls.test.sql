@@ -26,7 +26,7 @@ insert into public.sync_runs (provider_id, job, status, requests_used) values ('
 select is((select count(*)::int from public.competitions where is_active), 9, '9 compétitions actives au départ');
 select is((select count(*)::int from public.markets), 4, '4 marchés normalisés');
 select ok((select enabled from public.feature_flags where key = 'matches'), 'module Matchs activé');
-select is((select count(*)::int from public.app_settings where key like 'sports.%' and not is_public), 5,
+select is((select count(*)::int from public.app_settings where key like 'sports.%' and not is_public), 6,
           'réglages de synchronisation privés');
 
 -- 5-6 : contraintes

@@ -14,6 +14,8 @@ export interface SyncSettings {
   /** Saison passée à charger à la place de la saison en cours (offre gratuite), ou null. */
   archiveSeason: number | null;
   minRequestIntervalMs: number;
+  /** Saisons passées à charger une fois (calendrier et résultats), pour l'historique du moteur. */
+  historySeasons: number[];
 }
 
 const DEFAULTS: SyncSettings = {
@@ -23,6 +25,7 @@ const DEFAULTS: SyncSettings = {
   liveLookbackHours: 3,
   archiveSeason: null,
   minRequestIntervalMs: 0,
+  historySeasons: [],
 };
 
 export class BudgetExhausted extends Error {
@@ -73,6 +76,9 @@ export class SportsSync {
         ? Number(map.get("sports.archive_season"))
         : null,
       minRequestIntervalMs: n("sports.min_request_interval_ms", DEFAULTS.minRequestIntervalMs),
+      historySeasons: Array.isArray(map.get("sports.history_seasons"))
+        ? (map.get("sports.history_seasons") as unknown[]).map(Number).filter((x) => Number.isInteger(x) && x > 1990)
+        : [],
     };
     this.provider.configure?.({ minIntervalMs: this.settings.minRequestIntervalMs });
     const since = new Date();
@@ -195,6 +201,18 @@ export class SportsSync {
           const table = await this.provider.getStandings(c.provider_ref, season);
           items += await this.saveStandings(c.id, season, table);
           done.push(league.name);
+
+          // Historique : saisons passées terminées, chargées une seule fois (1 requête chacune).
+          for (const past of this.settings.historySeasons) {
+            if (past === season || this.outOfTime()) continue;
+            const existing = await this.db.from("matches").select("id", { count: "exact", head: true })
+              .eq("competition_id", c.id).eq("season", past);
+            if ((existing.count ?? 0) > 0) continue;
+            this.guard();
+            const pastFixtures = await this.provider.getFixtures(c.provider_ref, past);
+            items += await this.saveFixtures(c.id, pastFixtures);
+            done.push(`${league.name} ${past} (historique)`);
+          }
         } catch (e) {
           if (e instanceof BudgetExhausted) throw e;
           problems.push(`${c.name} : ${e instanceof Error ? e.message : e}`);
