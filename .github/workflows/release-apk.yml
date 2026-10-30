@@ -1,4 +1,7 @@
-# Publie un APK signé à chaque tag de version : `git tag v0.1.0 && git push --tags`.
+# Publie un APK signé :
+#   - à chaque tag de version (`git tag v0.1.0 && git push --tags`), ou
+#   - depuis Actions > Release APK > Run workflow, en indiquant la version (ex. 0.1.0) :
+#     la release et son tag sont alors créés par le workflow.
 #
 # Secrets GitHub requis (Settings > Secrets and variables > Actions) :
 #   ANDROID_KEYSTORE_BASE64   keystore de signature encodé en base64
@@ -12,6 +15,11 @@ on:
   push:
     tags: ['v*.*.*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version à publier (ex. 0.1.0 ou 0.1.0-test.1). Vide : APK en artefact, sans release.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -37,13 +45,21 @@ jobs:
 
       - name: Version
         id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            NAME="${GITHUB_REF#refs/tags/v}"
+            NAME="${GITHUB_REF#refs/tags/v}"; PUBLISH=true
+          elif [ -n "$INPUT_VERSION" ]; then
+            NAME="${INPUT_VERSION#v}"; PUBLISH=true
           else
-            NAME="$(grep '^version:' pubspec.yaml | sed 's/version: //; s/+.*//')-dev"
+            NAME="$(grep '^version:' pubspec.yaml | sed 's/version: //; s/+.*//')-dev"; PUBLISH=false
+          fi
+          if ! [[ "$NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Version invalide : $NAME"; exit 1
           fi
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
           # Numéro de build toujours croissant : condition pour installer les mises à jour.
           echo "build=$((100 + GITHUB_RUN_NUMBER))" >> "$GITHUB_OUTPUT"
 
@@ -103,19 +119,22 @@ jobs:
           retention-days: 90
 
       - name: Publier la release GitHub
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.version.outputs.publish == 'true'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.version.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          name: Coupon Pro IA ${{ steps.version.outputs.name }}
           files: dist/*
           generate_release_notes: true
-          prerelease: ${{ steps.signing.outputs.official != 'true' || contains(github.ref, '-') }}
+          prerelease: ${{ steps.signing.outputs.official != 'true' || contains(steps.version.outputs.name, '-') }}
           body: |
             **Quel APK installer ?** Presque tous les téléphones récents : `arm64-v8a`.
             Téléphones anciens ou très bon marché : `armeabi-v7a`.
             Build ${{ steps.version.outputs.build }}. Signature officielle : ${{ steps.signing.outputs.official }}.
 
-      - name: Artefact (lancement manuel)
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+      - name: Artefact (lancement manuel sans version)
+        if: steps.version.outputs.publish != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: apk-${{ steps.version.outputs.name }}
