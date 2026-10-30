@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['app/pubspec.yaml', '.github/workflows/bootstrap-platforms.yml']
+    paths: ['app/pubspec.yaml', 'app/assets/icon/**', '.github/workflows/bootstrap-platforms.yml']
 
 permissions:
   contents: write

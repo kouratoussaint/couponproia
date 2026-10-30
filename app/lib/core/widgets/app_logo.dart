@@ -1,35 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Logo Coupon Pro IA : pictogramme + nom (« IA » en vert).
+/// Emblème officiel (ballon + cerveau à circuits) suivi du nom « Coupon Pro IA ».
+/// Pour les barres d'application et les écrans système.
 class AppLogo extends StatelessWidget {
   const AppLogo({super.key, this.size = 40, this.showName = true});
 
+  /// Hauteur de l'emblème.
   final double size;
   final bool showName;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final mark = SvgPicture.asset(
-      'assets/brand/logo_mark.svg',
-      width: size,
+    final emblem = Image.asset(
+      'assets/brand/logo_emblem.webp',
       height: size,
-      semanticsLabel: 'Coupon Pro IA',
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      semanticLabel: 'Coupon Pro IA',
     );
-    if (!showName) return mark;
+    if (!showName) return emblem;
     final style = GoogleFonts.montserrat(
       fontSize: size * 0.55,
       fontWeight: FontWeight.w800,
+      fontStyle: FontStyle.italic,
       color: scheme.onSurface,
       letterSpacing: -0.5,
     );
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        mark,
-        SizedBox(width: size * 0.25),
+        emblem,
+        SizedBox(width: size * 0.2),
         Text.rich(
           TextSpan(
             text: 'Coupon Pro ',
@@ -38,6 +41,24 @@ class AppLogo extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Logo complet officiel, avec le nom dessiné. Pour les écrans d'accueil et de connexion.
+class AppFullLogo extends StatelessWidget {
+  const AppFullLogo({super.key, this.height = 140});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/brand/logo_full.webp',
+      height: height,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      semanticLabel: 'Coupon Pro IA',
     );
   }
 }

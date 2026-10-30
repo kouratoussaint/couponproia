@@ -2,11 +2,10 @@
 #
 # Secrets GitHub requis (Settings > Secrets and variables > Actions) :
 #   ANDROID_KEYSTORE_BASE64   keystore de signature encodé en base64
-#   ANDROID_KEYSTORE_PASSWORD mot de passe du keystore
-#   ANDROID_KEY_ALIAS         alias de la clé
-#   ANDROID_KEY_PASSWORD      mot de passe de la clé
-#   SUPABASE_URL / SUPABASE_ANON_KEY  (facultatifs : sans eux, l'APK affiche
-#                                      l'écran « configuration manquante »)
+#   ANDROID_KEYSTORE_PASSWORD mot de passe du keystore (et de la clé « upload »)
+#   SUPABASE_URL / SUPABASE_ANON_KEY  (sans eux, l'APK affiche « configuration manquante »)
+# Sans keystore, l'APK est signé avec une clé de debug, marqué TEST et publié en
+# pré-version : il faudra le désinstaller avant d'installer une version officielle.
 name: Release APK
 
 on:
@@ -49,23 +48,26 @@ jobs:
           echo "build=$((100 + GITHUB_RUN_NUMBER))" >> "$GITHUB_OUTPUT"
 
       - name: Signature
+        id: signing
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_B64" ]; then
-            echo "::error::Secret ANDROID_KEYSTORE_BASE64 absent : impossible de signer l'APK."
-            exit 1
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$STORE_PASSWORD" ]; then
+            echo "::warning::Secrets de signature absents : APK de TEST signé avec la clé de debug."
+            echo "suffix=-TEST" >> "$GITHUB_OUTPUT"
+            echo "official=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
           echo "$KEYSTORE_B64" | base64 -d > android/upload-keystore.jks
           {
             echo "storeFile=../upload-keystore.jks"
             echo "storePassword=$STORE_PASSWORD"
-            echo "keyAlias=$KEY_ALIAS"
-            echo "keyPassword=$KEY_PASSWORD"
+            echo "keyAlias=upload"
+            echo "keyPassword=$STORE_PASSWORD"
           } > android/key.properties
+          echo "suffix=" >> "$GITHUB_OUTPUT"
+          echo "official=true" >> "$GITHUB_OUTPUT"
 
       - run: flutter pub get
       - run: flutter test
@@ -89,7 +91,7 @@ jobs:
           V="${{ steps.version.outputs.name }}"
           for f in build/app/outputs/flutter-apk/app-*-release.apk; do
             abi="$(basename "$f" | sed 's/app-//; s/-release.apk//')"
-            cp "$f" "../dist/coupon-pro-ia-$V-$abi.apk"
+            cp "$f" "../dist/coupon-pro-ia-$V-$abi${{ steps.signing.outputs.suffix }}.apk"
           done
           (cd ../dist && sha256sum *.apk > SHA256SUMS.txt && ls -la)
 
@@ -106,10 +108,11 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
+          prerelease: ${{ steps.signing.outputs.official != 'true' || contains(github.ref, '-') }}
           body: |
             **Quel APK installer ?** Presque tous les téléphones récents : `arm64-v8a`.
             Téléphones anciens ou très bon marché : `armeabi-v7a`.
-            Build ${{ steps.version.outputs.build }}.
+            Build ${{ steps.version.outputs.build }}. Signature officielle : ${{ steps.signing.outputs.official }}.
 
       - name: Artefact (lancement manuel)
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}

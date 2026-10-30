@@ -4,7 +4,8 @@ Statut au 30/10/2026 : **code écrit, base de données testée ; compilation de 
 
 ## 1. Résumé
 
-- Logo (ballon + circuits + arc d'analyse) et icône d'application générés en SVG et PNG.
+- Logo officiel fourni par le propriétaire (`brand/logo-original.png`) intégré : logo complet sur les écrans de connexion,
+  emblème dans l'app, icône d'application et icône adaptative Android dérivées de l'emblème (fond #071B1B).
 - Charte appliquée : palette du LOT 0, Montserrat (titres) et Inter (texte), thèmes clair, sombre et système.
 - Application Flutter : navigation à 5 onglets, inscription, confirmation d'email et
   réinitialisation du mot de passe par code à 6 chiffres, profil, choix du thème synchronisé,
@@ -25,7 +26,7 @@ Statut au 30/10/2026 : **code écrit, base de données testée ; compilation de 
 | App — socle | `app/lib/main.dart`, `app.dart`, `core/` (config, providers, thème, routeur, erreurs, validateurs, widgets) |
 | App — écrans | `features/auth`, `home`, `matches`, `coupons`, `assistant`, `profile`, `shell`, `system` |
 | App — tests | `app/test/core_logic_test.dart`, `coming_soon_view_test.dart` |
-| Identité | `app/assets/brand/logo_mark.svg`, `app/assets/icon/*`, `scripts/brand/generate_logo.py` |
+| Identité | `brand/logo-original.png`, `app/assets/brand/logo_full.webp`, `logo_emblem.webp`, `app/assets/icon/*` |
 | CI | `.github/workflows/ci.yml`, `bootstrap-platforms.yml`, `release-apk.yml` |
 
 ## 3. Migrations
@@ -62,8 +63,7 @@ Statut au 30/10/2026 : **code écrit, base de données testée ; compilation de 
 - Les polices sont téléchargées au premier lancement (google_fonts) puis mises en cache ; elles
   seront embarquées dans l'APK à un lot ultérieur pour un fonctionnement 100 % hors ligne.
 - Photo de profil : la colonne existe, l'envoi d'image arrive avec le Storage (LOT 7 ou avant si besoin).
-- Identifiant d'application proposé : `com.couponproia.coupon_pro_ia` (généré par `flutter create`) ;
-  modifiable jusqu'à la première publication sur le Play Store, définitif ensuite.
+- Identifiant d'application : `com.couponproia.app` ; définitif dès la première publication.
 
 ## 7. Configurations restantes (propriétaire)
 

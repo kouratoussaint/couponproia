@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Fond de l'icône adaptative (géré par flutter_launcher_icons) -->
     <color name="ic_launcher_background">#071B1B</color>
+    <!-- Fond de l'écran de lancement -->
+    <color name="brand_background">#071B1B</color>
 </resources>

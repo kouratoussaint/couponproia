@@ -29,9 +29,7 @@ Secrets GitHub (Settings > Secrets and variables > Actions) :
 | Secret | Contenu |
 | --- | --- |
 | `ANDROID_KEYSTORE_BASE64` | `base64 -w0 upload-keystore.jks` |
-| `ANDROID_KEYSTORE_PASSWORD` | mot de passe du keystore |
-| `ANDROID_KEY_ALIAS` | `upload` |
-| `ANDROID_KEY_PASSWORD` | mot de passe de la clé |
+| `ANDROID_KEYSTORE_PASSWORD` | mot de passe du keystore (le même protège la clé `upload`) |
 | `SUPABASE_URL` | URL du projet de production |
 | `SUPABASE_ANON_KEY` | clé publique du projet de production |
 
