@@ -87,12 +87,14 @@ export async function loadCandidates(
   now: Date,
   windowHours: number,
   quality: EngineQuality | null,
+  range?: { from: Date; until: Date },
 ): Promise<CandidateLoad> {
-  const until = new Date(now.getTime() + windowHours * 3600_000).toISOString();
+  const until = (range?.until ?? new Date(now.getTime() + windowHours * 3600_000)).toISOString();
+  const startIso = new Date(Math.max(now.getTime(), range?.from.getTime() ?? 0)).toISOString();
   const upcoming = await paged<UpcomingRow>((from, to) =>
     db.from("matches").select(
       "id, season, round, kickoff_at, competition:competitions(id, name, type), home:teams!matches_home_team_fk(id, name), away:teams!matches_away_team_fk(id, name)",
-    ).eq("status", "scheduled").gt("kickoff_at", now.toISOString()).lte("kickoff_at", until)
+    ).eq("status", "scheduled").gt("kickoff_at", startIso).lte("kickoff_at", until)
       .order("kickoff_at").order("id").range(from, to) as unknown as PromiseLike<{ data: UpcomingRow[] | null; error: { message: string } | null }>
   );
   const valid = upcoming.filter((m) => m.competition && m.home && m.away);

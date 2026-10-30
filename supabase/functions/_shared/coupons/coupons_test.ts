@@ -195,3 +195,18 @@ Deno.test("qualité par compétition : saisons regroupées, petits échantillons
   });
   assertEquals(q, { "Ligue 1": true });
 });
+
+Deno.test("sélections imposées : conservées, complétées dans la fourchette", () => {
+  const fixed = cand({ matchId: 99, odd: 2.0, modelProbability: 0.5 });
+  const pool = [1, 2, 3, 4].map((i) => cand({ matchId: i, odd: 1.4 + i * 0.1, modelProbability: 0.75 - i * 0.03 }));
+  const [c] = buildCoupons(pool, parseCriteria({ min_selections: 3, max_selections: 3, min_total_odd: 4, max_total_odd: 6 }), new Set(), 200_000, [fixed]);
+  assert(c.selections.some((s) => s.matchId === 99), "la sélection imposée reste");
+  assertEquals(c.selections.length, 3);
+  assert(c.totalOdd >= 4 && c.totalOdd <= 6);
+  const keys = parseCriteria({ markets: ["OU"], allowed_keys: ["OU.OVER.1.5"] });
+  const { kept } = filterCandidates(
+    [cand({ matchId: 7, key: "OU.OVER.1.5", marketCode: "OU", outcomeCode: "OVER", line: 1.5 }),
+     cand({ matchId: 8, key: "OU.OVER.2.5", marketCode: "OU", outcomeCode: "OVER", line: 2.5 })],
+    { ...keys, require_validated_markets: false }, NOW, VALID);
+  assertEquals(kept.map((k) => k.key), ["OU.OVER.1.5"]);
+});

@@ -24,6 +24,8 @@ export interface Criteria {
   competitions: number[];
   /** Familles de marchés : 1X2, DC, OU, BTTS. */
   markets: string[];
+  /** Issues précises autorisées (« OU.OVER.1.5 »…) ; vide = toutes celles des marchés retenus. */
+  allowed_keys: string[];
   min_model_probability: number;
   min_edge: number;
   /** Écart maximal avec le marché : au-delà, le désaccord trahit plus souvent une lacune du modèle. */
@@ -48,6 +50,7 @@ export const DEFAULT_CRITERIA: Criteria = {
   coupons_per_run: 1,
   competitions: [],
   markets: ["1X2", "DC"],
+  allowed_keys: [],
   min_model_probability: 0.5,
   min_edge: -0.02,
   max_edge: 0.1,
@@ -76,6 +79,7 @@ export function parseCriteria(raw: unknown): Criteria {
     coupons_per_run: Math.round(num("coupons_per_run", 1, 10)),
     competitions: Array.isArray(r.competitions) ? r.competitions.map(Number).filter(Number.isInteger) : [],
     markets: Array.isArray(r.markets) && r.markets.length ? r.markets.map(String) : DEFAULT_CRITERIA.markets,
+    allowed_keys: Array.isArray(r.allowed_keys) ? r.allowed_keys.map(String) : [],
     min_model_probability: num("min_model_probability", 0, 1),
     min_edge: num("min_edge", -1, 1),
     max_edge: num("max_edge", 0, 1),
@@ -149,6 +153,7 @@ export function filterCandidates(
       return out("compétition non retenue");
     }
     if (!criteria.markets.includes(familyOf(c.key))) return out("marché non retenu");
+    if (criteria.allowed_keys.length && !criteria.allowed_keys.includes(c.key)) return out("issue non demandée");
     if (criteria.require_validated_markets && beatsBaseline?.[qualityFamilyOf(c.key)] !== true) {
       return out("marché non validé par l'évaluation du moteur");
     }
@@ -207,8 +212,11 @@ export function buildCoupons(
   criteria: Criteria,
   takenFingerprints: Set<string> = new Set(),
   maxNodes = 200_000,
+  /** Sélections imposées (équipes demandées, sélections conservées lors d'une modification). */
+  fixed: Candidate[] = [],
 ): ProposedCoupon[] {
-  const pool = [...candidates]
+  const fixedMatches = new Set(fixed.map((f) => f.matchId));
+  const pool = [...candidates].filter((c) => !fixedMatches.has(c.matchId))
     .sort((a, b) => b.modelProbability - a.modelProbability || (b.edge ?? 0) - (a.edge ?? 0))
     .slice(0, 40);
   const results: ProposedCoupon[] = [];
@@ -219,12 +227,16 @@ export function buildCoupons(
   for (let k = 0; k < criteria.coupons_per_run; k++) {
     const state: { best: Candidate[] | null; bestLogP: number } = { best: null, bestLogP: -Infinity };
     let nodes = 0;
-    const chosen: Candidate[] = [];
-    const matches = new Set<number>();
+    const chosen: Candidate[] = [...fixed];
+    const matches = new Set<number>(fixedMatches);
     const perCompetition = new Map<number, number>();
+    for (const f of fixed) perCompetition.set(f.competitionId, (perCompetition.get(f.competitionId) ?? 0) + 1);
+    const fixedLogOdd = fixed.reduce((s, f) => s + Math.log(f.odd), 0);
+    const fixedLogP = fixed.reduce((s, f) => s + Math.log(f.modelProbability), 0);
 
     const overlapsTooMuch = (sel: Candidate[]) =>
       results.some((r) => {
+        if (fixed.length) return fingerprintOf(sel) === r.fingerprint;
         const keys = new Set(r.selections.map((s) => `${s.matchId}:${s.key}`));
         const common = sel.filter((s) => keys.has(`${s.matchId}:${s.key}`)).length;
         return common > Math.floor(Math.min(sel.length, r.selections.length) / 2);
@@ -257,7 +269,7 @@ export function buildCoupons(
         perCompetition.set(c.competitionId, count);
       }
     };
-    dfs(0, 0, 0);
+    if (fixedLogOdd <= maxLog) dfs(0, fixedLogOdd, fixedLogP);
     if (!state.best) break;
     const proposal = propose(state.best);
     results.push(proposal);
