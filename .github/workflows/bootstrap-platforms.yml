@@ -1,0 +1,62 @@
+# À lancer UNE fois (onglet Actions > Bootstrap plateformes > Run workflow) :
+# génère les dossiers android/ et ios/ avec `flutter create`, puis les icônes,
+# et les commite dans le dépôt. Ne remplace jamais du code existant dans lib/.
+name: Bootstrap plateformes
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Générer android/ et ios/ si absents
+        run: |
+          if [ -d android ]; then
+            echo "android/ existe déjà : rien à générer."
+          else
+            flutter create --org com.couponproia --project-name coupon_pro_ia \
+              --platforms=android,ios --no-pub .
+            # flutter create ajoute un test d'exemple qui ne correspond pas à l'app
+            rm -f test/widget_test.dart
+          fi
+
+      - name: Dépendances et icônes
+        run: |
+          flutter pub get
+          dart run flutter_launcher_icons
+
+      - name: Version de Flutter utilisée
+        run: flutter --version | tee ../docs/flutter-version.txt
+
+      - name: Commiter les fichiers générés
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/android app/ios app/pubspec.lock docs/flutter-version.txt app/.metadata app/.gitignore || true
+          git add -u app/test || true
+          if git diff --cached --quiet; then
+            echo "Aucun changement."
+          else
+            git commit -m "chore: génère les plateformes Android et iOS (flutter create)"
+            git push
+          fi

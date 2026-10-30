@@ -1,0 +1,31 @@
+# Secrets : ne jamais commiter
+*.jks
+*.keystore
+key.properties
+.env
+.env.*
+supabase/.env
+supabase/.temp/
+
+# Flutter / Dart
+app/.dart_tool/
+app/build/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/android/.gradle/
+app/android/local.properties
+app/android/app/release/
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Generated.xcconfig
+app/ios/Flutter/flutter_export_environment.sh
+*.iml
+.idea/
+.vscode/
+
+# Sorties de build
+dist/
+
+# Divers
+.DS_Store
+__pycache__/

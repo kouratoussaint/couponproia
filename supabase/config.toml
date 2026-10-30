@@ -1,0 +1,43 @@
+# Configuration locale de la Supabase CLI (supabase start / supabase test db).
+# Les projets hébergés (staging, prod) se règlent dans le tableau de bord ;
+# garder les deux alignés, en particulier la section [auth].
+project_id = "coupon-pro-ia"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[auth]
+enabled = true
+# Pas de lien magique : l'app utilise des codes à 6 chiffres (OTP) pour la
+# confirmation d'email et la réinitialisation du mot de passe (voir templates/).
+site_url = "http://127.0.0.1:3000"
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+otp_length = 6
+otp_expiry = 3600
+
+[auth.email.template.confirmation]
+subject = "Votre code Coupon Pro IA"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Réinitialisation de votre mot de passe Coupon Pro IA"
+content_path = "./supabase/templates/recovery.html"
+
+[functions.delete-account]
+verify_jwt = true
