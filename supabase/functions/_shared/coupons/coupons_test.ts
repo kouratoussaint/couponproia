@@ -184,3 +184,14 @@ Deno.test("filtres : un désaccord trop fort avec le marché est écarté", () =
   assertEquals(kept.map((c) => c.matchId), [1]);
   assertEquals(excluded["désaccord trop fort avec le marché"], 1);
 });
+
+import { byCompetition } from "../engine/quality.ts";
+
+Deno.test("qualité par compétition : saisons regroupées, petits échantillons ignorés", () => {
+  const q = byCompetition({
+    "Ligue 1 2025": { matches: 278, brierModel: 0.63, brierBaseline: 0.66 },
+    "Ligue 1 2026": { matches: 50, brierModel: 0.70, brierBaseline: 0.62 },
+    "Coupe X 2026": { matches: 40, brierModel: 0.7, brierBaseline: 0.6 },
+  });
+  assertEquals(q, { "Ligue 1": true });
+});

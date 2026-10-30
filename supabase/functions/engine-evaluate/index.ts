@@ -56,14 +56,16 @@ Deno.serve(async (req) => {
       return matches;
     };
 
+    // Par défaut (tâche hebdomadaire) : saison précédente complète + saison en cours.
     const groups: { name: string; matches: PlayedMatch[]; prior: PlayedMatch[] }[] = [];
     for (const c of competitions ?? []) {
-      const s = Number.isInteger(season) ? season : c.current_season;
-      if (!s) continue;
-      const matches = await load(c.id, s);
-      if (matches.length === 0) continue;
-      const prior = priorWeight > 0 ? weighted(await load(c.id, s - 1), priorWeight) : [];
-      groups.push({ name: `${c.name} ${s}`, matches, prior });
+      const seasons = Number.isInteger(season) ? [season] : c.current_season ? [c.current_season - 1, c.current_season] : [];
+      for (const s of seasons) {
+        const matches = await load(c.id, s);
+        if (matches.length === 0) continue;
+        const prior = priorWeight > 0 ? weighted(await load(c.id, s - 1), priorWeight) : [];
+        groups.push({ name: `${c.name} ${s}`, matches, prior });
+      }
     }
 
     const warmupMatches = 30;
@@ -73,7 +75,7 @@ Deno.serve(async (req) => {
     const { data: saved, error: saveError } = await db.from("engine_evaluations").insert({
       engine_version: ENGINE_VERSION,
       scope: {
-        season: Number.isInteger(season) ? season : "en cours",
+        season: Number.isInteger(season) ? season : "précédente et en cours",
         competitions: groups.map((g) => g.name),
         warmup_matches: warmupMatches,
         prior_season_weight: priorWeight,

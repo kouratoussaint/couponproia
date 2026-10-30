@@ -22,10 +22,28 @@ export async function loadEngineQuality(db: SupabaseClient): Promise<EngineQuali
       OU: Number(e.details?.over_2_5?.brierModel) < Number(e.details?.over_2_5?.brierBaseline),
       BTTS: Number(e.details?.btts?.brierModel) < Number(e.details?.btts?.brierBaseline),
     },
-    competitions: Object.fromEntries(
-      Object.entries((e.details?.per_competition ?? {}) as Record<string, { matches: number; brierModel: number; brierBaseline: number }>)
-        .filter(([, m]) => m.matches >= 100)
-        .map(([key, m]) => [key.replace(/ \d{4}$/, ""), m.brierModel < m.brierBaseline] as [string, boolean]),
-    ),
+    competitions: byCompetition((e.details?.per_competition ?? {}) as Record<string, CompetitionScore>),
   };
+}
+
+interface CompetitionScore {
+  matches: number;
+  brierModel: number;
+  brierBaseline: number;
+}
+
+/** Regroupe les saisons d'une même compétition (« Ligue 1 2025 », « Ligue 1 2026 ») ; ≥ 100 matchs. */
+export function byCompetition(per: Record<string, CompetitionScore>): Record<string, boolean> {
+  const sums = new Map<string, { n: number; model: number; base: number }>();
+  for (const [key, m] of Object.entries(per)) {
+    const name = key.replace(/ \d{4}$/, "");
+    const acc = sums.get(name) ?? { n: 0, model: 0, base: 0 };
+    acc.n += m.matches;
+    acc.model += m.brierModel * m.matches;
+    acc.base += m.brierBaseline * m.matches;
+    sums.set(name, acc);
+  }
+  return Object.fromEntries(
+    [...sums].filter(([, a]) => a.n >= 100).map(([name, a]) => [name, a.model < a.base] as [string, boolean]),
+  );
 }
