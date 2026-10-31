@@ -23,5 +23,11 @@ Crayon → « Modifier le profil » : photo, pseudo, pays, fuseau horaire, nivea
 équipes suivies, adresse e-mail (code à 6 chiffres envoyé à la nouvelle adresse, mot de passe
 actuel demandé) et mot de passe (mot de passe actuel demandé).
 
-## Console
-Nouveau design proposé (canevas « Propositions », planche Console), à valider avant intégration.
+## Console (design validé, version 0.21.0)
+En-tête bleu nuit (période, utilisateurs actifs, coupons publiés, revenus) ; un bloc de couleur
+par thème, chaque pastille avec son icône ; gestion en tuiles colorées rangées en Pilotage,
+IA et données, Argent, Plateforme, avec un compteur rouge quand quelque chose attend (coupons à
+valider, signalements, paiements en attente).
+
+Console → Paiements → « Tester » : facture LigdiCash ou CinetPay de 100 FCFA créée pour vérifier
+les clés, jamais présentée ni enregistrée comme paiement (journal : `payment.provider_test`).

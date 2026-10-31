@@ -44,6 +44,35 @@ Deno.serve(async (req) => {
     const caller = await callerFrom(req, ctx);
     if (!caller) return json({ error: "unauthorized" }, 401);
 
+    // Console : vérifie les clés d'un agrégateur en créant une facture de 100 FCFA, jamais
+    // présentée à quiconque ni enregistrée comme paiement (aucun droit ne peut en découler).
+    if (action === "provider_test") {
+      if (!caller.permissions.includes("billing.manage")) return json({ error: "forbidden" }, 403);
+      const provider = providers.get(String(body?.provider ?? ""));
+      if (!provider) return json({ error: "provider_not_configured" }, 400);
+      const started = Date.now();
+      try {
+        await provider.checkout({
+          transactionId: `CPITEST${Date.now().toString(36).toUpperCase()}`,
+          amountXof: 100,
+          description: "Coupon Pro IA - test de connexion (ne pas payer)",
+          notifyUrl: `${url}/functions/v1/payment-webhook?p=${provider.name}`,
+          returnUrl: `${url}/functions/v1/payment-return`,
+          cancelUrl: `${url}/functions/v1/payment-return?annule=1`,
+          customerId: caller.id,
+          channels: "MOBILE_MONEY",
+        });
+        await db.from("audit_logs").insert({
+          actor_id: caller.id, action: "payment.provider_test", target_type: "setting", target_id: provider.name,
+          details: { ok: true, latency_ms: Date.now() - started },
+        });
+        return json({ provider: provider.name, ok: true, latency_ms: Date.now() - started });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return json({ provider: provider.name, ok: false, latency_ms: Date.now() - started, message: message.slice(0, 200) });
+      }
+    }
+
     // Console : agrégateurs dont les clés sont configurées (jamais les clés elles-mêmes).
     if (action === "providers") {
       if (!caller.permissions.includes("billing.manage")) return json({ error: "forbidden" }, 403);

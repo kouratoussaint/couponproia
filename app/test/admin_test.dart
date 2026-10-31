@@ -1,6 +1,8 @@
 import 'package:coupon_pro_ia/features/admin/data/admin_repository.dart';
 import 'package:coupon_pro_ia/features/admin/presentation/admin_console_screen.dart';
+import 'package:coupon_pro_ia/features/system/system_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Map<String, dynamic> _dashboard({int aiErrors = 0}) => {
@@ -77,8 +79,55 @@ void main() {
       ));
       await tester.pump();
       expect(find.text('1240'), findsOneWidget);
-      expect(find.text('Erreurs système : 5'), findsOneWidget);
+      expect(find.text('Erreurs système'), findsOneWidget);
+      expect(find.text('5'), findsWidgets);
       expect(find.text('Nouveaux utilisateurs par jour'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final scale in [1.0, 1.6]) {
+    testWidgets('console : familles colorées et compteurs (texte ×$scale)',
+        (tester) async {
+      tester.view.physicalSize = const Size(1080, 3200);
+      tester.view.devicePixelRatio = 2.6;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          myPermissionsProvider.overrideWith((ref) async => {
+                'admin.access',
+                'users.manage',
+                'generation.manage',
+                'moderation.manage',
+                'audit.read',
+                'ai.providers',
+                'ai.configure',
+                'sports.configure',
+                'billing.manage',
+                'settings.manage',
+                'flags.manage',
+              }),
+          adminDashboardProvider
+              .overrideWith((ref, days) async => _dashboard()),
+        ],
+        child: MaterialApp(
+          home: const AdminConsoleScreen(),
+          builder: (c, w) => MediaQuery(
+              data: MediaQuery.of(c)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
+              child: w!),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('Super admin'), findsOneWidget);
+      expect(find.text('utilisateurs actifs'), findsOneWidget);
+      final list = find.byType(Scrollable).first;
+      await tester.scrollUntilVisible(find.text('PILOTAGE'), 400,
+          scrollable: list);
+      await tester.scrollUntilVisible(find.text('Fournisseurs d’IA'), 300,
+          scrollable: list);
+      await tester.scrollUntilVisible(find.text('Documents légaux'), 300,
+          scrollable: list);
       expect(tester.takeException(), isNull);
     });
   }

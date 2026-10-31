@@ -62,6 +62,42 @@ class _PaymentProvidersCardState extends ConsumerState<PaymentProvidersCard> {
   List<String>? _order;
   Set<String>? _enabled;
   bool _saving = false;
+  bool _testing = false;
+
+  /// Crée une facture de test (100 FCFA, jamais présentée) pour vérifier les clés.
+  Future<void> _test(String name, String label) async {
+    setState(() => _testing = true);
+    try {
+      final res = await ref.read(supabaseClientProvider).functions.invoke(
+          'payments',
+          body: {'action': 'provider_test', 'provider': name});
+      final d = asMap(res.data);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (c) => AlertDialog(
+          icon: Icon(d['ok'] == true
+              ? Icons.check_circle_outline
+              : Icons.error_outline),
+          title: Text(d['ok'] == true
+              ? '$label répond : clés valides'
+              : '$label refuse la facture de test'),
+          content: Text(d['ok'] == true
+              ? 'Facture de test de 100 FCFA créée en ${((asInt(d['latency_ms'])) / 1000).toStringAsFixed(1).replaceAll('.', ',')} s, '
+                  'jamais présentée à un client. Pour un essai complet, achetez le plus petit pack depuis l’application.'
+              : 'Réponse : ${d['message'] ?? 'inconnue'}. Vérifiez les clés et l’activation du projet chez $label.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(c), child: const Text('Fermer'))
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) showMessage(context, 'Test impossible pour le moment.');
+    } finally {
+      if (mounted) setState(() => _testing = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -175,6 +211,11 @@ class _PaymentProvidersCardState extends ConsumerState<PaymentProvidersCard> {
               ],
             ),
           ),
+          if (p?.configured ?? false)
+            TextButton(
+              onPressed: _testing ? null : () => _test(name, label),
+              child: const Text('Tester'),
+            ),
           IconButton(
             tooltip: 'Monter',
             visualDensity: VisualDensity.compact,
