@@ -1,6 +1,14 @@
 // Tests unitaires : `deno test supabase/functions/_shared`
 import { assertEquals, assertRejects } from "jsr:@std/assert@1";
-import { ApiFootballError, ApiFootballProvider, parseFixture, parseOdds, parseStandings } from "./api_football.ts";
+import {
+  ApiFootballError,
+  ApiFootballProvider,
+  parseAbsence,
+  parseFixture,
+  parseLineups,
+  parseOdds,
+  parseStandings,
+} from "./api_football.ts";
 import { normalizeBet, normalizeStatus, safeEqual, summarizeOdds } from "./normalize.ts";
 
 Deno.test("statuts : codes du fournisseur ramenés à nos statuts", () => {
@@ -153,4 +161,39 @@ Deno.test("fournisseur : espacement minimal entre deux requêtes", async () => {
   await p.getFixtures("39", 2024);
   assertEquals(waits.length, 1);
   assertEquals(waits[0] > 6000, true);
+});
+
+Deno.test("compositions : lues seulement quand elles sont publiées", () => {
+  assertEquals(parseLineups(undefined), []);
+  assertEquals(parseLineups([{ team: { id: 33, name: "A" }, formation: "4-3-3", startXI: [] }]), []);
+  const l = parseLineups([{
+    team: { id: 33, name: "Manchester United", logo: "https://x/33.png" },
+    coach: { id: 1, name: "R. Amorim" },
+    formation: "3-4-2-1",
+    startXI: [{ player: { id: 1, name: "A. Onana", number: 24, pos: "G", grid: "1:1" } }, { player: { name: "" } }],
+    substitutes: [{ player: { id: 2, name: "T. Heaton", number: 22, pos: "G" } }],
+  }]);
+  assertEquals(l.length, 1);
+  assertEquals(l[0].team.ref, "33");
+  assertEquals(l[0].formation, "3-4-2-1");
+  assertEquals(l[0].coach, "R. Amorim");
+  assertEquals(l[0].startXI, [{ name: "A. Onana", number: 24, pos: "G" }]);
+  assertEquals(l[0].substitutes.length, 1);
+});
+
+Deno.test("absents : joueur, équipe, type et motif", () => {
+  const a = parseAbsence({
+    player: { id: 9, name: "L. Shaw", type: "Missing Fixture", reason: "Muscle Injury" },
+    team: { id: 33, name: "Manchester United" },
+    fixture: { id: 1208021 },
+  });
+  assertEquals(a, {
+    fixtureRef: "1208021",
+    team: { ref: "33", name: "Manchester United", logoUrl: null },
+    player: "L. Shaw",
+    type: "Missing Fixture",
+    reason: "Muscle Injury",
+  });
+  assertEquals(parseAbsence({ player: { name: "X" }, team: { id: 1 } }), null, "sans match : ignoré");
+  assertEquals(parseAbsence({ player: {}, team: { id: 1 }, fixture: { id: 2 } }), null, "sans nom : ignoré");
 });

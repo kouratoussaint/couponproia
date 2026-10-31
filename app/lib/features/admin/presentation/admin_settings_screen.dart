@@ -10,6 +10,7 @@ import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/admin_repository.dart';
+import 'promos_admin_screen.dart';
 import 'users_admin_screen.dart';
 
 String _when(String? iso) {
@@ -336,7 +337,8 @@ const _paymentStatus = {
   'succeeded': 'Confirmés',
   'pending': 'En attente',
   'failed': 'Échoués',
-  'cancelled': 'Abandonnés'
+  'cancelled': 'Abandonnés',
+  'refunded': 'Remboursés'
 };
 
 class PaymentsAdminScreen extends ConsumerStatefulWidget {
@@ -349,6 +351,33 @@ class PaymentsAdminScreen extends ConsumerStatefulWidget {
 
 class _PaymentsAdminScreenState extends ConsumerState<PaymentsAdminScreen> {
   String? _status;
+
+  Future<void> _actions(BuildContext context, Map<String, dynamic> p) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          if (p['user_id'] != null)
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: const Text('Fiche de l’utilisateur'),
+              onTap: () => Navigator.pop(c, 'user'),
+            ),
+          if (p['status'] == 'succeeded')
+            ListTile(
+              leading: const Icon(Icons.undo),
+              title: const Text('Enregistrer un remboursement'),
+              subtitle: const Text('Après remboursement chez CinetPay'),
+              onTap: () => Navigator.pop(c, 'refund'),
+            ),
+        ]),
+      ),
+    );
+    if (!context.mounted) return;
+    if (action == 'user') openAdminUser(context, p['user_id'] as String);
+    if (action == 'refund') await recordRefund(context, ref, p);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -371,8 +400,8 @@ class _PaymentsAdminScreenState extends ConsumerState<PaymentsAdminScreen> {
           ]),
           const SizedBox(height: 8),
           Text(
-              'Les remboursements se font depuis le tableau de bord CinetPay ; ajuster ensuite les droits '
-              'depuis la fiche de l’utilisateur.',
+              'Remboursement : rendre l’argent depuis le tableau de bord CinetPay, puis toucher le paiement '
+              'confirmé ici pour l’enregistrer (les droits accordés sont retirés).',
               style: Theme.of(context).textTheme.bodySmall),
           ...list.when(
             loading: () => [const LinearProgressIndicator()],
@@ -389,15 +418,18 @@ class _PaymentsAdminScreenState extends ConsumerState<PaymentsAdminScreen> {
                         child: ListTile(
                           title: Text(
                               '${fcfa(asInt(p['amount_xof']))} · ${p['kind'] == 'subscription' ? 'Forfait ${p['plan']} (${p['period']})' : '${p['credits']} crédits'}'),
-                          subtitle: Text(
-                              '${p['email'] ?? ''}\n${_when(p['created_at'] as String?)} · ${p['transaction_id']}'),
+                          subtitle: Text([
+                            '${p['email'] ?? ''}',
+                            '${_when(p['created_at'] as String?)} · ${p['transaction_id']}',
+                            if (p['promo_code'] != null)
+                              'Code ${p['promo_code']} (−${fcfa(asInt(p['discount_xof']))})',
+                            if (p['refund_reason'] != null)
+                              'Remboursé le ${_when(p['refunded_at'] as String?)} : ${p['refund_reason']}',
+                          ].join('\n')),
                           isThreeLine: true,
                           trailing: Text(
                               _paymentStatus[p['status']] ?? '${p['status']}'),
-                          onTap: p['user_id'] == null
-                              ? null
-                              : () => openAdminUser(
-                                  context, p['user_id'] as String),
+                          onTap: () => _actions(context, p),
                         ),
                       ),
                   ],

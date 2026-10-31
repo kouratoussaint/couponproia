@@ -2,9 +2,9 @@
 // budget journalier de requêtes, et tracent chaque passage dans sync_runs.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { summarizeOdds } from "./normalize.ts";
-import type { ProviderFixture, ProviderTeam, SportsDataProvider } from "./types.ts";
+import type { ProviderAbsence, ProviderFixture, ProviderTeam, SportsDataProvider } from "./types.ts";
 
-export type SyncJob = "daily" | "odds" | "live";
+export type SyncJob = "daily" | "odds" | "live" | "matchday";
 
 export interface SyncSettings {
   dailyBudget: number;
@@ -99,10 +99,16 @@ export class SportsSync {
   async run(job: SyncJob): Promise<Record<string, unknown>> {
     await this.loadSettings();
 
-    // Le suivi en direct ne journalise rien quand il n'y a aucun match à suivre.
+    // Le suivi en direct et le jour de match ne journalisent rien quand il n'y a rien à faire.
     if (job === "live") {
       const refs = await this.liveCandidates();
       if (refs.length === 0) return { job, status: "skipped", reason: "aucun match en cours" };
+    }
+    if (job === "matchday") {
+      const todo = await this.matchdayCandidates();
+      if (todo.lineups.length === 0 && todo.absences.length === 0) {
+        return { job, status: "skipped", reason: "rien à vérifier" };
+      }
     }
 
     const { data: runRow, error: runError } = await this.db
@@ -114,7 +120,13 @@ export class SportsSync {
 
     let report: RunReport;
     try {
-      report = job === "daily" ? await this.daily() : job === "odds" ? await this.odds() : await this.live();
+      report = job === "daily"
+        ? await this.daily()
+        : job === "odds"
+        ? await this.odds()
+        : job === "matchday"
+        ? await this.matchday()
+        : await this.live();
     } catch (e) {
       report = {
         status: "failed",
@@ -330,7 +342,119 @@ export class SportsSync {
       const compId = compByRef.get(leagueRef);
       if (compId !== undefined) items += await this.saveFixtures(compId, list);
     }
-    return { status: "success", items, details: { tracked: refs.length } };
+    const lineups = await this.saveLineups(fixtures);
+    return { status: "success", items, details: { tracked: refs.length, lineups } };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Jour de match : compositions (dès leur publication) et absents annoncés
+  // ---------------------------------------------------------------------------
+  private async matchdayCandidates(): Promise<{ lineups: string[]; absences: { id: number; ref: string }[] }> {
+    const now = Date.now();
+    const iso = (ms: number) => new Date(ms).toISOString();
+    const { data: soon, error } = await this.db
+      .from("matches")
+      .select("id, provider_ref, kickoff_at, absences_checked_at, competition:competitions!inner(is_active), lineups:match_lineups(team_id)")
+      .eq("provider_id", this.provider.id)
+      .eq("status", "scheduled")
+      .eq("competition.is_active", true)
+      .gte("kickoff_at", iso(now - 15 * 60_000))
+      .lte("kickoff_at", iso(now + 6 * 3600_000))
+      .limit(300);
+    if (error) throw new Error(error.message);
+    type Row = { id: number; provider_ref: string; kickoff_at: string; absences_checked_at: string | null; lineups: unknown[] };
+    const rows = (soon ?? []) as unknown as Row[];
+    const lineups = rows
+      .filter((r) => Date.parse(r.kickoff_at) <= now + 75 * 60_000 && (r.lineups?.length ?? 0) < 2)
+      .map((r) => r.provider_ref);
+    const absences = this.provider.getAbsences
+      ? rows
+        .filter((r) => !r.absences_checked_at || Date.parse(r.absences_checked_at) < now - 3 * 3600_000)
+        .map((r) => ({ id: r.id, ref: r.provider_ref }))
+      : [];
+    return { lineups, absences };
+  }
+
+  private async matchday(): Promise<RunReport> {
+    const todo = await this.matchdayCandidates();
+    let lineups = 0;
+    let absences = 0;
+    let budgetHit = false;
+    try {
+      if (todo.lineups.length) {
+        this.guard(Math.ceil(todo.lineups.length / 20));
+        lineups = await this.saveLineups(await this.provider.getFixturesByIds(todo.lineups));
+      }
+      if (todo.absences.length && this.provider.getAbsences) {
+        this.guard(Math.ceil(todo.absences.length / 20));
+        const found = await this.provider.getAbsences(todo.absences.map((a) => a.ref));
+        absences = await this.saveAbsences(todo.absences, found);
+      }
+    } catch (e) {
+      if (!(e instanceof BudgetExhausted)) throw e;
+      budgetHit = true;
+    }
+    return {
+      status: budgetHit ? "partial" : "success",
+      items: lineups + absences,
+      error: budgetHit ? "budget journalier atteint" : undefined,
+      details: { lineup_candidates: todo.lineups.length, lineups, absence_matches: todo.absences.length, absences },
+    };
+  }
+
+  /** Enregistre les compositions publiées (une ligne par équipe et par match). */
+  private async saveLineups(fixtures: ProviderFixture[]): Promise<number> {
+    const withLineups = fixtures.filter((f) => (f.lineups?.length ?? 0) > 0);
+    if (!withLineups.length) return 0;
+    const { data: matches } = await this.db.from("matches").select("id, provider_ref")
+      .eq("provider_id", this.provider.id).in("provider_ref", withLineups.map((f) => f.ref));
+    const matchId = new Map((matches ?? []).map((m: { id: number; provider_ref: string }) => [m.provider_ref, m.id] as [string, number]));
+    const teamIds = await this.saveTeams(withLineups.flatMap((f) => f.lineups!.map((l) => l.team)));
+    const now = new Date().toISOString();
+    const rows = withLineups.flatMap((f) =>
+      f.lineups!
+        .filter((l) => matchId.has(f.ref) && teamIds.has(l.team.ref))
+        .map((l) => ({
+          match_id: matchId.get(f.ref),
+          team_id: teamIds.get(l.team.ref),
+          formation: l.formation,
+          coach: l.coach,
+          start_xi: l.startXI,
+          substitutes: l.substitutes,
+          fetched_at: now,
+        }))
+    );
+    if (!rows.length) return 0;
+    const { error } = await this.db.from("match_lineups").upsert(rows, { onConflict: "match_id,team_id" });
+    if (error) throw new Error(`Compositions : ${error.message}`);
+    return rows.length;
+  }
+
+  /** Remplace la liste des absents des matchs vérifiés (une liste vide est aussi une information). */
+  private async saveAbsences(checked: { id: number; ref: string }[], found: ProviderAbsence[]): Promise<number> {
+    const idByRef = new Map(checked.map((c) => [c.ref, c.id] as [string, number]));
+    const teamIds = await this.saveTeams(found.map((a) => a.team));
+    const now = new Date().toISOString();
+    const rows = found
+      .filter((a) => idByRef.has(a.fixtureRef) && teamIds.has(a.team.ref))
+      .map((a) => ({
+        match_id: idByRef.get(a.fixtureRef),
+        team_id: teamIds.get(a.team.ref),
+        player_name: a.player,
+        absence_type: a.type,
+        reason: a.reason,
+        fetched_at: now,
+      }));
+    const ids = checked.map((c) => c.id);
+    const { error: delError } = await this.db.from("match_absences").delete().in("match_id", ids);
+    if (delError) throw new Error(`Absents : ${delError.message}`);
+    for (const chunk of chunks(rows, 500)) {
+      const { error } = await this.db.from("match_absences").insert(chunk);
+      if (error) throw new Error(`Absents : ${error.message}`);
+    }
+    const { error: upError } = await this.db.from("matches").update({ absences_checked_at: now }).in("id", ids);
+    if (upError) throw new Error(`Absents : ${upError.message}`);
+    return rows.length;
   }
 
   // ---------------------------------------------------------------------------

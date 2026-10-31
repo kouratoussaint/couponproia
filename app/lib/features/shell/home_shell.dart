@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/theme_mode_controller.dart';
+import '../notifications/data/push_service.dart';
 import '../system/maintenance_screen.dart';
 import '../system/system_providers.dart';
 import '../system/update_prompt.dart';
@@ -91,6 +92,29 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ));
   }
 
+  /// Notifications sur le téléphone (si le projet Firebase est configuré).
+  Future<void> _startPush() async {
+    final version = ref.read(installedPackageProvider).valueOrNull?.version;
+    await ref.read(pushServiceProvider).start(
+          appVersion: version,
+          onOpen: (route) {
+            if (mounted) context.push(route);
+          },
+          onForeground: (title, route) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(
+                content: Text(title),
+                action: route == null
+                    ? null
+                    : SnackBarAction(
+                        label: 'Voir', onPressed: () => context.push(route)),
+              ));
+          },
+        );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -98,6 +122,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       if (!mounted) return;
       ref.read(themeModeProvider.notifier).pullRemote();
       checkForUpdate(context, ref);
+      _startPush();
     });
   }
 

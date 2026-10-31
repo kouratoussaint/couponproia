@@ -4,7 +4,7 @@
 //  - reconcile (pg_cron) : relit les paiements en attente (notification perdue).
 // Aucun droit n'est accordé sans confirmation de l'agrégateur.
 import { callerFrom, corsHeaders, env, json, readSettings, serverContext } from "../_shared/http.ts";
-import { creditsPrice, newTransactionId, PaymentProviderError, type PlanSetting, subscriptionPrice } from "../_shared/payments/provider.ts";
+import { applyPromo, creditsPrice, newTransactionId, PaymentProviderError, type PlanSetting, subscriptionPrice } from "../_shared/payments/provider.ts";
 import { type PaymentRow, providerFromEnv, syncPayment } from "../_shared/payments/service.ts";
 import { safeEqual } from "../_shared/sports/normalize.ts";
 
@@ -88,6 +88,22 @@ Deno.serve(async (req) => {
       return json({ error: "invalid_product" }, 400);
     }
 
+    // Code promo : contrôlé et appliqué ici (le prix affiché par l'app n'est qu'indicatif).
+    const promoInput = String(body?.promo_code ?? "").trim();
+    if (promoInput) {
+      const { data: promo, error: promoError } = await db.rpc("svc_promo_check", {
+        p_user: caller.id,
+        p_code: promoInput,
+        p_kind: row.kind,
+        p_plan: (row.plan_code as string | undefined) ?? null,
+      });
+      if (promoError) throw new Error(promoError.message);
+      if (!promo?.ok) return json({ error: "invalid_promo", reason: promo?.reason ?? "unknown" }, 400);
+      const { amount, discount } = applyPromo(row.amount_xof as number, Number(promo.percent_off));
+      row = { ...row, amount_xof: amount, discount_xof: discount, promo_code: promo.code };
+      description += ` (code ${promo.code})`;
+    }
+
     // Anti-abus : pas plus de 5 paiements en attente à la fois.
     const { count } = await db.from("payments").select("id", { count: "exact", head: true })
       .eq("user_id", caller.id).eq("status", "pending");
@@ -115,7 +131,7 @@ Deno.serve(async (req) => {
       });
       await db.from("payments").update({ payment_url: out.paymentUrl, provider_payload: out.raw as Record<string, unknown> })
         .eq("id", payment.id);
-      return json({ payment_id: payment.id, payment_url: out.paymentUrl, amount_xof: row.amount_xof });
+      return json({ payment_id: payment.id, payment_url: out.paymentUrl, amount_xof: row.amount_xof, discount_xof: row.discount_xof ?? 0 });
     } catch (e) {
       await db.from("payments").update({
         status: "failed",

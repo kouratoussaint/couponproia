@@ -1,8 +1,11 @@
 // Adaptateur API-Football (https://v3.football.api-sports.io).
 import { normalizeBet, normalizeStatus } from "./normalize.ts";
 import type {
+  LineupPlayer,
   OddsQuote,
+  ProviderAbsence,
   ProviderFixture,
+  ProviderLineup,
   ProviderLeague,
   ProviderStanding,
   ProviderTeam,
@@ -55,6 +58,42 @@ export function parseFixture(r: Json): ProviderFixture {
     ftAwayGoals: numOrNull(r.score?.fulltime?.away),
     venue: strOrNull(r.fixture.venue?.name),
     referee: strOrNull(r.fixture.referee),
+    lineups: parseLineups(r.lineups),
+  };
+}
+
+function lineupPlayers(list: Json): LineupPlayer[] {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((x: Json) => x?.player)
+    .filter((p: Json) => p && typeof p.name === "string" && p.name.trim() !== "")
+    .map((p: Json) => ({ name: String(p.name), number: numOrNull(p.number), pos: strOrNull(p.pos) }));
+}
+
+/** Compositions d'un match (champ « lineups » du détail) ; vide tant qu'elles ne sont pas publiées. */
+export function parseLineups(list: Json): ProviderLineup[] {
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((l: Json) => l?.team?.id !== undefined && l?.team?.id !== null)
+    .map((l: Json) => ({
+      team: team(l.team),
+      formation: strOrNull(l.formation),
+      coach: strOrNull(l.coach?.name),
+      startXI: lineupPlayers(l.startXI),
+      substitutes: lineupPlayers(l.substitutes),
+    }))
+    .filter((l: ProviderLineup) => l.startXI.length > 0);
+}
+
+export function parseAbsence(r: Json): ProviderAbsence | null {
+  const name = strOrNull(r?.player?.name);
+  if (!name || r?.fixture?.id === undefined || r?.team?.id === undefined) return null;
+  return {
+    fixtureRef: String(r.fixture.id),
+    team: team(r.team),
+    player: name,
+    type: strOrNull(r.player?.type),
+    reason: strOrNull(r.player?.reason),
   };
 }
 
@@ -199,6 +238,18 @@ export class ApiFootballProvider implements SportsDataProvider {
   async getStandings(leagueRef: string, season: number): Promise<ProviderStanding[]> {
     const rows = await this.get("/standings", { league: leagueRef, season });
     return rows.length > 0 ? parseStandings(rows[0]) : [];
+  }
+
+  async getAbsences(fixtureRefs: string[]): Promise<ProviderAbsence[]> {
+    const out: ProviderAbsence[] = [];
+    for (let i = 0; i < fixtureRefs.length; i += 20) {
+      const rows = await this.get("/injuries", { ids: fixtureRefs.slice(i, i + 20).join("-") });
+      for (const r of rows) {
+        const a = parseAbsence(r);
+        if (a) out.push(a);
+      }
+    }
+    return out;
   }
 
   async getOdds(fixtureRef: string): Promise<OddsQuote[]> {

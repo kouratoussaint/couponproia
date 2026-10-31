@@ -83,6 +83,13 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
           'Transactions Mobile Money',
           AppRoutes.adminPayments
         ),
+      if (perms.contains('billing.manage'))
+        (
+          'Codes promo',
+          Icons.local_offer_outlined,
+          'Réductions, durée, nombre d’utilisations',
+          AppRoutes.adminPromos
+        ),
       if (perms.contains('moderation.manage'))
         (
           'Modération',

@@ -1,6 +1,7 @@
 // Tests des paiements : `deno test supabase/functions/_shared`
 import { assert, assertEquals, assertRejects } from "jsr:@std/assert@1";
 import {
+  applyPromo,
   CinetPayProvider,
   creditsPrice,
   interpretCinetPayCheck,
@@ -60,4 +61,15 @@ Deno.test("références de transaction uniques et alphanumériques", () => {
   const b = newTransactionId(1);
   assert(/^[A-Z0-9]+$/.test(a) && a.length <= 30);
   assert(a !== b);
+});
+
+Deno.test("code promo : réduction arrondie au multiple de 5, reste à payer positif", () => {
+  assertEquals(applyPromo(2000, 20), { amount: 1600, discount: 400 });
+  assertEquals(applyPromo(20400, 15), { amount: 17340, discount: 3060 });
+  assertEquals(applyPromo(505, 33), { amount: 340, discount: 165 });
+  assertEquals(applyPromo(2000, 150), { amount: 200, discount: 1800 });
+  for (const [a, p] of [[2000, 7], [5000, 13], [495, 89], [10000, 1]]) {
+    const r = applyPromo(a, p);
+    assert(r.amount > 0 && r.amount % 5 === 0 && r.amount + r.discount === a);
+  }
 });

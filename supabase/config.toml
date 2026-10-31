@@ -80,3 +80,7 @@ verify_jwt = false
 
 [functions.payment-return]
 verify_jwt = false
+
+[functions.push-dispatch]
+# Appelée par pg_cron sans JWT : la fonction vérifie le secret partagé.
+verify_jwt = false

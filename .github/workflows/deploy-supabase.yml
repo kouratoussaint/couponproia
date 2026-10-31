@@ -6,6 +6,8 @@
 #   SUPABASE_DB_PASSWORD   mot de passe de la base choisi à la création du projet
 #   API_FOOTBALL_KEY       clé API-Football (dashboard.api-football.com) ; sans elle, la
 #                          synchronisation est journalisée « ignorée »
+#   FCM_SERVICE_ACCOUNT : JSON du compte de service Firebase (Paramètres du projet → Comptes de
+#     service → Générer une clé privée) ; sans lui, les notifications restent dans l'app.
 #   CINETPAY_API_KEY, CINETPAY_SITE_ID, CINETPAY_SECRET_KEY : compte marchand CinetPay (menu
 #                          Intégrations) ; sans eux, les achats sont indisponibles.
 #   GEMINI_API_KEY         clé Google AI Studio (aistudio.google.com) pour l'analyse IA ;
@@ -82,6 +84,7 @@ jobs:
           CINETPAY_API_KEY: ${{ secrets.CINETPAY_API_KEY }}
           CINETPAY_SITE_ID: ${{ secrets.CINETPAY_SITE_ID }}
           CINETPAY_SECRET_KEY: ${{ secrets.CINETPAY_SECRET_KEY }}
+          FCM_SERVICE_ACCOUNT: ${{ secrets.FCM_SERVICE_ACCOUNT }}
           REF: ${{ steps.project.outputs.ref }}
         run: |
           export CRON_SECRET="$(openssl rand -hex 32)"
@@ -102,6 +105,17 @@ jobs:
           done
           if [ -z "$CINETPAY_API_KEY" ] || [ -z "$CINETPAY_SITE_ID" ]; then
             echo "::warning::CINETPAY_API_KEY / CINETPAY_SITE_ID absents : les achats répondront « paiement pas encore configuré »."
+          fi
+          # Compte de service Firebase (JSON) : compacté sur une ligne pour être transmis tel quel.
+          if [ -n "$FCM_SERVICE_ACCOUNT" ]; then
+            if fcm_json="$(printf '%s' "$FCM_SERVICE_ACCOUNT" | jq -c . 2>/dev/null)" && [ -n "$fcm_json" ]; then
+              echo "::add-mask::$fcm_json"
+              args+=("FCM_SERVICE_ACCOUNT=$fcm_json")
+            else
+              echo "::warning::FCM_SERVICE_ACCOUNT n'est pas un JSON valide : notifications limitées à la boîte de réception de l'app."
+            fi
+          else
+            echo "::warning::FCM_SERVICE_ACCOUNT absent : notifications limitées à la boîte de réception de l'app."
           fi
           if [ "$ai_keys" -eq 0 ]; then
             echo "::warning::Aucune clé IA (GEMINI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY) : les analyses se limiteront à la fiche statistique."

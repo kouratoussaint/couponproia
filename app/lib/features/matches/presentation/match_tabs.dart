@@ -11,6 +11,7 @@ import '../../lab/data/lab_repository.dart';
 import '../../onboarding/data/preferences_repository.dart';
 import '../../system/system_providers.dart';
 import '../data/insights_models.dart';
+import '../data/matchday_models.dart';
 import '../data/sports_format.dart';
 import '../data/sports_models.dart';
 import '../data/sports_repository.dart';
@@ -214,6 +215,7 @@ class AnalysisTab extends ConsumerWidget {
               ),
             ),
           ),
+        MatchdayCard(match: match),
         if (facts.isNotEmpty) ...[
           const SectionTitle('Faits vérifiés'),
           for (final f in facts) FactCard(fact: f),
@@ -528,6 +530,143 @@ class GlossaryCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Compositions officielles et absents annoncés (API-Football), avec l'heure du relevé.
+class MatchdayCard extends ConsumerWidget {
+  const MatchdayCard({super.key, required this.match});
+
+  final MatchSummary match;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final data = ref.watch(matchdayProvider(match.id));
+    final started = match.status != MatchStatus.scheduled;
+    return data.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (d) {
+        Widget team(TeamRef t) {
+          final lineup = d.lineupOf(t.id);
+          final absent = d.absencesOf(t.id);
+          final out = [
+            for (final a in absent)
+              if (!a.uncertain) a
+          ];
+          final doubt = [
+            for (final a in absent)
+              if (a.uncertain) a
+          ];
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(t.name,
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              if (lineup != null) ...[
+                Text(
+                  [
+                    if (lineup.formation != null) lineup.formation!,
+                    if (lineup.coach != null) 'entraîneur ${lineup.coach}'
+                  ].join(' · '),
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 4),
+                for (final p in lineup.startXI)
+                  Text('${p.number ?? '–'}  ${p.name}',
+                      style: theme.textTheme.bodyMedium),
+              ],
+              if (out.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text('Absents',
+                    style: theme.textTheme.labelMedium
+                        ?.copyWith(color: BrandColors.rouge)),
+                for (final a in out)
+                  Text('${a.player} : ${absenceReason(a.reason)}',
+                      style: theme.textTheme.bodySmall),
+              ],
+              if (doubt.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text('Incertains',
+                    style: theme.textTheme.labelMedium
+                        ?.copyWith(color: BrandColors.orange)),
+                for (final a in doubt)
+                  Text('${a.player} : ${absenceReason(a.reason)}',
+                      style: theme.textTheme.bodySmall),
+              ],
+              if (lineup == null && absent.isEmpty)
+                Text('Aucun absent annoncé',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: scheme.onSurfaceVariant)),
+            ],
+          );
+        }
+
+        final hasLineups = d.lineups.isNotEmpty;
+        final checked = d.lastFetched;
+        if (!hasLineups && d.absences.isEmpty && checked == null && started) {
+          return const SizedBox.shrink();
+        }
+        final expected = match.kickoffAt.subtract(const Duration(minutes: 40));
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SectionTitle('Compositions et absents'),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (!hasLineups && !started)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          children: [
+                            Icon(Icons.schedule,
+                                size: 18, color: scheme.onSurfaceVariant),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Compositions officielles attendues vers ${timeLabel(expected)} '
+                                '(20 à 40 minutes avant le coup d’envoi).',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (checked == null)
+                      Text(
+                          'Absents pas encore vérifiés : la vérification commence 6 heures avant le match.',
+                          style: theme.textTheme.bodySmall)
+                    else
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: team(match.home)),
+                          const SizedBox(width: 12),
+                          Expanded(child: team(match.away)),
+                        ],
+                      ),
+                    if (checked != null) ...[
+                      const SizedBox(height: 10),
+                      Text('API-Football · relevé à ${timeLabel(checked)}',
+                          style: theme.textTheme.labelSmall
+                              ?.copyWith(color: scheme.onSurfaceVariant)),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

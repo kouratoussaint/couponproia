@@ -157,6 +157,13 @@ export function creditsPrice(pack: { credits: number; price_xof: number }, quant
   return { credits: pack.credits * quantity, amount: Math.round((pack.price_xof * quantity) / 5) * 5 };
 }
 
+/** Réduction d'un code promo : arrondie au multiple de 5 inférieur, le reste à payer reste positif. */
+export function applyPromo(amount: number, percentOff: number): { amount: number; discount: number } {
+  const pct = Math.min(90, Math.max(0, Math.floor(percentOff)));
+  const discount = Math.floor((amount * pct) / 100 / 5) * 5;
+  return { amount: amount - discount, discount };
+}
+
 /** Référence unique acceptée par l'agrégateur (lettres et chiffres). */
 export function newTransactionId(now = Date.now()): string {
   const rand = crypto.getRandomValues(new Uint8Array(5));

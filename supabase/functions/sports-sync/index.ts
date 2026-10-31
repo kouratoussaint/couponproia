@@ -13,7 +13,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-const JOBS: SyncJob[] = ["daily", "odds", "live"];
+const JOBS: SyncJob[] = ["daily", "odds", "live", "matchday"];
 
 function json(body: Record<string, unknown>, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });

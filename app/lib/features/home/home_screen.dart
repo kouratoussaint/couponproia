@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/errors/error_messages.dart';
 import '../../core/router/app_routes.dart';
+import '../../core/theme/brand_colors.dart';
 import '../../core/widgets/app_logo.dart';
 import '../analysis/data/analysis_format.dart';
 import '../assistant/data/assistant_repository.dart';
@@ -16,6 +19,8 @@ import '../matches/data/sports_models.dart';
 import '../matches/data/sports_repository.dart';
 import '../matches/presentation/sports_widgets.dart';
 import '../community/data/community_repository.dart';
+import '../notifications/data/notifications_repository.dart';
+import '../notifications/presentation/notifications_screens.dart';
 import '../onboarding/data/preferences_repository.dart';
 import '../onboarding/presentation/onboarding_sheet.dart';
 import '../profile/data/profile_repository.dart';
@@ -105,6 +110,7 @@ class HomeScreen extends ConsumerWidget {
       ref.invalidate(market1x2OfDayProvider(today));
       ref.invalidate(market1x2OfDayProvider(tomorrow));
       ref.invalidate(myCreditsProvider);
+      ref.invalidate(unreadCountProvider);
       await ref.read(publishedCouponsProvider.future);
     }
 
@@ -113,6 +119,7 @@ class HomeScreen extends ConsumerWidget {
         leading: const DrawerMenuButton(),
         title: const AppLogo(size: 30),
         actions: [
+          const NotificationBell(),
           if (credits != null)
             Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -147,6 +154,7 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             const OnboardingTrigger(),
+            _LiveBlock(day: today),
             const _CouponOfTheDay(),
             const _FeaturedMatch(),
             _MatchesBlock(
@@ -598,5 +606,126 @@ class _OnboardingTriggerState extends ConsumerState<OnboardingTrigger> {
       });
     }
     return const SizedBox.shrink();
+  }
+}
+
+/// Matchs en cours (score et minute), rafraîchis chaque minute tant que l'accueil est affiché.
+class _LiveBlock extends ConsumerStatefulWidget {
+  const _LiveBlock({required this.day});
+
+  final DateTime day;
+
+  @override
+  ConsumerState<_LiveBlock> createState() => _LiveBlockState();
+}
+
+class _LiveBlockState extends ConsumerState<_LiveBlock> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+      final live = ref
+              .read(matchesOfDayProvider(widget.day))
+              .valueOrNull
+              ?.any((m) => m.isLive) ??
+          false;
+      if (live && mounted) ref.invalidate(matchesOfDayProvider(widget.day));
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final all = ref.watch(matchesOfDayProvider(widget.day)).valueOrNull ??
+        const <MatchSummary>[];
+    final teams = ref.watch(favoriteTeamsProvider).valueOrNull?.keys.toSet() ??
+        const <int>{};
+    final live = all.where((m) => m.isLive).toList()
+      ..sort((a, b) {
+        int fav(MatchSummary m) =>
+            teams.contains(m.home.id) || teams.contains(m.away.id) ? 0 : 1;
+        final f = fav(a).compareTo(fav(b));
+        return f != 0
+            ? f
+            : a.competition.priority.compareTo(b.competition.priority);
+      });
+    if (live.isEmpty) return const SizedBox.shrink();
+    final shown = live.take(4).toList();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                        color: BrandColors.rouge, shape: BoxShape.circle)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('En direct (${live.length})',
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w800)),
+                ),
+                Text('mis à jour toutes les 5 min',
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: scheme.onSurfaceVariant)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            for (final m in shown)
+              InkWell(
+                onTap: () => context.push(AppRoutes.matchDetailFor(m.id)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 44,
+                        child: Text(m.elapsed == null ? '–' : '${m.elapsed}’',
+                            style: theme.textTheme.labelLarge?.copyWith(
+                                color: BrandColors.rouge,
+                                fontWeight: FontWeight.w800)),
+                      ),
+                      Expanded(
+                        child: Text('${m.home.name} – ${m.away.name}',
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                          m.hasScore
+                              ? '${m.homeGoals} - ${m.awayGoals}'
+                              : '0 - 0',
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800)),
+                    ],
+                  ),
+                ),
+              ),
+            if (live.length > shown.length)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => context.go(AppRoutes.matches),
+                  child: Text(
+                      '+ ${live.length - shown.length} autre${live.length - shown.length > 1 ? 's' : ''}'),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

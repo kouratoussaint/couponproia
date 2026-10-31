@@ -6,6 +6,7 @@ import '../../core/providers.dart';
 import '../../core/router/app_routes.dart';
 import '../../core/widgets/app_logo.dart';
 import '../auth/data/auth_repository.dart';
+import '../notifications/data/push_service.dart';
 import '../profile/data/profile_repository.dart';
 import '../system/system_providers.dart';
 
@@ -194,9 +195,10 @@ class AppDrawer extends ConsumerWidget {
           contentPadding: const EdgeInsets.symmetric(horizontal: 28),
           leading: const Icon(Icons.logout),
           title: const Text('Se déconnecter'),
-          onTap: () {
+          onTap: () async {
             _close();
-            ref.read(authRepositoryProvider).signOut();
+            await ref.read(pushServiceProvider).stop();
+            await ref.read(authRepositoryProvider).signOut();
           },
         ),
         if (version != null)

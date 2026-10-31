@@ -89,13 +89,38 @@ jobs:
       - run: flutter pub get
       - run: flutter test
 
+      # Notifications : valeurs publiques du projet Firebase, lues dans google-services.json
+      # (secret GOOGLE_SERVICES_JSON). Sans lui, l'app garde sa boîte de réception, sans push.
+      - name: Configuration Firebase (facultative)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          echo '{}' > env/firebase.generated.json
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            if printf '%s' "$GOOGLE_SERVICES_JSON" | jq -e . > /dev/null 2>&1; then
+              printf '%s' "$GOOGLE_SERVICES_JSON" | jq '
+                (.client[] | select(.client_info.android_client_info.package_name == "com.couponproia.app")) as $c
+                | {FIREBASE_PROJECT_ID: .project_info.project_id,
+                   FIREBASE_SENDER_ID: .project_info.project_number,
+                   FIREBASE_APP_ID: $c.client_info.mobilesdk_app_id,
+                   FIREBASE_API_KEY: $c.api_key[0].current_key}' > env/firebase.generated.json \
+                || { echo "::warning::google-services.json ne contient pas l'app com.couponproia.app : push désactivé."; echo '{}' > env/firebase.generated.json; }
+            else
+              echo "::warning::GOOGLE_SERVICES_JSON n'est pas un JSON valide : push désactivé."
+            fi
+          else
+            echo "::warning::GOOGLE_SERVICES_JSON absent : notifications limitées à la boîte de réception de l'app."
+          fi
+          echo "Clés Firebase fournies : $(jq -r 'keys | join(", ")' env/firebase.generated.json)"
+
       - name: Compiler les APK (un par architecture)
         run: |
           flutter build apk --release --split-per-abi \
             --obfuscate --split-debug-info=build/symbols \
             --build-name="${{ steps.version.outputs.name }}" \
             --build-number="${{ steps.version.outputs.build }}" \
-            --dart-define-from-file=env/prod.json
+            --dart-define-from-file=env/prod.json \
+            --dart-define-from-file=env/firebase.generated.json
 
       - name: Renommer et calculer les empreintes
         run: |

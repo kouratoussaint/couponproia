@@ -82,6 +82,8 @@ class PaymentRecord {
     this.planCode,
     this.period,
     this.credits,
+    this.promoCode,
+    this.discountXof = 0,
   });
 
   factory PaymentRecord.fromJson(Map<String, dynamic> j) => PaymentRecord(
@@ -93,6 +95,8 @@ class PaymentRecord {
         amountXof: _i(j['amount_xof']),
         status: j['status'] as String,
         createdAt: DateTime.parse(j['created_at'] as String).toLocal(),
+        promoCode: j['promo_code'] as String?,
+        discountXof: _i(j['discount_xof']),
       );
 
   final String id;
@@ -103,7 +107,61 @@ class PaymentRecord {
   final int amountXof;
   final String status;
   final DateTime createdAt;
+  final String? promoCode;
+  final int discountXof;
 }
+
+/// Code promo vérifié par le serveur (affichage ; le serveur recalcule au paiement).
+class PromoQuote {
+  const PromoQuote({
+    required this.code,
+    required this.percentOff,
+    this.appliesTo = 'all',
+    this.planCodes = const [],
+    this.description = '',
+    this.endsAt,
+  });
+
+  factory PromoQuote.fromJson(Map<String, dynamic> j) => PromoQuote(
+        code: j['code'] as String,
+        percentOff: _i(j['percent_off']),
+        appliesTo: j['applies_to'] as String? ?? 'all',
+        planCodes: [
+          for (final c in (j['plan_codes'] as List? ?? const [])) c as String
+        ],
+        description: j['description'] as String? ?? '',
+        endsAt: j['ends_at'] == null
+            ? null
+            : DateTime.parse(j['ends_at'] as String).toLocal(),
+      );
+
+  final String code;
+  final int percentOff;
+  final String appliesTo;
+  final List<String> planCodes;
+  final String description;
+  final DateTime? endsAt;
+
+  bool appliesToPlan(String plan) =>
+      appliesTo != 'credits' && (planCodes.isEmpty || planCodes.contains(plan));
+
+  bool get appliesToCredits => appliesTo != 'subscription';
+
+  /// Même arrondi que le serveur : réduction au multiple de 5 inférieur.
+  int discounted(int amount) =>
+      amount - ((amount * percentOff / 100) / 5).floor() * 5;
+}
+
+String promoReasonMessage(String? reason) => switch (reason) {
+      'unknown' => 'Ce code n’existe pas.',
+      'inactive' => 'Ce code n’est plus actif.',
+      'not_started' => 'Ce code n’est pas encore valable.',
+      'expired' => 'Ce code a expiré.',
+      'exhausted' => 'Ce code a atteint son nombre d’utilisations.',
+      'already_used' => 'Vous avez déjà utilisé ce code.',
+      'not_applicable' => 'Ce code ne s’applique pas à cette offre.',
+      _ => 'Code non valable.',
+    };
 
 class BillingException implements Exception {
   const BillingException(this.message);
@@ -126,7 +184,7 @@ class BillingRepository {
     final rows = await _client
         .from('payments')
         .select(
-            'id, kind, plan_code, period, credits, amount_xof, status, created_at')
+            'id, kind, plan_code, period, credits, amount_xof, status, created_at, promo_code, discount_xof')
         .order('created_at', ascending: false)
         .limit(30);
     return rows.map(PaymentRecord.fromJson).toList();
@@ -146,6 +204,7 @@ class BillingRepository {
         'feature_disabled' => 'Les achats sont momentanément indisponibles.',
         'provider_error' =>
           'L’opérateur de paiement n’a pas répondu. Réessayez dans un instant.',
+        'invalid_promo' => promoReasonMessage(d['reason'] as String?),
         'invalid_plan' ||
         'invalid_quantity' ||
         'invalid_product' =>
@@ -157,12 +216,13 @@ class BillingRepository {
 
   /// Crée le paiement côté serveur (prix calculé par le serveur) et renvoie (id, lien de paiement).
   Future<({String paymentId, String paymentUrl})> checkoutPlan(String planCode,
-      {required bool annual}) async {
+      {required bool annual, String? promoCode}) async {
     final d = await _call({
       'action': 'checkout',
       'product': 'subscription',
       'plan_code': planCode,
-      'period': annual ? 'annual' : 'monthly'
+      'period': annual ? 'annual' : 'monthly',
+      if (promoCode != null) 'promo_code': promoCode,
     });
     return (
       paymentId: d['payment_id'] as String,
@@ -170,14 +230,28 @@ class BillingRepository {
     );
   }
 
-  Future<({String paymentId, String paymentUrl})> checkoutCredits(
-      int quantity) async {
-    final d = await _call(
-        {'action': 'checkout', 'product': 'credits', 'quantity': quantity});
+  Future<({String paymentId, String paymentUrl})> checkoutCredits(int quantity,
+      {String? promoCode}) async {
+    final d = await _call({
+      'action': 'checkout',
+      'product': 'credits',
+      'quantity': quantity,
+      if (promoCode != null) 'promo_code': promoCode,
+    });
     return (
       paymentId: d['payment_id'] as String,
       paymentUrl: d['payment_url'] as String
     );
+  }
+
+  /// Vérifie un code promo (portée et réduction) ; lève [BillingException] s'il n'est pas valable.
+  Future<PromoQuote> checkPromo(String code) async {
+    final r = Map<String, dynamic>.from(await _client
+        .rpc('check_promo', params: {'p_code': code.trim()}) as Map);
+    if (r['ok'] != true) {
+      throw BillingException(promoReasonMessage(r['reason'] as String?));
+    }
+    return PromoQuote.fromJson(r);
   }
 
   /// Statut confirmé par le serveur après vérification auprès de l'opérateur.

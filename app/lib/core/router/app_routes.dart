@@ -36,6 +36,9 @@ abstract final class AppRoutes {
   static const studioEditor = '/studio/:kind/:id';
 
   static String studioFor(String kind, String id) => '/studio/$kind/$id';
+  static const responsibleGaming = '/jeu-responsable';
+  static const notifications = '/notifications';
+  static const notificationSettings = '/notifications/reglages';
   static const community = '/communaute';
   static const myTipsterProfile = '/communaute/mon-profil';
   static const tipster = '/tipster/:id';
@@ -51,6 +54,7 @@ abstract final class AppRoutes {
   static const adminFlags = '/admin/modules';
   static const adminSettings = '/admin/reglages';
   static const adminPayments = '/admin/paiements';
+  static const adminPromos = '/admin/promos';
   static const adminAudit = '/admin/journal';
 
   static String adminUserFor(String id) => '/admin/utilisateurs/$id';

@@ -47,6 +47,33 @@ export interface ProviderFixture {
   ftAwayGoals: number | null;
   venue: string | null;
   referee: string | null;
+  /** Compositions officielles, présentes dans le détail d'un match (20 à 40 min avant). */
+  lineups?: ProviderLineup[];
+}
+
+export interface LineupPlayer {
+  name: string;
+  number: number | null;
+  /** G, D, M, F (poste annoncé par le fournisseur). */
+  pos: string | null;
+}
+
+export interface ProviderLineup {
+  team: ProviderTeam;
+  formation: string | null;
+  coach: string | null;
+  startXI: LineupPlayer[];
+  substitutes: LineupPlayer[];
+}
+
+/** Joueur annoncé absent (blessé, suspendu…) ou incertain pour un match. */
+export interface ProviderAbsence {
+  fixtureRef: string;
+  team: ProviderTeam;
+  player: string;
+  /** « Missing Fixture » (absent) ou « Questionable » (incertain). */
+  type: string | null;
+  reason: string | null;
 }
 
 export interface ProviderStanding {
@@ -98,6 +125,8 @@ export interface SportsDataProvider {
   getFixturesByIds(refs: string[]): Promise<ProviderFixture[]>;
   getStandings(leagueRef: string, season: number): Promise<ProviderStanding[]>;
   getOdds(fixtureRef: string): Promise<OddsQuote[]>;
+  /** Absents annoncés pour une liste de matchs (facultatif selon le fournisseur). */
+  getAbsences?(fixtureRefs: string[]): Promise<ProviderAbsence[]>;
   /** Réglages de rythme (ex. offre gratuite limitée à 10 requêtes par minute). */
   configure?(options: { minIntervalMs: number }): void;
 }

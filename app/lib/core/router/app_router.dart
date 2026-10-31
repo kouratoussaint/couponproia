@@ -22,9 +22,12 @@ import '../../features/matches/presentation/matches_screen.dart';
 import '../../features/matches/presentation/sports_admin_screen.dart';
 import '../../features/admin/presentation/admin_console_screen.dart';
 import '../../features/admin/presentation/admin_settings_screen.dart';
+import '../../features/admin/presentation/promos_admin_screen.dart';
 import '../../features/admin/presentation/users_admin_screen.dart';
 import '../../features/billing/billing_screen.dart';
 import '../../features/community/presentation/community_screen.dart';
+import '../../features/notifications/presentation/notifications_screens.dart';
+import '../../features/profile/presentation/responsible_gaming_screen.dart';
 import '../../features/community/presentation/moderation_screen.dart';
 import '../../features/community/presentation/post_screen.dart';
 import '../../features/community/presentation/tipster_edit_screen.dart';
@@ -183,8 +186,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const PaymentsAdminScreen(),
       ),
       GoRoute(
+        path: AppRoutes.adminPromos,
+        builder: (context, state) => const PromosAdminScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.adminAudit,
         builder: (context, state) => const AuditAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.responsibleGaming,
+        builder: (context, state) => const ResponsibleGamingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.notifications,
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.notificationSettings,
+        builder: (context, state) => const NotificationSettingsScreen(),
       ),
       GoRoute(
         path: AppRoutes.community,

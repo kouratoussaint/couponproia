@@ -11,8 +11,10 @@ import '../../../core/validators.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../billing/billing_repository.dart';
+import '../../notifications/data/push_service.dart';
 import '../../onboarding/data/preferences_repository.dart';
 import '../../onboarding/presentation/onboarding_sheet.dart';
+import 'responsible_gaming_screen.dart';
 import '../../assistant/data/assistant_repository.dart';
 import '../../system/system_providers.dart';
 import '../data/profile_repository.dart';
@@ -111,6 +113,13 @@ class ProfileScreen extends ConsumerWidget {
                     }()),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => showOnboarding(context, fromProfile: true),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.notifications_none),
+                    title: const Text('Notifications'),
+                    subtitle: const Text('Ce que je reçois, heures calmes'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.notificationSettings),
                   ),
                   ListTile(
                     leading: const Icon(Icons.star_outline),
@@ -240,6 +249,20 @@ class ProfileScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   ListTile(
+                    leading: const Icon(Icons.support_agent),
+                    title: const Text('Contacter le support'),
+                    subtitle: const Text(
+                        'Signaler un problème ou poser une question'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => contactSupport(context, ref),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.health_and_safety_outlined),
+                    title: const Text('Jeu responsable'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.responsibleGaming),
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.gavel_outlined),
                     title: const Text('Mentions et avertissements'),
                     trailing: const Icon(Icons.chevron_right),
@@ -248,7 +271,10 @@ class ProfileScreen extends ConsumerWidget {
                   ListTile(
                     leading: const Icon(Icons.logout),
                     title: const Text('Se déconnecter'),
-                    onTap: () => ref.read(authRepositoryProvider).signOut(),
+                    onTap: () async {
+                      await ref.read(pushServiceProvider).stop();
+                      await ref.read(authRepositoryProvider).signOut();
+                    },
                   ),
                   ListTile(
                     leading: Icon(Icons.delete_forever_outlined,

@@ -114,6 +114,37 @@ class AdminRepository {
   Future<List<Map<String, dynamic>>> payments(String? status) async =>
       asList(await _client.rpc('admin_payments', params: {'p_status': status}));
 
+  Future<List<Map<String, dynamic>>> promoCodes() async =>
+      asList(await _client.rpc('admin_promo_codes'));
+
+  Future<void> savePromo({
+    required String code,
+    required String description,
+    required int percentOff,
+    required String appliesTo,
+    required List<String> planCodes,
+    DateTime? startsAt,
+    DateTime? endsAt,
+    int? maxUses,
+    required bool active,
+  }) =>
+      _client.rpc('admin_save_promo', params: {
+        'p_code': code,
+        'p_description': description,
+        'p_percent': percentOff,
+        'p_applies_to': appliesTo,
+        'p_plan_codes': planCodes,
+        'p_starts': startsAt?.toUtc().toIso8601String(),
+        'p_ends': endsAt?.toUtc().toIso8601String(),
+        'p_max_uses': maxUses,
+        'p_active': active,
+      });
+
+  /// Enregistre un remboursement déjà effectué chez l'opérateur : droits retirés, journalisé.
+  Future<Map<String, dynamic>> refundPayment(String id, String reason) async =>
+      asMap(await _client.rpc('admin_refund_payment',
+          params: {'p_payment': id, 'p_reason': reason}));
+
   Future<List<Map<String, dynamic>>> audit(String? action) async =>
       asList(await _client
           .rpc('admin_audit', params: {'p_limit': 150, 'p_action': action}));
@@ -147,3 +178,7 @@ final adminPaymentsProvider = FutureProvider.autoDispose
 final adminAuditProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String?>(
         (ref, a) => ref.watch(adminRepositoryProvider).audit(a));
+
+final adminPromosProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>(
+        (ref) => ref.watch(adminRepositoryProvider).promoCodes());
