@@ -108,6 +108,13 @@ class UserAdminDetailScreen extends ConsumerWidget {
         (p as Map)['code'] as String,
     ];
 
+    final packSetting =
+        ref.watch(publicSettingsProvider).valueOrNull?['pricing.credit_pack'];
+    final (int, int)? pack =
+        packSetting is Map && asInt(packSetting['credits']) > 0
+            ? (asInt(packSetting['credits']), asInt(packSetting['price_xof']))
+            : null;
+
     Future<void> run(Future<void> Function() action, String done) async {
       try {
         await action();
@@ -175,6 +182,71 @@ class UserAdminDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                if (perms.contains('billing.manage')) ...[
+                  const SectionTitle('Forfait et crédits (sans paiement)'),
+                  Card(
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: Icon(Icons.workspace_premium_outlined,
+                              color: theme.colorScheme.primary),
+                          title: const Text('Attribuer un forfait'),
+                          subtitle: Text('Actuel : ${u['plan']}'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            final r = await _subscriptionDialog(context,
+                                plans.where((p) => p != 'FREE').toList());
+                            if (r != null) {
+                              await run(
+                                  () => repo.grantSubscription(
+                                      userId, r.$1, r.$2, r.$3),
+                                  'Forfait ${r.$1.replaceAll('_', ' ')} attribué pour ${r.$2} mois.');
+                            }
+                          },
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: Icon(Icons.card_giftcard,
+                              color: theme.colorScheme.primary),
+                          title: const Text('Offrir un pack de crédits'),
+                          subtitle: Text(pack == null
+                              ? 'Pack non configuré'
+                              : 'Pack : ${pack.$1} crédits (valeur ${fcfa(pack.$2)})'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: pack == null
+                              ? null
+                              : () async {
+                                  final r = await _packDialog(
+                                      context, pack.$1, pack.$2);
+                                  if (r != null) {
+                                    await run(
+                                        () => repo
+                                            .grantCreditPack(userId, r.$1, r.$2)
+                                            .then((_) {}),
+                                        '${r.$1 * pack.$1} crédits offerts.');
+                                  }
+                                },
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: const Icon(Icons.bolt),
+                          title: const Text('Ajuster les crédits'),
+                          subtitle: Text(
+                              'Solde : ${credits['unlimited'] == true ? 'illimité' : credits['total']} · ajout ou retrait libre'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            final r = await _creditsDialog(context);
+                            if (r != null) {
+                              await run(
+                                  () => repo.adjustCredits(userId, r.$1, r.$2),
+                                  'Crédits ajustés.');
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SectionTitle('Rôles'),
                 Wrap(
                   spacing: 8,
@@ -197,34 +269,6 @@ class UserAdminDetailScreen extends ConsumerWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    if (perms.contains('billing.manage')) ...[
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final r = await _creditsDialog(context);
-                          if (r != null) {
-                            await run(
-                                () => repo.adjustCredits(userId, r.$1, r.$2),
-                                'Crédits ajustés.');
-                          }
-                        },
-                        icon: const Icon(Icons.bolt),
-                        label: const Text('Ajuster les crédits'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final r = await _subscriptionDialog(context,
-                              plans.where((p) => p != 'FREE').toList());
-                          if (r != null) {
-                            await run(
-                                () => repo.grantSubscription(
-                                    userId, r.$1, r.$2, r.$3),
-                                'Abonnement accordé.');
-                          }
-                        },
-                        icon: const Icon(Icons.workspace_premium_outlined),
-                        label: const Text('Offrir un abonnement'),
-                      ),
-                    ],
                     u['suspended'] == true
                         ? FilledButton.icon(
                             onPressed: () => run(
@@ -255,11 +299,11 @@ class UserAdminDetailScreen extends ConsumerWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(14),
                     child: Text([
-                      'Analyses (30 j) : ${activity['analyses_30d']}',
-                      'Messages à l’assistant (30 j) : ${activity['assistant_messages_30d']}',
-                      'Coupons enregistrés : ${activity['saved_coupons']} · publiés : ${activity['published_coupons']}',
-                      'Publications : ${activity['posts']} · commentaires : ${activity['comments']}',
-                      'Signalements le concernant : ${activity['reports_against']}',
+                      'Analyses (30 j) : ${asInt(activity['analyses_30d'])}',
+                      'Messages à l’assistant (30 j) : ${asInt(activity['assistant_messages_30d'])}',
+                      'Coupons enregistrés : ${asInt(activity['saved_coupons'])} · publiés : ${asInt(activity['published_coupons'])}',
+                      'Publications : ${asInt(activity['posts'])} · commentaires : ${asInt(activity['comments'])}',
+                      'Signalements le concernant : ${asInt(activity['reports_against'])}',
                     ].join('\n')),
                   ),
                 ),
@@ -390,7 +434,7 @@ Future<(String, int, String)?> _subscriptionDialog(
     context: context,
     builder: (c) => StatefulBuilder(
       builder: (c, setState) => AlertDialog(
-        title: const Text('Offrir un abonnement'),
+        title: const Text('Attribuer un forfait'),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           DropdownButtonFormField<String>(
             initialValue: plan,
@@ -423,7 +467,7 @@ Future<(String, int, String)?> _subscriptionDialog(
               child: const Text('Annuler')),
           FilledButton(
               onPressed: () => Navigator.pop(c, true),
-              child: const Text('Accorder')),
+              child: const Text('Attribuer')),
         ],
       ),
     ),
@@ -432,6 +476,65 @@ Future<(String, int, String)?> _subscriptionDialog(
   reason.dispose();
   if (ok != true || r.isEmpty) return null;
   return (plan, months, r);
+}
+
+Future<(int, String)?> _packDialog(
+    BuildContext context, int creditsPerPack, int priceXof) async {
+  var quantity = 1;
+  final reason = TextEditingController();
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => StatefulBuilder(
+      builder: (c, setState) => AlertDialog(
+        title: const Text('Offrir un pack de crédits'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Row(children: [
+            IconButton(
+                onPressed:
+                    quantity > 1 ? () => setState(() => quantity--) : null,
+                icon: const Icon(Icons.remove)),
+            Text('$quantity', style: Theme.of(c).textTheme.titleMedium),
+            IconButton(
+                onPressed:
+                    quantity < 20 ? () => setState(() => quantity++) : null,
+                icon: const Icon(Icons.add)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                  '${quantity * creditsPerPack} crédits\n(valeur ${fcfa(quantity * priceXof)})'),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          TextField(
+              controller: reason,
+              decoration:
+                  const InputDecoration(labelText: 'Motif (journalisé)')),
+          const SizedBox(height: 8),
+          Text(
+              'Aucun paiement : les crédits sont ajoutés tout de suite et n’expirent pas.',
+              style: Theme.of(c).textTheme.bodySmall),
+        ]),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Annuler')),
+          FilledButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('Offrir')),
+        ],
+      ),
+    ),
+  );
+  final r = reason.text.trim();
+  reason.dispose();
+  if (ok != true) return null;
+  if (r.isEmpty) {
+    if (context.mounted) {
+      showMessage(context, 'Le motif est obligatoire.', error: true);
+    }
+    return null;
+  }
+  return (quantity, r);
 }
 
 /// Accès à la fiche depuis un identifiant (utilisé par le journal).

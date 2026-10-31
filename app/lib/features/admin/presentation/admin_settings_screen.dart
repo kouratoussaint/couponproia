@@ -216,6 +216,16 @@ class SettingsAdminScreen extends ConsumerWidget {
                         c, num.parse(ctrl.text.trim().replaceAll(',', '.')));
                   } else if (s.value is String) {
                     Navigator.pop(c, ctrl.text);
+                  } else if (s.value == null) {
+                    // Réglage encore vide : JSON si possible, sinon texte simple.
+                    final t = ctrl.text.trim();
+                    Object? v;
+                    try {
+                      v = jsonDecode(t);
+                    } catch (_) {
+                      v = t;
+                    }
+                    Navigator.pop(c, v);
                   } else {
                     Navigator.pop(c, jsonDecode(ctrl.text));
                   }

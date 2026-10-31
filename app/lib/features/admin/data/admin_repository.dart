@@ -88,6 +88,13 @@ class AdminRepository {
         'p_reason': reason
       });
 
+  /// Pack(s) de crédits offerts : le serveur lit le contenu du pack dans ses réglages.
+  Future<int> grantCreditPack(String user, int quantity, String reason) async {
+    final r = asMap(await _client.rpc('admin_grant_credit_pack',
+        params: {'p_user': user, 'p_quantity': quantity, 'p_reason': reason}));
+    return asInt(r['credits']);
+  }
+
   Future<List<FeatureFlag>> flags() async {
     final rows = await _client
         .from('feature_flags')

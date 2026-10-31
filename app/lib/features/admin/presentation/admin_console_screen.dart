@@ -38,7 +38,7 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
         (
           'Utilisateurs',
           Icons.people_outline,
-          'Rôles, suspension, crédits, abonnements',
+          'Rechercher un compte et ouvrir sa fiche : forfait, crédits, rôles',
           AppRoutes.adminUsers
         ),
       if (perms.contains('generation.manage'))
