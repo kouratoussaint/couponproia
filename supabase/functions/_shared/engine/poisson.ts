@@ -1,4 +1,4 @@
-// Moteur statistique « poisson-1.0 ».
+// Moteur statistique « poisson-1.1 » (référence des backtests ; la production utilise poisson-2.0).
 //
 // Modèle de Poisson indépendant (type Maher / Dixon-Coles sans correction) :
 //   λ domicile  = moyenne_buts_domicile_ligue × attaque_dom(équipe A) × défense_ext(équipe B)
@@ -10,7 +10,8 @@
 // pas ramener toutes les équipes à la moyenne en début de saison.
 // Fonctions pures, sans accès réseau : testables et rejouables sur l'historique.
 
-export const ENGINE_VERSION = "poisson-1.1";
+/** Version du moteur en production (modèle : poisson2.ts, activé le 31/10 après backtest). */
+export const ENGINE_VERSION = "poisson-2.0";
 
 export interface PlayedMatch {
   kickoffAt: string;

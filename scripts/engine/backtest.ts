@@ -100,7 +100,8 @@ for (const list of byComp.values()) {
     const p11 = runModel([...prior, ...same], m.homeId, m.awayId).probabilities;
     accOf("poisson-1.1", m.season).add(vec(p11), outcome, p11["OU.OVER.2.5"], over, p11["BTTS.YES"], btts);
     const v2: Record<string, number[]> = {};
-    const recent = before.filter((x) => m.t - x.t <= 800 * 86400_000);
+    // Comme en production : saison en cours et saison précédente de la compétition.
+    const recent = before.filter((x) => x.season >= m.season - 1);
     for (const o of grid) {
       const key = `${label(o)}|${j}`;
       const s = cache.get(key) ?? cache.set(key, fitStrengths(recent, m.t, o)).get(key)!;

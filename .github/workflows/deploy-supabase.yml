@@ -202,6 +202,24 @@ jobs:
       - name: Vérification avec la clé publique
         run: bash scripts/supabase/smoke_test.sh app/env/prod.json
 
+      - name: Évaluation du moteur (nouvelle version)
+        env:
+          REF: ${{ steps.project.outputs.ref }}
+        run: |
+          VERSION="$(grep -oE 'ENGINE_VERSION = "[^"]+"' supabase/functions/_shared/engine/poisson.ts | cut -d'"' -f2)"
+          [[ "$VERSION" =~ ^[a-z0-9.-]+$ ]] || { echo "::error::Version du moteur illisible"; exit 1; }
+          printf '{"query": "select count(*) as n from public.engine_evaluations where engine_version = %s"}' "'$VERSION'" > q.json
+          curl -s -o ev.json -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" --data @q.json
+          n="$(jq -r '.[0].n // 0' ev.json 2>/dev/null || echo 0)"
+          if [ "$n" != "0" ]; then echo "::notice::Moteur $VERSION déjà évalué ($n évaluation(s))"; exit 0; fi
+          URL="$(jq -r .SUPABASE_URL app/env/prod.json)"
+          sleep 5
+          status="$(curl -s -m 140 -o evaluate.json -w '%{http_code}' -X POST "$URL/functions/v1/engine-evaluate" \
+            -H "Content-Type: application/json" -H "x-cron-secret: $CRON_SECRET" --data '{}')"
+          echo "::notice::Évaluation de $VERSION : HTTP $status $(jq -c '{matches_evaluated, brier_model, brier_baseline, logloss_model, accuracy_model}' evaluate.json 2>/dev/null || head -c 300 evaluate.json)"
+          [ "${status:0:1}" = "2" ] || echo "::warning::Évaluation à relancer depuis la console (Moteur et IA) : sans elle, les coupons attendent."
+
       - name: Planification active
         env:
           REF: ${{ steps.project.outputs.ref }}

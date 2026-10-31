@@ -31,10 +31,15 @@ export interface Model2Options {
   maxGoals: number;
 }
 
+/**
+ * Réglages retenus par le backtest du 31/10 (réglage sur la saison 2025, vérifié sur 2026) :
+ * demi-vie de 730 jours, k = 5. La correction de Dixon-Coles (ρ) n'apportait rien de mesurable
+ * sur ces données : elle reste disponible mais désactivée (ρ = 0).
+ */
 export const DEFAULT_OPTIONS_2: Model2Options = {
-  halfLifeDays: 120,
-  shrinkK: 4,
-  rho: -0.06,
+  halfLifeDays: 730,
+  shrinkK: 5,
+  rho: 0,
   leaguePriorMatches: 20,
   priorHomeGoals: 1.5,
   priorAwayGoals: 1.2,
@@ -59,50 +64,70 @@ export interface Strengths {
  * compétition, puis attaque et défense de chaque équipe relatives à 1 (la moyenne).
  */
 export function fitStrengths(history: PlayedMatch[], at: number, o: Model2Options = DEFAULT_OPTIONS_2): Strengths {
-  const rows = history.map((m) => {
+  // Équipes indexées dans des tableaux (calcul rejoué pour chaque jour de l'historique).
+  const index = new Map<number, number>();
+  const ids: number[] = [];
+  const idx = (id: number) => {
+    let i = index.get(id);
+    if (i === undefined) {
+      i = ids.length;
+      index.set(id, i);
+      ids.push(id);
+    }
+    return i;
+  };
+  const n = history.length;
+  const hi = new Int32Array(n), ai = new Int32Array(n);
+  const hg = new Float64Array(n), ag = new Float64Array(n), w = new Float64Array(n);
+  let sw = 0, sh = 0, sa = 0;
+  const playedRaw: number[] = [];
+  for (let r = 0; r < n; r++) {
+    const m = history[r];
     const age = Math.max(0, (at - Date.parse(m.kickoffAt)) / DAY);
-    return { m, w: (m.weight ?? 1) * 0.5 ** (age / o.halfLifeDays) };
-  });
-  let n = 0, sh = 0, sa = 0;
-  const played = new Map<number, number>();
-  for (const { m, w } of rows) {
-    n += w;
-    sh += w * m.homeGoals;
-    sa += w * m.awayGoals;
-    for (const id of [m.homeId, m.awayId]) played.set(id, (played.get(id) ?? 0) + (m.weight ?? 1));
+    w[r] = (m.weight ?? 1) * 0.5 ** (age / o.halfLifeDays);
+    hi[r] = idx(m.homeId);
+    ai[r] = idx(m.awayId);
+    hg[r] = m.homeGoals;
+    ag[r] = m.awayGoals;
+    sw += w[r];
+    sh += w[r] * m.homeGoals;
+    sa += w[r] * m.awayGoals;
+    for (const t of [hi[r], ai[r]]) playedRaw[t] = (playedRaw[t] ?? 0) + (m.weight ?? 1);
   }
   const p = o.leaguePriorMatches;
-  const homeAvg = (sh + p * o.priorHomeGoals) / (n + p);
-  const awayAvg = (sa + p * o.priorAwayGoals) / (n + p);
-  const c = (homeAvg + awayAvg) / 2;
-  const attack = new Map<number, number>();
-  const defense = new Map<number, number>();
-  for (const id of played.keys()) {
-    attack.set(id, 1);
-    defense.set(id, 1);
-  }
+  const homeAvg = (sw + p) > 0 ? (sh + p * o.priorHomeGoals) / (sw + p) : o.priorHomeGoals;
+  const awayAvg = (sw + p) > 0 ? (sa + p * o.priorAwayGoals) / (sw + p) : o.priorAwayGoals;
+  const k = o.shrinkK * (homeAvg + awayAvg) / 2;
+  const T = ids.length;
+  const att = new Float64Array(T).fill(1), def = new Float64Array(T).fill(1);
+  const sc = new Float64Array(T), es = new Float64Array(T), co = new Float64Array(T), ec = new Float64Array(T);
   for (let it = 0; it < o.iterations; it++) {
-    const scored = new Map<number, number>(), expScored = new Map<number, number>();
-    const conceded = new Map<number, number>(), expConceded = new Map<number, number>();
-    const add = (map: Map<number, number>, id: number, v: number) => map.set(id, (map.get(id) ?? 0) + v);
-    for (const { m, w } of rows) {
-      const ah = attack.get(m.homeId)!, dh = defense.get(m.homeId)!;
-      const aa = attack.get(m.awayId)!, da = defense.get(m.awayId)!;
-      add(scored, m.homeId, w * m.homeGoals);
-      add(expScored, m.homeId, w * homeAvg * da);
-      add(scored, m.awayId, w * m.awayGoals);
-      add(expScored, m.awayId, w * awayAvg * dh);
-      add(conceded, m.homeId, w * m.awayGoals);
-      add(expConceded, m.homeId, w * awayAvg * aa);
-      add(conceded, m.awayId, w * m.homeGoals);
-      add(expConceded, m.awayId, w * homeAvg * ah);
+    sc.fill(0);
+    es.fill(0);
+    co.fill(0);
+    ec.fill(0);
+    for (let r = 0; r < n; r++) {
+      const h = hi[r], a = ai[r], x = w[r];
+      sc[h] += x * hg[r];
+      es[h] += x * homeAvg * def[a];
+      sc[a] += x * ag[r];
+      es[a] += x * awayAvg * def[h];
+      co[h] += x * ag[r];
+      ec[h] += x * awayAvg * att[a];
+      co[a] += x * hg[r];
+      ec[a] += x * homeAvg * att[h];
     }
-    const k = o.shrinkK * c;
-    for (const id of played.keys()) {
-      attack.set(id, ((scored.get(id) ?? 0) + k) / ((expScored.get(id) ?? 0) + k));
-      defense.set(id, ((conceded.get(id) ?? 0) + k) / ((expConceded.get(id) ?? 0) + k));
+    for (let t = 0; t < T; t++) {
+      att[t] = (sc[t] + k) / (es[t] + k);
+      def[t] = (co[t] + k) / (ec[t] + k);
     }
   }
+  const attack = new Map<number, number>(), defense = new Map<number, number>(), played = new Map<number, number>();
+  ids.forEach((id, t) => {
+    attack.set(id, att[t]);
+    defense.set(id, def[t]);
+    played.set(id, playedRaw[t] ?? 0);
+  });
   return { homeAvg, awayAvg, attack, defense, played };
 }
 
@@ -164,4 +189,19 @@ export function runModel2(
   o: Model2Options = DEFAULT_OPTIONS_2,
 ): ModelResult {
   return runModel2FromStrengths(fitStrengths(history, Date.parse(kickoffAt), o), homeId, awayId, o);
+}
+
+/**
+ * Modèle de production : saison en cours et saison précédente de la compétition, sans le poids
+ * fixe de la v1.1 (la décroissance dans le temps s'en charge).
+ */
+export function runProductionModel(
+  history: PlayedMatch[],
+  prior: PlayedMatch[],
+  homeId: number,
+  awayId: number,
+  kickoffAt: string,
+): ModelResult {
+  const all = [...prior, ...history].map((m) => ({ ...m, weight: 1 }));
+  return runModel2(all, homeId, awayId, kickoffAt);
 }

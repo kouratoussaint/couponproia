@@ -1,9 +1,11 @@
 // Évaluation du moteur sur l'historique (backtest « marche avant ») : chaque match est
 // prédit uniquement avec les matchs joués avant lui, puis comparé au résultat réel.
+// Modèle évalué : celui de production (poisson-2.0, forces calculées la veille du match).
 // Référence (baseline) : fréquences observées jusque-là dans la compétition
 // (1 / N / 2, plus de 2,5 buts, les deux marquent), avec lissage de Laplace.
 // Plus le score de Brier et la perte logarithmique sont BAS, meilleur est le modèle.
-import { ENGINE_VERSION, type PlayedMatch, round, runModel } from "./poisson.ts";
+import { ENGINE_VERSION, type PlayedMatch, round } from "./poisson.ts";
+import { DEFAULT_OPTIONS_2, fitStrengths, runModel2FromStrengths, type Strengths } from "./poisson2.ts";
 
 export interface EvaluationOptions {
   /** Matchs déjà joués dans la compétition avant de commencer à noter. */
@@ -88,6 +90,10 @@ export function evaluateCompetition(
   const rBtts = new Acc();
   const counts = { home: 0, draw: 0, away: 0, over: 0, btts: 0 };
 
+  // Forces calculées une fois par jour de match, avec les seuls matchs des jours précédents
+  // (prudent : aucun match du jour même n'est utilisé) ; limite le temps de calcul.
+  const priorAll = prior.map((p) => ({ ...p, weight: 1 }));
+  const byDay = new Map<string, Strengths>();
   for (let i = 0; i < sorted.length; i++) {
     const m = sorted[i];
     // Matchs strictement antérieurs (deux matchs simultanés ne se « voient » pas).
@@ -96,7 +102,14 @@ export function evaluateCompetition(
     const history = sorted.slice(0, j);
 
     if (history.length >= options.warmupMatches) {
-      const p = runModel(prior.length ? [...prior, ...history] : history, m.homeId, m.awayId).probabilities;
+      const day = m.kickoffAt.slice(0, 10);
+      let s = byDay.get(day);
+      if (!s) {
+        const before = [...priorAll, ...history.filter((h) => h.kickoffAt.slice(0, 10) < day)].map((h) => ({ ...h, weight: 1 }));
+        s = fitStrengths(before, Date.parse(`${day}T00:00:00Z`), DEFAULT_OPTIONS_2);
+        byDay.set(day, s);
+      }
+      const p = runModel2FromStrengths(s, m.homeId, m.awayId, DEFAULT_OPTIONS_2).probabilities;
       const n = history.length;
       const base1x2 = [(counts.home + 1) / (n + 3), (counts.draw + 1) / (n + 3), (counts.away + 1) / (n + 3)];
       const outcome = m.homeGoals > m.awayGoals ? 0 : m.homeGoals === m.awayGoals ? 1 : 2;

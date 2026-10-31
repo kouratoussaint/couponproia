@@ -7,11 +7,11 @@ import {
   outcomeKey,
   type PlayedMatch,
   round,
-  runModel,
   sideRecord,
   type SideRecord,
   tableAt,
 } from "./poisson.ts";
+import { runProductionModel } from "./poisson2.ts";
 
 export interface NamedMatch extends PlayedMatch {
   homeName: string;
@@ -133,7 +133,7 @@ function h2hJson(m: NamedMatch) {
 export function buildFiche(input: FicheInput) {
   const { match } = input;
   const prior = input.prior ?? [];
-  const model = runModel([...prior, ...input.history], match.home.id, match.away.id);
+  const model = runProductionModel(input.history, prior, match.home.id, match.away.id, match.kickoffAt);
 
   const implied = impliedProbabilities(input.odds);
   const oddsLines: OddsLineFiche[] = input.odds.map((o) => {
@@ -181,7 +181,7 @@ export function buildFiche(input: FicheInput) {
   return {
     engine_version: ENGINE_VERSION,
     generated_at: input.generatedAt,
-    note: "Probabilités estimées par un modèle statistique (Poisson) : ce sont des estimations, pas des certitudes.",
+    note: "Probabilités estimées par un modèle statistique (Poisson, forme récente pondérée) : ce sont des estimations, pas des certitudes.",
     match: {
       id: match.id,
       competition: match.competition.name,

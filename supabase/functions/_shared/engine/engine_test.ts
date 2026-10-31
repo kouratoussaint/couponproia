@@ -225,10 +225,10 @@ Deno.test("poisson-2.0 : les matchs à l'extérieur comptent, les anciens matchs
     history.push({ kickoffAt: day(i * 7 + 1), homeId: 2, awayId: 3 + (i % 4), homeGoals: 0, awayGoals: 2 });
   }
   const s = fitStrengths(history, Date.parse(day(80)));
-  assert(s.attack.get(1)! > 1.5, "attaque de l'équipe 1 mesurée sur ses matchs à l'extérieur");
-  assert(s.attack.get(2)! < 0.7, "attaque faible de l'équipe 2 mesurée à domicile");
+  assert(s.attack.get(1)! > 1.3, "attaque de l'équipe 1 mesurée sur ses matchs à l'extérieur");
+  assert(s.attack.get(2)! < 0.8, "attaque faible de l'équipe 2 mesurée à domicile");
   const r = runModel2(history, 1, 2, day(80));
-  assert(r.probabilities["1X2.HOME"] > 0.6, "l'équipe 1 favorite à domicile alors qu'elle n'y a jamais joué");
+  assert(r.probabilities["1X2.HOME"] > 0.55, "l'équipe 1 favorite à domicile alors qu'elle n'y a jamais joué");
   // Décroissance : un résultat très ancien pèse moins qu'un résultat récent.
   const old = fitStrengths([{ kickoffAt: day(0), homeId: 1, awayId: 2, homeGoals: 5, awayGoals: 0 }], Date.parse(day(720)));
   const recent = fitStrengths([{ kickoffAt: day(700), homeId: 1, awayId: 2, homeGoals: 5, awayGoals: 0 }], Date.parse(day(720)));
