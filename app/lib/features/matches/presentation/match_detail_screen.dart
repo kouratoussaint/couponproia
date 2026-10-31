@@ -279,8 +279,8 @@ class _FollowTeamButton extends ConsumerWidget {
             showMessage(
                 context,
                 on
-                    ? 'Tu ne suis plus ${team.name}.'
-                    : 'Tu suis ${team.name} : ses matchs passent en premier sur l’accueil.');
+                    ? 'Vous ne suivez plus ${team.name}.'
+                    : 'Vous suivez ${team.name} : ses matchs passent en premier sur l’accueil.');
           }
         } catch (e) {
           if (context.mounted) {

@@ -85,7 +85,23 @@ class PronosticTab extends ConsumerWidget {
                         ?.showExplanations ??
                     true)
                   const GlossaryCard(),
-                ProbabilitiesCard(fiche: a.fiche, home: home, away: away),
+                ModelMarketCard(
+                  fiche: a.fiche,
+                  home: home,
+                  away: away,
+                  liveMarket: switch (ref
+                      .watch(market1x2OfMatchProvider(match.id))
+                      .valueOrNull) {
+                    final m? => (
+                        home: m.pHome,
+                        draw: m.pDraw,
+                        away: m.pAway,
+                        bookmakers: m.bookmakers,
+                        at: m.capturedAt
+                      ),
+                    null => null,
+                  },
+                ),
                 ScoresCard(fiche: a.fiche, max: 3),
                 const SizedBox(height: 8),
                 AnalyzeButton(match: match),

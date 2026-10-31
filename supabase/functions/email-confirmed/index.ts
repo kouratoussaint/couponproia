@@ -7,7 +7,7 @@
 Deno.serve(() =>
   new Response(
     "Coupon Pro IA\n\n" +
-      "C'est fait : votre adresse email est confirmée.\n" +
+      "C'est fait : votre adresse e-mail est confirmée.\n" +
       "Retournez dans l'application Coupon Pro IA et connectez-vous.\n\n" +
       "Si un message d'erreur s'affiche dans l'application, demandez un nouveau code.",
     { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } },

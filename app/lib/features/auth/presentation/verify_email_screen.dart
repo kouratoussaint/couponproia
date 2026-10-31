@@ -63,11 +63,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   Widget build(BuildContext context) {
     final missingEmail = widget.email.isEmpty;
     return AuthScaffold(
-      title: 'Confirmez votre email',
+      title: 'Confirmez votre adresse e-mail',
       subtitle: missingEmail
           ? 'Adresse inconnue : recommencez depuis la connexion.'
           : 'Saisissez le code à 6 chiffres envoyé à ${widget.email} (pensez aux spams). '
-              'Si l’email contient un lien au lieu d’un code, ouvrez-le, puis revenez vous connecter.',
+              'Si l’e-mail contient un lien au lieu d’un code, ouvrez-le, puis revenez vous connecter.',
       child: Form(
         key: _formKey,
         child: Column(

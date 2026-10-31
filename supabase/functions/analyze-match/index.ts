@@ -29,6 +29,12 @@ Deno.serve(async (req) => {
   }
   const { db } = ctx;
   const canManage = caller.permissions.includes("ai.configure");
+  // Fournisseur, modèle et prompt : visibles du seul super administrateur (permission ai.providers).
+  const forCaller = (row: Record<string, unknown>) => {
+    if (caller.permissions.includes("ai.providers")) return row;
+    const { provider: _p, model: _m, prompt_key: _k, prompt_version: _v, ...rest } = row;
+    return rest;
+  };
   if (force && !canManage) return json({ error: "forbidden" }, 403);
 
   try {
@@ -56,7 +62,7 @@ Deno.serve(async (req) => {
     if (!force) {
       const { data: cached } = await db.from("match_analyses").select(ANALYSIS_COLUMNS).eq("match_id", matchId)
         .order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (cached && isFresh(cached, played, ttlHours, prompt?.version ?? null)) return json({ ...cached, cached: true });
+      if (cached && isFresh(cached, played, ttlHours, prompt?.version ?? null)) return json({ ...forCaller(cached), cached: true });
     }
 
     // Quota : nouvelles analyses déclenchées par l'utilisateur aujourd'hui (UTC = heure de Ouagadougou).
@@ -79,7 +85,7 @@ Deno.serve(async (req) => {
     }
 
     const saved = await generateMatchAnalysis(db, m, prompt, caller.id);
-    return json({ ...saved, cached: false });
+    return json({ ...forCaller(saved), cached: false });
   } catch (e) {
     console.error("analyze-match", e);
     return json({ error: "internal_error", message: String((e as Error).message ?? e).slice(0, 200) }, 500);

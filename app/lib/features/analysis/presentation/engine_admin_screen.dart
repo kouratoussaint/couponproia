@@ -45,7 +45,7 @@ class _EngineAdminScreenState extends ConsumerState<EngineAdminScreen> {
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!permissions.contains('ai.configure')) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Moteur d’analyse')),
+        appBar: AppBar(title: const Text('Moteur et IA')),
         body: const InfoMessage(
             icon: Icons.lock_outline,
             title: 'Accès réservé aux administrateurs'),
@@ -56,7 +56,7 @@ class _EngineAdminScreenState extends ConsumerState<EngineAdminScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Moteur d’analyse'),
+        title: const Text('Moteur et IA'),
         actions: [
           IconButton(
             tooltip: 'Actualiser',

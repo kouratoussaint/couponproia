@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
 import '../../../core/router/app_routes.dart';
-import '../../../core/widgets/coming_soon_view.dart';
 import '../../shell/app_drawer.dart';
 import '../../system/system_providers.dart';
 import '../data/sports_format.dart';
@@ -72,12 +71,11 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
     if (flags != null && flags['matches'] == false) {
       return Scaffold(
         appBar: appBar,
-        body: const ComingSoonView(
+        body: const InfoMessage(
           icon: Icons.sports_soccer,
           title: 'Matchs momentanément indisponibles',
-          lot: 'LOT 2',
-          description:
-              'L’administration a désactivé ce module. Réessayez plus tard.',
+          body:
+              'Ce module est mis en pause pour le moment. Réessayez plus tard.',
         ),
       );
     }

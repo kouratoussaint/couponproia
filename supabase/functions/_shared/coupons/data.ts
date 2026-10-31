@@ -4,7 +4,7 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { buildFiche, type NamedMatch, type OddsRow } from "../engine/fiche.ts";
 import type { EngineQuality } from "../engine/quality.ts";
 import { outcomeKey, PRIOR_SEASON_WEIGHT, weighted } from "../engine/poisson.ts";
-import { type Candidate, justificationFor, type LiveCheck, type Reliability } from "./generator.ts";
+import { type Candidate, justificationFor, type LiveCheck, type MatchUsage, type Reliability } from "./generator.ts";
 
 const PAGE = 1000;
 const PLAYED = ["finished", "awarded"];
@@ -236,4 +236,26 @@ export async function liveFingerprints(db: SupabaseClient): Promise<Set<string>>
     .in("status", ["pending_review", "ready", "published"]).gte("last_kickoff_at", new Date(Date.now() - 86400_000).toISOString());
   if (error) throw new Error(error.message);
   return new Set((data ?? []).map((r) => r.fingerprint));
+}
+
+/**
+ * Matchs des coupons de la plateforme encore en circulation (à valider, prêts ou publiés,
+ * dernier match pas encore commencé depuis plus de 3 h) : nombre de coupons et catégories.
+ */
+export async function liveMatchUsage(db: SupabaseClient): Promise<Map<number, MatchUsage>> {
+  const { data, error } = await db.from("coupons").select("category, coupon_selections(match_id)")
+    .in("status", ["pending_review", "ready", "published"])
+    .gte("last_kickoff_at", new Date(Date.now() - 3 * 3600_000).toISOString());
+  if (error) throw new Error(error.message);
+  const usage = new Map<number, MatchUsage>();
+  for (const c of (data ?? []) as { category: string; coupon_selections: { match_id: number }[] }[]) {
+    const ids = [...new Set((c.coupon_selections ?? []).map((s) => Number(s.match_id)))];
+    for (const id of ids) {
+      const u = usage.get(id) ?? { count: 0, categories: new Set<string>() };
+      u.count++;
+      u.categories.add(c.category);
+      usage.set(id, u);
+    }
+  }
+  return usage;
 }

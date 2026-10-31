@@ -13,7 +13,7 @@ String communityErrorMessage(Object e) {
       case 'plan_required':
         return 'Publier demande le forfait PRO TIPSTER ou BUSINESS.';
       case 'profile_required':
-        return 'Crée d’abord ton profil Tipster.';
+        return 'Créez d’abord votre profil Tipster.';
       case 'too_late':
         return 'Trop tard : un coupon se publie avant le premier coup d’envoi.';
       case 'already_published':
@@ -32,7 +32,7 @@ String communityErrorMessage(Object e) {
       return e.message;
     }
   }
-  return 'Action impossible pour le moment. Réessaie.';
+  return 'Action impossible pour le moment. Réessayez.';
 }
 
 class CommunityRepository {

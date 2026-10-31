@@ -4,8 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/providers.dart';
 import 'analysis_models.dart';
 
-const _analysisColumns =
-    'id, match_id, engine_version, provider, model, status, status_reason, '
+// Le fournisseur et le modèle d'IA ne sont pas lisibles par les utilisateurs :
+// le super administrateur les obtient avec [AnalysisRepository.tech].
+const _analysisColumns = 'id, match_id, engine_version, status, status_reason, '
     'stats, analysis, source_updated_at, created_at';
 
 /// Erreur métier renvoyée par la fonction d'analyse, déjà formulée pour l'utilisateur.
@@ -83,6 +84,13 @@ class AnalysisRepository {
     return row == null ? null : EngineEvaluation.fromJson(row);
   }
 
+  /// Fournisseur, modèle, prompt et temps de réponse d'une analyse (super administrateur).
+  Future<Map<String, dynamic>> tech(int analysisId) async {
+    final res = await _client
+        .rpc('analysis_tech', params: {'p_analysis_id': analysisId});
+    return res is Map ? Map<String, dynamic>.from(res) : const {};
+  }
+
   Future<EngineEvaluation> evaluateEngine() async =>
       EngineEvaluation.fromJson(await _invoke('engine-evaluate', const {}));
 
@@ -107,6 +115,11 @@ final analysisRepositoryProvider = Provider<AnalysisRepository>(
 final storedAnalysisProvider =
     FutureProvider.autoDispose.family<MatchAnalysis?, int>(
   (ref, matchId) => ref.watch(analysisRepositoryProvider).latest(matchId),
+);
+
+final analysisTechProvider =
+    FutureProvider.autoDispose.family<Map<String, dynamic>, int>(
+  (ref, id) => ref.watch(analysisRepositoryProvider).tech(id),
 );
 
 final latestEvaluationProvider = FutureProvider<EngineEvaluation?>(

@@ -247,7 +247,7 @@ class FavoriteTeamsScreen extends ConsumerWidget {
                 icon: Icons.star_border,
                 title: 'Aucune équipe suivie',
                 body:
-                    'Dans la fiche d’un match, touche l’étoile à côté d’une équipe pour la suivre : '
+                    'Dans la fiche d’un match, touchez l’étoile à côté d’une équipe pour la suivre : '
                     'ses matchs passeront en premier sur l’accueil.')
             : ListView(
                 padding: const EdgeInsets.all(12),

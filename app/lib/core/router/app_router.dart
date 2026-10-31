@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/admin/presentation/ai_providers_screen.dart';
 import '../../features/analysis/presentation/engine_admin_screen.dart';
 import '../../features/assistant/presentation/assistant_screen.dart';
 import '../../features/assistant/presentation/my_coupons_screen.dart';
@@ -201,6 +202,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.adminCosts,
         builder: (context, state) => const CostsAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminAi,
+        builder: (context, state) => const AiProvidersScreen(),
       ),
       GoRoute(
         path: AppRoutes.adminPromos,

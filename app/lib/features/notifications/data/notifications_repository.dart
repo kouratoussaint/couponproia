@@ -88,25 +88,29 @@ const notificationKinds = [
   (
     'notify_coupons',
     'Nouveaux coupons',
-    'Quand un coupon de la plateforme que tu peux voir est publié'
+    'Quand un coupon de la plateforme que vous pouvez voir est publié'
   ),
   (
     'notify_results',
     'Résultats de mes coupons',
     'Gagné, perdu ou annulé, dès le règlement'
   ),
-  ('notify_tipsters', 'Tipsters suivis', 'Quand un Tipster que tu suis publie'),
+  (
+    'notify_tipsters',
+    'Tipsters suivis',
+    'Quand un Tipster que vous suivez publie'
+  ),
   (
     'notify_matches',
     'Rappels de match',
-    '30 minutes avant un match d’une équipe que tu suis'
+    '30 minutes avant un match d’une équipe que vous suivez'
   ),
   (
     'notify_morning',
     'Rendez-vous du matin',
     'Vers 7 h 30 : matchs du jour et analyse offerte'
   ),
-  ('notify_credits', 'Crédits IA', 'Quand tes crédits sont presque épuisés'),
+  ('notify_credits', 'Crédits IA', 'Quand vos crédits sont presque épuisés'),
 ];
 
 class NotificationsRepository {

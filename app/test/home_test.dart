@@ -103,13 +103,20 @@ void main() {
         ),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('Coupon du jour'), findsOneWidget);
-      expect(find.text('Analyse offerte du jour'), findsOneWidget);
-      expect(find.text('Lille – Lens'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Derniers résultats'), 300);
+      expect(find.text('COUPON DU JOUR'), findsOneWidget);
+      expect(find.text('à jouer'), findsOneWidget);
+      expect(find.text('Voir le coupon'), findsOneWidget);
       await tester.scrollUntilVisible(
-          find.text('Tout l’historique, pertes comprises'), 300);
-      expect(find.text('Perdu'), findsOneWidget);
+          find.text('ANALYSE OFFERTE DU JOUR'), 300);
+      expect(find.text('Lille – Lens'), findsWidgets);
+      await tester.scrollUntilVisible(find.text('Marché : 1 · N · 2'), 300);
+      expect(find.text('35 · 29 · 36'), findsOneWidget);
+      await tester.tap(find.text('Demain'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+          find.text('Bilan des 7 derniers jours'), 300);
+      expect(find.textContaining('1 gagné · 1 perdu sur 2 réglés'),
+          findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }

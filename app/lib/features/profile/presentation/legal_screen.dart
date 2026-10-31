@@ -16,7 +16,7 @@ class LegalScreen extends ConsumerWidget {
     final disclaimers =
         ref.watch(disclaimersProvider).valueOrNull ?? fallbackDisclaimers;
     return Scaffold(
-      appBar: AppBar(title: const Text('Mentions et documents')),
+      appBar: AppBar(title: const Text('Mentions légales et documents')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

@@ -153,7 +153,7 @@ export function criteriaFromIntent(i: Intent, windowHours: number): { criteria: 
     allowed_keys: i.issues,
     min_model_probability: risk?.min_model_probability ?? 0.4,
     min_edge: -0.05,
-    max_edge: 0.1,
+    max_edge: 0.06,
     min_reliability: "moyenne",
     window_hours: Math.max(1, Math.ceil(windowHours)),
     min_minutes_before_kickoff: 15,

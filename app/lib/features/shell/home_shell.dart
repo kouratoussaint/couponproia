@@ -90,7 +90,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(const SnackBar(
-        content: Text('Appuie encore sur Retour pour quitter'),
+        content: Text('Appuyez encore sur Retour pour quitter'),
         duration: Duration(seconds: 2),
       ));
   }

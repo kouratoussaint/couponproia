@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../core/widgets/form_widgets.dart';
+import '../../../core/widgets/super_admin_note.dart';
 import '../../lab/data/lab_repository.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/data/sports_models.dart';
@@ -409,45 +410,203 @@ class ProbabilityBar extends StatelessWidget {
   }
 }
 
-class ProbabilitiesCard extends StatelessWidget {
-  const ProbabilitiesCard(
-      {super.key, required this.fiche, required this.home, required this.away});
+/// Probabilités du résultat : estimation du modèle et marché côte à côte, avec l'écart.
+/// Le marché vient des cotes relevées pour l'analyse ; à défaut, des cotes actuelles.
+class ModelMarketCard extends StatelessWidget {
+  const ModelMarketCard(
+      {super.key,
+      required this.fiche,
+      required this.home,
+      required this.away,
+      this.liveMarket});
 
   final AnalysisFiche fiche;
   final String home;
   final String away;
 
+  /// Probabilités 1-N-2 actuelles (marge retirée), utilisées si l'analyse n'en a pas.
+  final ({
+    double home,
+    double draw,
+    double away,
+    int bookmakers,
+    DateTime? at
+  })? liveMarket;
+
+  static const keys = ['1X2.HOME', '1X2.DRAW', '1X2.AWAY'];
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final f = fiche;
-    const oneXTwo = ['1X2.HOME', '1X2.DRAW', '1X2.AWAY'];
-    final best = oneXTwo.where((k) => f.p(k) != null).fold<String?>(
-          null,
-          (b, k) => b == null || f.p(k)! > f.p(b)! ? k : b,
-        );
+    final lines = {
+      for (final l in f.marketLines)
+        if (keys.contains(l.key) && l.impliedProbability != null) l.key: l
+    };
+    final fromFiche = lines.length == 3;
+    final live = liveMarket;
+    double? market(String k) {
+      if (fromFiche) return lines[k]!.impliedProbability;
+      if (live == null) return null;
+      return switch (k) {
+        '1X2.HOME' => live.home,
+        '1X2.DRAW' => live.draw,
+        _ => live.away,
+      };
+    }
+
+    final bookmakers = fromFiche
+        ? lines.values.map((l) => l.bookmakers).reduce((a, b) => a > b ? a : b)
+        : live?.bookmakers;
+    final at = fromFiche ? f.marketCapturedAt : live?.at;
+    final hasMarket = fromFiche || live != null;
+    final modelColor = theme.colorScheme.primary;
+    final marketColor = theme.brightness == Brightness.dark
+        ? const Color(0xFF8FA3FF)
+        : BrandColors.bleuTech;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Résultat du match selon le modèle',
-                style: theme.textTheme.labelLarge),
-            const SizedBox(height: 6),
-            for (final k in oneXTwo)
+            Row(
+              children: [
+                Expanded(
+                    child: Text(
+                        hasMarket
+                            ? 'Modèle et marché'
+                            : 'Résultat du match selon le modèle',
+                        style: theme.textTheme.labelLarge)),
+                if (hasMarket) ...[
+                  _Legend(color: modelColor, label: 'Modèle'),
+                  const SizedBox(width: 10),
+                  _Legend(color: marketColor, label: 'Marché'),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (final k in keys)
               if (f.p(k) != null)
-                ProbabilityBar(
-                    label: outcomeKeyLabel(k, home, away),
-                    probability: f.p(k)!,
-                    highlight: k == best),
-            const SizedBox(height: 10),
+                _OutcomeRows(
+                  label: outcomeKeyLabel(k, home, away),
+                  model: f.p(k)!,
+                  market: market(k),
+                  modelColor: modelColor,
+                  marketColor: marketColor,
+                ),
+            const SizedBox(height: 6),
             Text(
               'Buts attendus : $home ${decimal(f.expectedGoalsHome)} – ${decimal(f.expectedGoalsAway)} $away',
               style: theme.textTheme.bodyMedium,
             ),
+            if (hasMarket) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Marché : cotes médianes${bookmakers == null || bookmakers == 0 ? '' : ' de $bookmakers bookmaker${bookmakers > 1 ? 's' : ''}'}, '
+                'marge retirée${at == null ? '' : ', relevées le ${shortDate(at.toLocal())} à ${timeLabel(at.toLocal())}'}. '
+                'Ce sont aussi des estimations.',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _Legend extends StatelessWidget {
+  const _Legend({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                  color: color, borderRadius: BorderRadius.circular(3))),
+          const SizedBox(width: 5),
+          Text(label, style: Theme.of(context).textTheme.labelSmall),
+        ],
+      );
+}
+
+class _OutcomeRows extends StatelessWidget {
+  const _OutcomeRows(
+      {required this.label,
+      required this.model,
+      required this.market,
+      required this.modelColor,
+      required this.marketColor});
+
+  final String label;
+  final double model;
+  final double? market;
+  final Color modelColor;
+  final Color marketColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final m = market;
+    final diff = m == null ? null : ((model - m) * 100).round();
+    Widget bar(double p, Color c, {bool muted = false}) => Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: p.clamp(0.0, 1.0).toDouble(),
+                    minHeight: 8,
+                    color: c,
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                child: Text(pct(p),
+                    textAlign: TextAlign.right,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                        color:
+                            muted ? theme.colorScheme.onSurfaceVariant : null,
+                        fontFeatures: const [FontFeature.tabularFigures()])),
+              ),
+            ],
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                  child: Text(label,
+                      style: theme.textTheme.bodyMedium,
+                      overflow: TextOverflow.ellipsis)),
+              if (diff != null)
+                Text(
+                    diff == 0
+                        ? 'identique'
+                        : '${diff > 0 ? '+' : '−'}${diff.abs()} pt${diff.abs() > 1 ? 's' : ''} modèle',
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            ],
+          ),
+          bar(model, modelColor),
+          if (m != null) bar(m, marketColor, muted: true),
+        ],
       ),
     );
   }
@@ -822,15 +981,19 @@ class AnalysisFooter extends ConsumerWidget {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                'Rédigé le ${shortDate(at)} à ${timeLabel(at)}'
-                '${data == null ? '' : ' avec les données du ${shortDate(data)} à ${timeLabel(data)}'} · '
-                'moteur ${analysis.engineVersion}'
-                '${analysis.provider == null ? '' : ' · IA ${analysis.provider}'}.',
+                'Analyse rédigée par l’IA à partir de données vérifiées, le ${shortDate(at)} à ${timeLabel(at)}'
+                '${data == null ? '' : ' (données du ${shortDate(data)} à ${timeLabel(data)})'}.',
                 style: muted,
               ),
             ),
           ],
         ),
+        if (ref
+                .watch(myPermissionsProvider)
+                .valueOrNull
+                ?.contains('ai.providers') ??
+            false)
+          TechLine(analysisId: analysis.id),
         const SizedBox(height: 4),
         Text(
           'Calculée avec les seuls matchs joués avant le coup d’envoi (${f.competitionMatches} matchs de la compétition). '
@@ -847,6 +1010,29 @@ class AnalysisFooter extends ConsumerWidget {
         ],
       ],
     );
+  }
+}
+
+/// Détails techniques d'une analyse, visibles du seul super administrateur.
+class TechLine extends ConsumerWidget {
+  const TechLine({super.key, required this.analysisId});
+
+  final int analysisId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = ref.watch(analysisTechProvider(analysisId)).valueOrNull;
+    if (t == null) return const SizedBox.shrink();
+    final parts = [
+      if (t['provider'] != null) '${t['provider']}',
+      if (t['model'] != null) '${t['model']}',
+      if (t['engine_version'] != null) 'moteur ${t['engine_version']}',
+      if (t['prompt_version'] != null) 'prompt v${t['prompt_version']}',
+      if (t['latency_ms'] != null)
+        '${((t['latency_ms'] as num) / 1000).toStringAsFixed(1).replaceAll('.', ',')} s',
+    ];
+    if (parts.isEmpty) return const SizedBox.shrink();
+    return SuperAdminNote(text: parts.join(' · '));
   }
 }
 

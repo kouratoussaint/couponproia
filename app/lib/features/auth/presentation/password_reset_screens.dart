@@ -48,7 +48,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     return AuthScaffold(
       title: 'Mot de passe oublié',
       subtitle:
-          'Indiquez votre email : vous recevrez un code pour choisir un nouveau mot de passe.',
+          'Indiquez votre adresse e-mail : vous recevrez un code pour choisir un nouveau mot de passe.',
       showBack: true,
       child: Form(
         key: _formKey,
@@ -61,7 +61,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               autofillHints: const [AutofillHints.email],
               validator: Validators.email,
               decoration: const InputDecoration(
-                labelText: 'Email',
+                labelText: 'Adresse e-mail',
                 prefixIcon: Icon(Icons.alternate_email),
               ),
               onFieldSubmitted: (_) => _submit(),
@@ -146,7 +146,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 ],
                 validator: Validators.otpCode,
                 decoration: const InputDecoration(
-                  labelText: 'Code reçu par email',
+                  labelText: 'Code reçu par e-mail',
                   prefixIcon: Icon(Icons.pin_outlined),
                 ),
               ),

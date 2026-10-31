@@ -8,6 +8,45 @@ export interface AiCallResult {
   model: string;
   inputTokens: number | null;
   outputTokens: number | null;
+  /** Quota restant annoncé par le fournisseur (en-têtes de limite), s'il en envoie. */
+  quota?: Quota | null;
+}
+
+/** Limites et restes annoncés par le fournisseur ; les remises à zéro sont en texte brut. */
+export interface Quota {
+  requests_limit: number | null;
+  requests_remaining: number | null;
+  requests_reset: string | null;
+  tokens_limit: number | null;
+  tokens_remaining: number | null;
+  tokens_reset: string | null;
+}
+
+/** Lit les en-têtes de limite (Groq : x-ratelimit-*, Anthropic : anthropic-ratelimit-*). */
+export function readQuota(headers: Headers): Quota | null {
+  const num = (name: string) => {
+    const v = headers.get(name);
+    const n = v === null ? NaN : Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  const groq = {
+    requests_limit: num("x-ratelimit-limit-requests"),
+    requests_remaining: num("x-ratelimit-remaining-requests"),
+    requests_reset: headers.get("x-ratelimit-reset-requests"),
+    tokens_limit: num("x-ratelimit-limit-tokens"),
+    tokens_remaining: num("x-ratelimit-remaining-tokens"),
+    tokens_reset: headers.get("x-ratelimit-reset-tokens"),
+  };
+  const anthropic = {
+    requests_limit: num("anthropic-ratelimit-requests-limit"),
+    requests_remaining: num("anthropic-ratelimit-requests-remaining"),
+    requests_reset: headers.get("anthropic-ratelimit-requests-reset"),
+    tokens_limit: num("anthropic-ratelimit-tokens-limit"),
+    tokens_remaining: num("anthropic-ratelimit-tokens-remaining"),
+    tokens_reset: headers.get("anthropic-ratelimit-tokens-reset"),
+  };
+  const filled = (q: Quota) => q.requests_remaining !== null || q.tokens_remaining !== null;
+  return filled(groq) ? groq : filled(anthropic) ? anthropic : null;
 }
 
 export interface AiProvider {
@@ -16,7 +55,12 @@ export interface AiProvider {
 }
 
 export class AiProviderError extends Error {
-  constructor(readonly provider: string, readonly status: number, message: string) {
+  constructor(
+    readonly provider: string,
+    readonly status: number,
+    message: string,
+    readonly quota: Quota | null = null,
+  ) {
     super(`${provider} (${status}) : ${message}`);
   }
 }
@@ -107,7 +151,7 @@ export class AnthropicProvider implements AiProvider {
       },
       body: JSON.stringify({ model, max_tokens: 2048, system, messages: [{ role: "user", content: user }] }),
     });
-    if (!res.ok) throw new AiProviderError(this.name, res.status, await errorText(res));
+    if (!res.ok) throw new AiProviderError(this.name, res.status, await errorText(res), readQuota(res.headers));
     const body = await res.json();
     const text = (body?.content ?? []).filter((c: { type: string }) => c.type === "text")
       .map((c: { text: string }) => c.text).join("");
@@ -116,6 +160,7 @@ export class AnthropicProvider implements AiProvider {
       model: body?.model ?? model,
       inputTokens: body?.usage?.input_tokens ?? null,
       outputTokens: body?.usage?.output_tokens ?? null,
+      quota: readQuota(res.headers),
     };
   }
 }
@@ -136,13 +181,14 @@ export class GroqProvider implements AiProvider {
         messages: [{ role: "system", content: system }, { role: "user", content: user }],
       }),
     });
-    if (!res.ok) throw new AiProviderError(this.name, res.status, await errorText(res));
+    if (!res.ok) throw new AiProviderError(this.name, res.status, await errorText(res), readQuota(res.headers));
     const body = await res.json();
     return {
       text: body?.choices?.[0]?.message?.content ?? "",
       model: body?.model ?? model,
       inputTokens: body?.usage?.prompt_tokens ?? null,
       outputTokens: body?.usage?.completion_tokens ?? null,
+      quota: readQuota(res.headers),
     };
   }
 }
@@ -163,4 +209,37 @@ export function makeProvider(
   if (name === "gemini") return new GeminiProvider(key, fetchFn);
   if (name === "anthropic") return new AnthropicProvider(key, fetchFn);
   return new GroqProvider(key, fetchFn);
+}
+
+/** Fournisseurs connus : nom affiché et secret de la clé. */
+export const PROVIDERS: Record<string, { label: string; secret: string }> = {
+  gemini: { label: "Gemini", secret: "GEMINI_API_KEY" },
+  groq: { label: "Groq", secret: "GROQ_API_KEY" },
+  anthropic: { label: "Claude", secret: "ANTHROPIC_API_KEY" },
+};
+
+/** Modèles proposés par le fournisseur (appel en direct, avec la clé du serveur). */
+export async function listModels(name: string, apiKey: string, fetchFn: FetchFn = fetch): Promise<string[]> {
+  if (name === "gemini") {
+    const res = await fetchFn("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", {
+      headers: { "x-goog-api-key": apiKey },
+    });
+    if (!res.ok) throw new AiProviderError(name, res.status, await errorText(res));
+    const body = await res.json();
+    return (body?.models ?? [])
+      .filter((m: { supportedGenerationMethods?: string[] }) =>
+        (m.supportedGenerationMethods ?? []).includes("generateContent")
+      )
+      .map((m: { name: string }) => String(m.name).replace(/^models\//, ""))
+      .filter((n: string) => n.startsWith("gemini-"))
+      .sort();
+  }
+  const url = name === "groq" ? "https://api.groq.com/openai/v1/models" : "https://api.anthropic.com/v1/models?limit=100";
+  const headers: Record<string, string> = name === "groq"
+    ? { Authorization: `Bearer ${apiKey}` }
+    : { "x-api-key": apiKey, "anthropic-version": "2023-06-01" };
+  const res = await fetchFn(url, { headers });
+  if (!res.ok) throw new AiProviderError(name, res.status, await errorText(res));
+  const body = await res.json();
+  return (body?.data ?? []).map((m: { id: string }) => String(m.id)).sort();
 }

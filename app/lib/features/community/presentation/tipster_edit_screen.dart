@@ -199,7 +199,7 @@ class _FormState extends ConsumerState<_Form> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Tes statistiques sont calculées par Coupon Pro IA à partir des résultats réels de tes coupons '
+            'Vos statistiques sont calculées par Coupon Pro IA à partir des résultats réels de vos coupons '
             'publiés : elles ne se saisissent pas et ne se modifient pas. Un coupon publié reste visible, '
             'pertes comprises.',
             style: theme.textTheme.bodySmall,

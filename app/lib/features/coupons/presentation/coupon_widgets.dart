@@ -198,7 +198,7 @@ class CouponCard extends StatelessWidget {
                       Text('Cote ${decimal(c.totalOdd)}',
                           style: theme.textTheme.titleMedium
                               ?.copyWith(color: theme.colorScheme.primary)),
-                      Text('Modèle ${pct(c.combinedProbability)}',
+                      Text('Estimation ${pct(c.combinedProbability)}',
                           style: theme.textTheme.bodySmall),
                     ],
                   ),
@@ -297,7 +297,7 @@ class SelectionCard extends StatelessWidget {
                 children: [
                   ReliabilityChip(
                       reliability: Reliability.parse(s.reliability)),
-                  Text('Modèle ${pct(s.modelProbability)}',
+                  Text('Estimation ${pct(s.modelProbability)}',
                       style: theme.textTheme.labelMedium),
                   if (s.impliedProbability != null)
                     Text('Marché ${pct(s.impliedProbability!)}',

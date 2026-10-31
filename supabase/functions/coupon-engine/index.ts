@@ -10,17 +10,26 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { type AiResult, runValidated } from "../_shared/ai/analyst.ts";
 import { loadAiSetup } from "../_shared/ai/setup.ts";
 import { type CouponSummary, validateCouponSummary } from "../_shared/ai/validate.ts";
-import { type CandidateLoad, liveFingerprints, loadCandidates, loadLiveChecks } from "../_shared/coupons/data.ts";
 import {
+  type CandidateLoad,
+  liveFingerprints,
+  liveMatchUsage,
+  loadCandidates,
+  loadLiveChecks,
+} from "../_shared/coupons/data.ts";
+import {
+  blendWithMarket,
   buildCoupons,
   type Criteria,
   dailyLimit,
   defaultSummary,
+  diversify,
   filterCandidates,
   outcomeLabel,
   parseCriteria,
   type ProposedCoupon,
   qualityCheck,
+  recordUsage,
   riskLevel,
   type RiskThresholds,
 } from "../_shared/coupons/generator.ts";
@@ -76,6 +85,8 @@ class CouponEngine {
       "ai.coupon_summary",
       "ai.analysis_ttl_hours",
       "featured.prepare_from_hour",
+      "coupons.market_weight",
+      "coupons.max_match_uses",
     ]);
     this.quality = await loadEngineQuality(this.db);
   }
@@ -84,9 +95,29 @@ class CouponEngine {
     return String(this.settings["app.timezone"] ?? "Africa/Ouagadougou");
   }
 
+  /** Part du marché dans la probabilité retenue (0 = modèle seul). */
+  get marketWeight() {
+    const w = Number(this.settings["coupons.market_weight"] ?? 0.7);
+    return Number.isFinite(w) ? Math.min(1, Math.max(0, w)) : 0.7;
+  }
+
+  /** Nombre maximal de coupons en circulation contenant un même match (0 = sans limite). */
+  get maxMatchUses() {
+    const n = Number(this.settings["coupons.max_match_uses"] ?? 2);
+    return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 2;
+  }
+
   private candidates(windowHours: number) {
     const w = Math.ceil(windowHours);
-    if (!this.candidateCache.has(w)) this.candidateCache.set(w, loadCandidates(this.db, this.now, w, this.quality));
+    if (!this.candidateCache.has(w)) {
+      this.candidateCache.set(
+        w,
+        loadCandidates(this.db, this.now, w, this.quality).then((load) => ({
+          ...load,
+          candidates: blendWithMarket(load.candidates, this.marketWeight),
+        })),
+      );
+    }
     return this.candidateCache.get(w)!;
   }
 
@@ -177,15 +208,20 @@ class CouponEngine {
       return 0;
     }
     if (!this.quality) reasons.push("Moteur jamais évalué : aucun marché n'est validé.");
-    const { kept, excluded } = filterCandidates(
+    const filtered = filterCandidates(
       load.candidates,
       criteria,
       this.now,
       this.quality?.beatsBaseline ?? null,
       this.quality?.competitions ?? {},
     );
+    const usage = await liveMatchUsage(this.db);
+    const diverse = diversify(filtered.kept, usage, profile.category, this.maxMatchUses);
+    const kept = diverse.kept;
+    const excluded = { ...filtered.excluded, ...diverse.excluded };
     details.excluded = excluded;
     details.kept = kept.length;
+    details.market_weight = this.marketWeight;
     if (new Set(kept.map((c) => c.matchId)).size < criteria.min_selections) {
       const top = Object.entries(excluded).sort((a, b) => b[1] - a[1]).slice(0, 3)
         .map(([why, n]) => `${why} (${n})`).join(", ");
@@ -219,6 +255,10 @@ class CouponEngine {
           continue;
         }
       }
+      if (diversify(proposal.selections, usage, profile.category, this.maxMatchUses).kept.length !== proposal.selections.length) {
+        reasons.push("Coupon écarté : un de ses matchs figure déjà dans assez de coupons en circulation.");
+        continue;
+      }
       const live = await loadLiveChecks(this.db, proposal.selections);
       const qc = qualityCheck(proposal, live, criteria, this.now, taken);
       if (qc.length) {
@@ -229,6 +269,7 @@ class CouponEngine {
       if (ok) {
         created++;
         taken.add(proposal.fingerprint);
+        recordUsage(usage, proposal.selections, profile.category);
       }
     }
     return created;
@@ -251,7 +292,7 @@ class CouponEngine {
         edge: s.edge,
         reliability: s.reliability,
       })),
-      note: "Probabilité combinée = produit des probabilités du modèle (matchs supposés indépendants).",
+      note: "Probabilité de chaque sélection = estimation retenue (mélange du modèle et du marché). Probabilité combinée = produit de ces estimations (matchs supposés indépendants).",
     };
   }
 
@@ -275,6 +316,7 @@ class CouponEngine {
         cost_usd: l.costUsd,
         latency_ms: l.latencyMs,
         error: l.error,
+        quota: l.quota ?? null,
       })));
     }
     return { summary: ai.status === "ok" ? ai.value : null, ai };
@@ -368,13 +410,16 @@ class CouponEngine {
   async preview(profile: Profile) {
     const criteria = parseCriteria(profile.criteria);
     const load = await this.candidates(criteria.window_hours);
-    const { kept, excluded } = filterCandidates(
+    const filtered = filterCandidates(
       load.candidates,
       criteria,
       this.now,
       this.quality?.beatsBaseline ?? null,
       this.quality?.competitions ?? {},
     );
+    const diverse = diversify(filtered.kept, await liveMatchUsage(this.db), profile.category, this.maxMatchUses);
+    const kept = diverse.kept;
+    const excluded = { ...filtered.excluded, ...diverse.excluded };
     const proposals = buildCoupons(kept, criteria, await liveFingerprints(this.db));
     return {
       profile: profile.key,
@@ -391,6 +436,7 @@ class CouponEngine {
           selection: outcomeLabel(x.key, x.home, x.away),
           odd: x.odd,
           model: x.modelProbability,
+          model_alone: x.rawModelProbability ?? x.modelProbability,
           market: x.impliedProbability,
           edge: x.edge,
           reliability: x.reliability,

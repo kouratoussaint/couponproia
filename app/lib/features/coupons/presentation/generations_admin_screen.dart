@@ -110,7 +110,7 @@ class _GenerationsAdminScreenState
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!permissions.contains('generation.manage')) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Générations de coupons')),
+        appBar: AppBar(title: const Text('Coupons et générations')),
         body: const InfoMessage(
             icon: Icons.lock_outline,
             title: 'Accès réservé aux administrateurs'),
@@ -124,7 +124,7 @@ class _GenerationsAdminScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Générations de coupons'),
+        title: const Text('Coupons et générations'),
         actions: [
           IconButton(
               tooltip: 'Actualiser',

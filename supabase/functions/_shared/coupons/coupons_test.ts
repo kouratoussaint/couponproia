@@ -1,16 +1,20 @@
 // Tests unitaires du générateur de coupons : `deno test supabase/functions/_shared`
 import { assert, assertEquals } from "jsr:@std/assert@1";
 import {
+  blendWithMarket,
   buildCoupons,
   type Candidate,
   DEFAULT_CRITERIA,
   defaultSummary,
+  diversify,
   filterCandidates,
   fingerprintOf,
   justificationFor,
   type LiveCheck,
   parseCriteria,
+  type MatchUsage,
   qualityCheck,
+  recordUsage,
   riskLevel,
 } from "./generator.ts";
 
@@ -236,4 +240,39 @@ Deno.test("coupon du jour : un seul par jour de match, limite réglable pour les
   assertEquals(ouaga.end.toISOString(), "2026-11-01T00:00:00.000Z");
   const paris = localDayBounds("2026-07-14", "Europe/Paris");
   assertEquals(paris.start.toISOString(), "2026-07-13T22:00:00.000Z");
+});
+
+Deno.test("mélange modèle/marché : 30/70, écart filtré sur le modèle seul", () => {
+  const [c] = blendWithMarket([
+    cand({ matchId: 1, modelProbability: 0.68, impliedProbability: 0.6, edge: 0.08, justification: "Modèle : 68 % ; buts attendus 1,2 – 1,0." }),
+  ], 0.7);
+  assertEquals(c.modelProbability, 0.624);
+  assertEquals(c.rawModelProbability, 0.68);
+  assertEquals(c.edge, 0.024);
+  assertEquals(c.rawEdge, 0.08);
+  assert(c.justification.startsWith("Estimation retenue : 62 % (modèle 68 %, marché 60 %) ; buts attendus"));
+  // Rayo – Celta (+8 pts) ou Getafe – Sevilla (+10 pts) : écartés avec le plafond de 6 points.
+  const { kept, excluded } = filterCandidates([c], { ...DEFAULT_CRITERIA, min_model_probability: 0.5 }, NOW, VALID);
+  assertEquals(kept.length, 0);
+  assertEquals(excluded["désaccord trop fort avec le marché"], 1);
+  // Sans cote, rien ne change.
+  const [noMarket] = blendWithMarket([cand({ matchId: 2, impliedProbability: null, edge: null })], 0.7);
+  assertEquals(noMarket.modelProbability, 0.6);
+  assertEquals(noMarket.rawModelProbability, undefined);
+});
+
+Deno.test("diversification : 2 coupons par match au plus, du jour et prudent sans match commun", () => {
+  const usage = new Map<number, MatchUsage>();
+  recordUsage(usage, [{ matchId: 1 }, { matchId: 2 }], "prudent");
+  recordUsage(usage, [{ matchId: 2 }, { matchId: 3 }], "equilibre");
+  const all = [1, 2, 3, 4].map((id) => cand({ matchId: id }));
+  const duJour = diversify(all, usage, "du_jour", 2);
+  assertEquals(duJour.kept.map((c) => c.matchId), [3, 4]);
+  assertEquals(duJour.excluded["match déjà dans le coupon jumelé (du jour / prudent)"], 2);
+  const audacieux = diversify(all, usage, "audacieux", 2);
+  assertEquals(audacieux.kept.map((c) => c.matchId), [1, 3, 4]);
+  assertEquals(audacieux.excluded["match déjà dans 2 coupons en circulation"], 1);
+  const equilibre = diversify(all, usage, "equilibre", 2);
+  assertEquals(equilibre.kept.map((c) => c.matchId), [1, 4]);
+  assertEquals(diversify(all, usage, "audacieux", 0).kept.length, 4, "sans plafond, seule la règle de catégorie reste");
 });

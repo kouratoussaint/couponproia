@@ -90,7 +90,7 @@ class NotificationsScreen extends ConsumerWidget {
                     icon: Icons.notifications_none,
                     title: 'Aucune notification',
                     body:
-                        'Coupons publiés, résultats de tes coupons, publications des Tipsters suivis et '
+                        'Coupons publiés, résultats de vos coupons, publications des Tipsters suivis et '
                         'rappels de match apparaîtront ici.',
                   ),
                 ])
@@ -160,7 +160,12 @@ class NotificationSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final prefs = ref.watch(notificationPrefsProvider);
-    final pushAvailable = ref.watch(pushServiceProvider).available;
+    final push = ref.watch(pushServiceProvider);
+    final pushBlocked = !push.available
+        ? 'Cet appareil ne peut pas recevoir les notifications de Coupon Pro IA. '
+        : push.permissionDenied
+            ? 'Les notifications sont bloquées dans les réglages du téléphone. '
+            : null;
 
     Future<void> set(Map<String, Object> values) async {
       try {
@@ -186,21 +191,21 @@ class NotificationSettingsScreen extends ConsumerWidget {
         data: (p) => ListView(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
           children: [
-            if (!pushAvailable)
+            if (pushBlocked != null)
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.info_outline),
                   title: const Text('Notifications dans l’app'),
-                  subtitle: const Text(
-                      'Les notifications sur le téléphone arrivent bientôt. En attendant, '
-                      'elles s’affichent ici, dans la boîte de réception (cloche de l’accueil).'),
+                  subtitle:
+                      Text('${pushBlocked}Elles restent visibles ici, dans la '
+                          'boîte de réception (cloche de l’accueil).'),
                 ),
               ),
             Card(
               child: SwitchListTile(
                 title: const Text('Notifications sur le téléphone'),
                 subtitle: const Text(
-                    'Coupe tout d’un coup ; la boîte de réception reste remplie.'),
+                    'Coupe toutes les alertes du téléphone ; la boîte de réception continue de se remplir.'),
                 value: p.enabled,
                 onChanged: (v) => set({'notifications_enabled': v}),
               ),
@@ -265,7 +270,7 @@ class NotificationSettingsScreen extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Text(
                       p.hasQuietHours
-                          ? 'Silence de ${hour(p.quietStart)} à ${hour(p.quietEnd)} (heure de ton profil).'
+                          ? 'Silence de ${hour(p.quietStart)} à ${hour(p.quietEnd)} (heure de votre profil).'
                           : 'Pas d’heures calmes.',
                       style: theme.textTheme.bodySmall,
                     ),

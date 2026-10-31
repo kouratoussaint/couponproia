@@ -1,6 +1,6 @@
 // Orchestration : fiche → IA → validation → (correction) → analyse publiée ou repli.
 // Les fournisseurs sont essayés dans l'ordre ; chaque tentative est journalisée.
-import { type AiProvider, AiProviderError } from "./providers.ts";
+import { type AiProvider, AiProviderError, type Quota } from "./providers.ts";
 import { type Analysis, type FicheLike, parseJsonLoose, validateAnalysis } from "./validate.ts";
 
 export type Validator<T> = (raw: unknown) => { ok: true; value: T } | { ok: false; errors: string[] };
@@ -20,6 +20,8 @@ export interface AttemptLog {
   costUsd: number | null;
   latencyMs: number;
   error: string | null;
+  /** Dernier quota annoncé par le fournisseur pendant cette tentative. */
+  quota?: Quota | null;
 }
 
 export type AiResult<T> =
@@ -89,6 +91,7 @@ export async function runValidated<T>(
         log.attempts = attempt;
         const res = await provider.call(systemPrompt, message, model);
         log.model = res.model;
+        if (res.quota) log.quota = res.quota;
         log.inputTokens = add(log.inputTokens, res.inputTokens);
         log.outputTokens = add(log.outputTokens, res.outputTokens);
         let errors: string[];
@@ -112,6 +115,7 @@ export async function runValidated<T>(
     } catch (e) {
       log.status = "error";
       log.error = (e instanceof AiProviderError ? e.message : String(e)).slice(0, 500);
+      if (e instanceof AiProviderError && e.quota) log.quota = e.quota;
     }
     log.latencyMs = now() - started;
     log.costUsd = estimateCost(pricing, log.model, log.inputTokens, log.outputTokens);

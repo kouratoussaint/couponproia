@@ -28,7 +28,7 @@ class DrawerMenuButton extends StatelessWidget {
 }
 
 /// Menu latéral : les cinq espaces principaux, les espaces secondaires
-/// (avec leur lot de livraison s'ils ne sont pas encore prêts) et l'administration.
+/// et l'accès à la console d'administration.
 class AppDrawer extends ConsumerWidget {
   const AppDrawer(
       {super.key, required this.currentIndex, required this.onSelectTab});
@@ -159,25 +159,28 @@ class AppDrawer extends ConsumerWidget {
               title: const Text('Console d’administration'),
               onTap: () => open(AppRoutes.adminConsole),
             ),
-          if (permissions.contains('sports.configure'))
+          if (!permissions.contains('admin.access') &&
+              permissions.contains('sports.configure'))
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 28),
               leading: const Icon(Icons.sync_alt),
               title: const Text('Données sportives'),
               onTap: () => open(AppRoutes.sportsAdmin),
             ),
-          if (permissions.contains('generation.manage'))
+          if (!permissions.contains('admin.access') &&
+              permissions.contains('generation.manage'))
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 28),
               leading: const Icon(Icons.auto_mode),
-              title: const Text('Générations de coupons'),
+              title: const Text('Coupons et générations'),
               onTap: () => open(AppRoutes.generationsAdmin),
             ),
-          if (permissions.contains('ai.configure'))
+          if (!permissions.contains('admin.access') &&
+              permissions.contains('ai.configure'))
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 28),
               leading: const Icon(Icons.psychology_outlined),
-              title: const Text('Moteur d’analyse'),
+              title: const Text('Moteur et IA'),
               onTap: () => open(AppRoutes.engineAdmin),
             ),
         ],
@@ -185,7 +188,7 @@ class AppDrawer extends ConsumerWidget {
         ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 28),
           leading: const Icon(Icons.gavel_outlined),
-          title: const Text('Mentions et avertissements'),
+          title: const Text('Mentions légales et documents'),
           onTap: () {
             _close();
             context.go(AppRoutes.legal);

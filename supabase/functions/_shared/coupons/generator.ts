@@ -55,7 +55,7 @@ export const DEFAULT_CRITERIA: Criteria = {
   allowed_keys: [],
   min_model_probability: 0.5,
   min_edge: -0.02,
-  max_edge: 0.1,
+  max_edge: 0.06,
   min_reliability: "moyenne",
   window_hours: 24,
   min_minutes_before_kickoff: 30,
@@ -126,8 +126,86 @@ export interface Candidate {
   modelProbability: number;
   impliedProbability: number | null;
   edge: number | null;
+  /** Probabilité du modèle seul, avant le mélange avec le marché (absente si pas de mélange). */
+  rawModelProbability?: number;
+  /** Écart du modèle seul avec le marché : c'est lui que filtrent min_edge et max_edge. */
+  rawEdge?: number | null;
   reliability: Reliability;
   justification: string;
+}
+
+/**
+ * Mélange modèle / marché (proposition validée le 31/10) : la probabilité retenue est
+ * (1 − w) × modèle + w × marché. Le marché intègre des informations que le modèle ignore
+ * (absents, compositions) ; le mélange tempère les désaccords. Sans cote, rien ne change.
+ */
+export function blendWithMarket(candidates: Candidate[], marketWeight: number): Candidate[] {
+  const w = Math.min(1, Math.max(0, marketWeight));
+  if (w === 0) return candidates;
+  return candidates.map((c) => {
+    if (c.impliedProbability === null) return c;
+    const p = round((1 - w) * c.modelProbability + w * c.impliedProbability, 4);
+    const edge = round(p - c.impliedProbability, 4);
+    const raw = c.modelProbability;
+    const rest = c.justification.includes(" ; ") ? c.justification.slice(c.justification.indexOf(" ; ")) : ".";
+    return {
+      ...c,
+      rawModelProbability: raw,
+      rawEdge: c.edge,
+      modelProbability: p,
+      edge,
+      justification: `Estimation retenue : ${pct(p)} (modèle ${pct(raw)}, marché ${pct(c.impliedProbability)})${rest}`,
+    };
+  });
+}
+
+/** Utilisation d'un match dans les coupons en circulation. */
+export interface MatchUsage {
+  count: number;
+  categories: Set<string>;
+}
+
+/** Catégories qui ne partagent aucun match (le Coupon du jour et le Coupon prudent). */
+export const EXCLUSIVE_CATEGORIES: Record<string, string[]> = {
+  du_jour: ["prudent"],
+  prudent: ["du_jour"],
+};
+
+/**
+ * Diversification (proposition validée le 31/10) : un match figure dans `maxUses` coupons
+ * en circulation au plus, et jamais à la fois dans deux catégories exclusives. Un seul
+ * pronostic raté ne fait plus tomber tous les coupons de la journée.
+ */
+export function diversify(
+  candidates: Candidate[],
+  usage: Map<number, MatchUsage>,
+  category: string,
+  maxUses: number,
+): { kept: Candidate[]; excluded: Record<string, number> } {
+  const excluded: Record<string, number> = {};
+  const exclusive = EXCLUSIVE_CATEGORIES[category] ?? [];
+  const kept = candidates.filter((c) => {
+    const u = usage.get(c.matchId);
+    if (!u) return true;
+    let reason: string | null = null;
+    if (u.categories.has(category)) reason = "match déjà dans un coupon de la même catégorie";
+    else if (exclusive.some((x) => u.categories.has(x))) reason = "match déjà dans le coupon jumelé (du jour / prudent)";
+    else if (maxUses > 0 && u.count >= maxUses) reason = `match déjà dans ${u.count} coupons en circulation`;
+    if (!reason) return true;
+    excluded[reason] = (excluded[reason] ?? 0) + 1;
+    return false;
+  });
+  return { kept, excluded };
+}
+
+/** Ajoute les matchs d'un coupon créé à l'utilisation en cours. */
+export function recordUsage(usage: Map<number, MatchUsage>, selections: Pick<Candidate, "matchId">[], category: string) {
+  for (const s of selections) {
+    const u = usage.get(s.matchId) ?? { count: 0, categories: new Set<string>() };
+    u.count++;
+    u.categories.add(category);
+    usage.set(s.matchId, u);
+  }
 }
 
 /** Famille d'un marché pour les critères (1X2, DC, OU, BTTS). */
@@ -169,8 +247,9 @@ export function filterCandidates(
     if (t - Date.parse(c.oddsCapturedAt) > criteria.max_odds_age_hours * HOUR) return out("cote trop ancienne");
     if (c.odd < criteria.min_selection_odd || c.odd > criteria.max_selection_odd) return out("cote hors fourchette");
     if (c.modelProbability < criteria.min_model_probability) return out("probabilité du modèle trop faible");
-    if (c.edge === null || c.edge < criteria.min_edge) return out("écart avec le marché insuffisant");
-    if (c.edge > criteria.max_edge) return out("désaccord trop fort avec le marché");
+    const edge = c.rawEdge !== undefined ? c.rawEdge : c.edge;
+    if (edge === null || edge < criteria.min_edge) return out("écart avec le marché insuffisant");
+    if (edge > criteria.max_edge) return out("désaccord trop fort avec le marché");
     if (RELIABILITY_RANK[c.reliability] < RELIABILITY_RANK[criteria.min_reliability]) return out("fiabilité insuffisante");
     return true;
   });
@@ -421,7 +500,7 @@ export function defaultSummary(coupon: ProposedCoupon): { analyse_generale: stri
   const label = (s: Candidate) => `${outcomeLabel(s.key, s.home, s.away)} (${s.home} – ${s.away}, ${pct(s.modelProbability)})`;
   const text = [
     `${coupon.selections.length} sélections pour une cote totale de ${dec(coupon.totalOdd)}.`,
-    `Probabilité combinée estimée par le modèle : ${pct(coupon.combinedProbability)}` +
+    `Probabilité combinée estimée : ${pct(coupon.combinedProbability)}` +
     (coupon.impliedProbability !== null ? ` (marché : ${pct(coupon.impliedProbability)}).` : "."),
     coupon.selections.length > 1
       ? `Sélection la plus solide : ${label(strongest)} ; la plus fragile : ${label(weakest)}.`

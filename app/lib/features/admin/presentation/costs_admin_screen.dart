@@ -28,6 +28,7 @@ const _aiKinds = {
   'coupon_summary': 'Résumés de coupons',
   'assistant_intent': 'Assistant (compréhension)',
   'engine_evaluation': 'Évaluation du moteur',
+  'provider_test': 'Tests des fournisseurs',
 };
 
 /// Coûts de fonctionnement et coût moyen par utilisateur actif.

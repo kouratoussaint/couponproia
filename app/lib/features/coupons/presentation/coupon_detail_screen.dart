@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
+import '../../../core/widgets/super_admin_note.dart';
 import '../../../core/router/app_routes.dart';
 import '../../analysis/data/analysis_format.dart';
 import '../../matches/data/sports_format.dart';
@@ -250,16 +251,22 @@ class _CouponBody extends ConsumerWidget {
         const SizedBox(height: 16),
         Text(
           [
-            'Moteur ${c.engineVersion}',
-            'source ${c.dataSource}',
-            if (c.summaryFromAi && c.aiModel != null)
-              'analyse rédigée par l’IA (${c.aiModel}) et vérifiée',
+            if (c.summaryFromAi)
+              'Analyse rédigée par l’IA à partir de données vérifiées',
             if (c.publishedAt != null)
               'publié le ${shortDate(c.publishedAt!)}/${c.publishedAt!.year} à ${timeLabel(c.publishedAt!)}',
           ].join(' · '),
           style: muted,
           textAlign: TextAlign.center,
         ),
+        if (perms.contains('ai.providers'))
+          SuperAdminNote(
+            text: [
+              'moteur ${c.engineVersion}',
+              'source ${c.dataSource}',
+              if (c.aiModel != null) 'IA ${c.aiModel}',
+            ].join(' · '),
+          ),
         const SizedBox(height: 4),
         Text(
           'Probabilité combinée = produit des probabilités du modèle, matchs supposés indépendants. '

@@ -255,6 +255,11 @@ void main() {
       expect(find.text('2,60'), findsOneWidget); // cote juste
       expect(find.text('2,70'), findsOneWidget); // cote du marché
       expect(find.text('environ 2 fois sur 5'), findsWidgets);
+      await tester.scrollUntilVisible(find.text('Modèle et marché'), 300,
+          scrollable: find.byType(Scrollable).first);
+      expect(find.text('Modèle et marché'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('1-1'), 300,
+          scrollable: find.byType(Scrollable).first);
       expect(find.text('1-1'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

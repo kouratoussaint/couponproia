@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
+import '../../../core/widgets/super_admin_note.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/widgets/history_filter.dart';
 import '../../../core/widgets/form_widgets.dart';
@@ -16,6 +17,7 @@ import '../../community/data/community_repository.dart';
 import '../../community/presentation/community_widgets.dart';
 import '../../studio/data/studio_models.dart';
 import '../data/assistant_models.dart';
+import '../../system/system_providers.dart';
 import '../data/assistant_repository.dart';
 
 /// Mes coupons : coupons enregistrés depuis l'assistant ou le laboratoire.
@@ -244,11 +246,17 @@ class MyCouponDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Moteur ${c.engineVersion} · créé le ${shortDate(c.createdAt)}/${c.createdAt.year} à ${timeLabel(c.createdAt)}. '
+                    'Créé le ${shortDate(c.createdAt)}/${c.createdAt.year} à ${timeLabel(c.createdAt)}. '
                     'Cotes relevées au moment de la création : elles ont pu changer. Estimations, sans garantie de gain.',
                     style: muted,
                     textAlign: TextAlign.center,
                   ),
+                  if (ref
+                          .watch(myPermissionsProvider)
+                          .valueOrNull
+                          ?.contains('ai.providers') ??
+                      false)
+                    SuperAdminNote(text: 'moteur ${c.engineVersion}'),
                 ],
               ),
       ),
@@ -269,9 +277,9 @@ Future<void> _publish(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-              'Il apparaîtra sur ton profil Tipster et dans le fil de tes abonnés. '
+              'Il apparaîtra sur votre profil Tipster et dans le fil de vos abonnés. '
               'Une fois publié, il ne peut plus être modifié ni supprimé : son résultat comptera '
-              'dans tes statistiques, qu’il soit gagné ou perdu.'),
+              'dans vos statistiques, qu’il soit gagné ou perdu.'),
           const SizedBox(height: 12),
           TextField(
             controller: comment,
@@ -279,7 +287,7 @@ Future<void> _publish(
             maxLines: 3,
             minLines: 1,
             decoration: const InputDecoration(
-                labelText: 'Ton commentaire (facultatif)'),
+                labelText: 'Votre commentaire (facultatif)'),
           ),
         ],
       ),
@@ -310,7 +318,7 @@ Future<void> _publish(
         ref.invalidate(savedCouponsProvider);
         ref.invalidate(feedProvider);
         if (context.mounted) {
-          showMessage(context, 'Coupon publié sur ton profil Tipster.');
+          showMessage(context, 'Coupon publié sur votre profil Tipster.');
         }
       } catch (e) {
         if (context.mounted) {

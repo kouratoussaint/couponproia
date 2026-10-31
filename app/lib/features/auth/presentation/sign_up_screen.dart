@@ -88,7 +88,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     final theme = Theme.of(context);
     return AuthScaffold(
       title: 'Créer un compte',
-      subtitle: 'Gratuit. Un code de confirmation vous sera envoyé par email.',
+      subtitle: 'Gratuit. Un code de confirmation vous sera envoyé par e-mail.',
       showBack: true,
       child: AutofillGroup(
         child: Form(
@@ -116,7 +116,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 textInputAction: TextInputAction.next,
                 validator: Validators.email,
                 decoration: const InputDecoration(
-                  labelText: 'Email',
+                  labelText: 'Adresse e-mail',
                   prefixIcon: Icon(Icons.alternate_email),
                 ),
               ),

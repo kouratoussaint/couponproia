@@ -70,7 +70,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 textInputAction: TextInputAction.next,
                 validator: Validators.email,
                 decoration: const InputDecoration(
-                  labelText: 'Email',
+                  labelText: 'Adresse e-mail',
                   prefixIcon: Icon(Icons.alternate_email),
                 ),
               ),

@@ -140,7 +140,7 @@ void main() {
       expect(
         userMessageFor(AuthException('Invalid login credentials',
             code: 'invalid_credentials')),
-        'Email ou mot de passe incorrect.',
+        'E-mail ou mot de passe incorrect.',
       );
     });
 

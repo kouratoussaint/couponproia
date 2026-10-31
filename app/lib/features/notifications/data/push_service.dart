@@ -51,6 +51,7 @@ class PushService {
   final Ref _ref;
   final FirebaseConfig _config;
   bool _started = false;
+  bool _denied = false;
   String? _token;
   final _subs = <StreamSubscription<Object?>>[];
 
@@ -58,6 +59,9 @@ class PushService {
       _config.isConfigured &&
       !kIsWeb &&
       defaultTargetPlatform == TargetPlatform.android;
+
+  /// Vrai si l'utilisateur a refusé les notifications dans les réglages du téléphone.
+  bool get permissionDenied => _denied;
 
   /// Appelé après la connexion. [onOpen] reçoit la route à ouvrir (notification touchée),
   /// [onForeground] le titre d'une notification reçue app ouverte.
@@ -74,7 +78,8 @@ class PushService {
       }
       final messaging = FirebaseMessaging.instance;
       final perm = await messaging.requestPermission();
-      if (perm.authorizationStatus == AuthorizationStatus.denied) return;
+      _denied = perm.authorizationStatus == AuthorizationStatus.denied;
+      if (_denied) return;
       final repo = _ref.read(notificationsRepositoryProvider);
       // Jeton FCM classique, éprouvé avec l'envoi HTTP v1 du serveur (champ « token »).
       // Firebase propose désormais register()/onRegistered (identifiant d'installation, champ

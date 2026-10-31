@@ -14,32 +14,32 @@ class ResponsibleGamingScreen extends StatelessWidget {
 
   static const _tips = [
     (
-      'Fixe un budget',
-      'Décide à l’avance d’une somme que tu peux perdre sans conséquence, et arrête-toi quand elle est atteinte.'
+      'Fixez un budget',
+      'Décidez à l’avance d’une somme que vous pouvez perdre sans conséquence, et arrêtez-vous quand elle est atteinte.'
     ),
     (
-      'Ne cours pas après tes pertes',
+      'Ne courez pas après vos pertes',
       'Augmenter les mises pour « se refaire » mène presque toujours à des pertes plus grandes.'
     ),
     (
       'Pas d’argent nécessaire',
-      'Ne parie jamais l’argent du loyer, de la nourriture, de l’école ou des dettes.'
+      'Ne pariez jamais l’argent du loyer, de la nourriture, de l’école ou des dettes.'
     ),
     (
-      'Fais des pauses',
-      'Le football reste un plaisir : prends des jours sans paris.'
+      'Faites des pauses',
+      'Le football reste un plaisir : prenez des jours sans paris.'
     ),
     (
-      'Garde l’esprit critique',
+      'Gardez l’esprit critique',
       'Nos chiffres sont des estimations. Un coupon peut perdre même quand l’analyse est juste.'
     ),
   ];
 
   static const _signs = [
-    'Tu paries plus que prévu, ou de plus en plus souvent.',
-    'Tu caches tes paris à tes proches.',
-    'Tu empruntes ou vends des biens pour parier.',
-    'Le jeu te rend nerveux, irritable ou t’empêche de dormir.',
+    'Vous pariez plus que prévu, ou de plus en plus souvent.',
+    'Vous cachez vos paris à vos proches.',
+    'Vous empruntez ou vendez des biens pour parier.',
+    'Le jeu vous rend nerveux, irritable ou vous empêche de dormir.',
   ];
 
   @override
@@ -79,7 +79,7 @@ class ResponsibleGamingScreen extends StatelessWidget {
                     ),
                   const SizedBox(height: 6),
                   Text(
-                    'Si tu te reconnais, parles-en à un proche ou à un professionnel de santé. Demander de l’aide '
+                    'Si vous vous reconnaissez, parlez-en à un proche ou à un professionnel de santé. Demander de l’aide '
                     'est une bonne décision.',
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(fontWeight: FontWeight.w600),
@@ -122,12 +122,12 @@ Future<void> contactSupport(BuildContext context, WidgetRef ref) async {
       ref.read(publicSettingsProvider).valueOrNull ?? const <String, dynamic>{};
   final email = settings['app.support_email'];
   if (email is! String || !email.contains('@')) {
-    showMessage(context, 'L’adresse du support sera bientôt disponible.');
+    showMessage(context, 'Contact indisponible pour le moment.');
     return;
   }
   final ok = await launchUrl(Uri(
       scheme: 'mailto',
       path: email,
       queryParameters: {'subject': 'Coupon Pro IA : demande d’aide'}));
-  if (!ok && context.mounted) showMessage(context, 'Écris-nous à $email');
+  if (!ok && context.mounted) showMessage(context, 'Écrivez-nous à $email');
 }

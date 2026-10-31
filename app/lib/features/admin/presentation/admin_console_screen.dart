@@ -27,7 +27,7 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!perms.contains('admin.access')) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Administration')),
+        appBar: AppBar(title: const Text('Console d’administration')),
         body: const InfoMessage(
             icon: Icons.lock_outline, title: 'Accès réservé à l’équipe'),
       );
@@ -48,11 +48,18 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
           'Validation, publication, profils',
           AppRoutes.generationsAdmin
         ),
+      if (perms.contains('ai.providers'))
+        (
+          'Fournisseurs d’IA',
+          Icons.hub_outlined,
+          'IA principale et de secours, consommation, quotas, test',
+          AppRoutes.adminAi
+        ),
       if (perms.contains('ai.configure'))
         (
           'Moteur et IA',
           Icons.psychology_outlined,
-          'Évaluation, prompts, fournisseurs',
+          'Évaluation du moteur, prompts, journal IA',
           AppRoutes.engineAdmin
         ),
       if (perms.contains('sports.configure'))
@@ -120,7 +127,7 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
         ),
     ];
     return Scaffold(
-      appBar: AppBar(title: const Text('Administration')),
+      appBar: AppBar(title: const Text('Console d’administration')),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(adminDashboardProvider(_days));

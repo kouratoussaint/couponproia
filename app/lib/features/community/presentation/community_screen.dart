@@ -82,7 +82,7 @@ Future<void> showComposer(BuildContext context, WidgetRef ref) async {
           Text('Nouvelle publication', style: Theme.of(c).textTheme.titleLarge),
           const SizedBox(height: 4),
           Text(
-            'Pour publier un coupon, ouvre-le dans « Mes coupons » puis « Publier ». '
+            'Pour publier un coupon, ouvrez-le dans « Mes coupons » puis « Publier ». '
             'Pas de promesse de résultat : « sûr », « garanti », « gain »… sont refusés.',
             style: Theme.of(c).textTheme.bodySmall,
           ),
@@ -94,7 +94,7 @@ Future<void> showComposer(BuildContext context, WidgetRef ref) async {
             maxLines: 5,
             minLines: 3,
             decoration: const InputDecoration(
-                hintText: 'Ton analyse, ton avis sur la journée…'),
+                hintText: 'Votre analyse, votre avis sur la journée…'),
           ),
           const SizedBox(height: 8),
           FilledButton(
@@ -147,10 +147,10 @@ class _Feed extends ConsumerWidget {
                       ? Icons.people_outline
                       : Icons.forum_outlined,
                   title: scope == 'following'
-                      ? 'Aucune publication de tes Tipsters'
+                      ? 'Aucune publication de vos Tipsters'
                       : 'Aucune publication pour l’instant',
                   body: scope == 'following'
-                      ? 'Suis des Tipsters depuis l’onglet « Tipsters » : leurs coupons et analyses apparaîtront ici.'
+                      ? 'Suivez des Tipsters depuis l’onglet « Tipsters » : leurs coupons et analyses apparaîtront ici.'
                       : 'Les coupons publiés par les Tipsters apparaîtront ici, avec leurs résultats réels.',
                 ),
               ])

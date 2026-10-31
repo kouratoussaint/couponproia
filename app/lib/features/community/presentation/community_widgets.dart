@@ -231,7 +231,7 @@ class PostCard extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 6, right: 8),
                   child: Text(
-                      'Masquée par la modération : visible par toi seul.',
+                      'Masquée par la modération : visible par vous seul.',
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: BrandColors.orange)),
                 ),
@@ -569,7 +569,7 @@ class PublishedBadge extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              'Publié sur ton profil Tipster le ${shortDate(publishedAt)} à ${timeLabel(publishedAt)} : '
+              'Publié sur votre profil Tipster le ${shortDate(publishedAt)} à ${timeLabel(publishedAt)} : '
               'il ne peut plus être modifié ni supprimé.',
               style: Theme.of(context).textTheme.bodySmall,
             ),

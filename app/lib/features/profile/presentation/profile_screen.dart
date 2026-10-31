@@ -168,11 +168,13 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ),
                   if (permissions.contains('admin.access'))
-                    const ListTile(
-                      leading: Icon(Icons.admin_panel_settings_outlined),
-                      title: Text('Administration'),
-                      subtitle:
-                          Text('Accès autorisé · console prévue au LOT 11'),
+                    ListTile(
+                      leading: const Icon(Icons.admin_panel_settings_outlined),
+                      title: const Text('Console d’administration'),
+                      subtitle: const Text(
+                          'Utilisateurs, coupons, paiements, réglages'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push(AppRoutes.adminConsole),
                     ),
                 ],
               ),

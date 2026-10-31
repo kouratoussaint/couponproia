@@ -20,12 +20,12 @@ String userMessageFor(Object error) {
   if (error is AuthException) {
     switch (error.code) {
       case 'invalid_credentials':
-        return 'Email ou mot de passe incorrect.';
+        return 'E-mail ou mot de passe incorrect.';
       case 'email_not_confirmed':
-        return 'Confirmez d’abord votre email avec le code reçu.';
+        return 'Confirmez d’abord votre adresse e-mail avec le code reçu.';
       case 'user_already_exists':
       case 'email_exists':
-        return 'Un compte existe déjà avec cet email. Connectez-vous.';
+        return 'Un compte existe déjà avec cette adresse e-mail. Connectez-vous.';
       case 'weak_password':
         return 'Mot de passe trop faible : au moins 8 caractères, avec lettres et chiffres.';
       case 'same_password':
@@ -42,10 +42,10 @@ String userMessageFor(Object error) {
     }
     final message = error.message.toLowerCase();
     if (message.contains('invalid login')) {
-      return 'Email ou mot de passe incorrect.';
+      return 'E-mail ou mot de passe incorrect.';
     }
     if (message.contains('not confirmed')) {
-      return 'Confirmez d’abord votre email avec le code reçu.';
+      return 'Confirmez d’abord votre adresse e-mail avec le code reçu.';
     }
     if (message.contains('expired') ||
         (message.contains('invalid') && message.contains('token'))) {

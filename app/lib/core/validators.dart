@@ -7,8 +7,8 @@ abstract final class Validators {
 
   static String? email(String? value) {
     final v = value?.trim() ?? '';
-    if (v.isEmpty) return 'Saisissez votre email.';
-    if (!_email.hasMatch(v)) return 'Email invalide.';
+    if (v.isEmpty) return 'Saisissez votre adresse e-mail.';
+    if (!_email.hasMatch(v)) return 'Adresse e-mail invalide.';
     return null;
   }
 

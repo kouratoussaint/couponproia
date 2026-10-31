@@ -15,7 +15,7 @@ import '../data/assistant_models.dart';
 import '../data/assistant_repository.dart';
 
 const _suggestions = [
-  'Fais-moi un coupon de 3 matchs avec une cote totale proche de 4',
+  'Faites-moi un coupon de 3 matchs avec une cote totale proche de 4',
   'Je veux un coupon prudent pour demain',
   'Analyse les matchs de ce week-end',
   'Construis un coupon uniquement avec la Premier League',

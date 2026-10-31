@@ -66,6 +66,10 @@ verify_jwt = true
 [functions.lab]
 verify_jwt = true
 
+[functions.ai-providers]
+# Écran Fournisseurs d'IA : super administrateur (permission ai.providers vérifiée dans la fonction).
+verify_jwt = true
+
 [functions.settle-coupons]
 # Appelée par pg_cron sans JWT : la fonction vérifie le secret ou la permission generation.manage.
 verify_jwt = false

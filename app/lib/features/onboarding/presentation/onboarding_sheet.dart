@@ -231,14 +231,14 @@ class _NameStep extends StatelessWidget {
           const _StepHeader(
             icon: Icons.waving_hand_outlined,
             title: 'Bienvenue sur Coupon Pro IA',
-            subtitle: 'Comment veux-tu qu’on t’appelle ?',
+            subtitle: 'Comment souhaitez-vous qu’on vous appelle ?',
           ),
           TextField(
             controller: controller,
             maxLength: 40,
             textCapitalization: TextCapitalization.words,
             decoration:
-                InputDecoration(labelText: 'Ton pseudo', errorText: error),
+                InputDecoration(labelText: 'Votre pseudo', errorText: error),
           ),
         ],
       );
@@ -268,7 +268,7 @@ class _CompetitionsStep extends ConsumerWidget {
       children: [
         const _StepHeader(
           icon: Icons.emoji_events_outlined,
-          title: 'Tes compétitions',
+          title: 'Vos compétitions',
           subtitle: 'Leurs matchs passeront en premier sur l’accueil.',
         ),
         competitions.when(
@@ -305,7 +305,7 @@ class _CompetitionsStep extends ConsumerWidget {
           },
         ),
         const SizedBox(height: 6),
-        Text('Facultatif : tu peux passer cette étape.',
+        Text('Facultatif : vous pouvez passer cette étape.',
             style: theme.textTheme.bodySmall),
       ],
     );
@@ -384,7 +384,7 @@ class _LevelStep extends StatelessWidget {
       children: [
         const _StepHeader(
           icon: Icons.menu_book_outlined,
-          title: 'Ton niveau',
+          title: 'Votre niveau',
           subtitle:
               'On adapte les explications. Les chiffres restent les mêmes pour tout le monde.',
         ),

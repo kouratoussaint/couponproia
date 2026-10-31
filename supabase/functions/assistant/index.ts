@@ -63,6 +63,7 @@ async function logAi(db: SupabaseClient, userId: string, kind: string, logs: Att
     cost_usd: l.costUsd,
     latency_ms: l.latencyMs,
     error: l.error,
+    quota: l.quota ?? null,
   })));
 }
 
@@ -324,7 +325,7 @@ class Assistant {
       max_selection_odd: 4,
       min_model_probability: 0.45,
       min_edge: 0,
-      max_edge: 0.1,
+      max_edge: 0.06,
       window_hours: 168,
       min_minutes_before_kickoff: 15,
       max_odds_age_hours: 24,
@@ -334,7 +335,7 @@ class Assistant {
     const ops = opportunities(kept, 8);
     if (!ops.length) return this.noResult(`Aucune rencontre ${range.label} ne se détache selon le modèle.`, excluded);
     return {
-      content: `${ops.length} rencontre(s) ${range.label} où le modèle estime une issue plus probable que le marché (écart positif, sans dépasser 10 points). Ce sont des estimations ; demandez-moi d'en faire un coupon si vous le souhaitez.`,
+      content: `${ops.length} rencontre(s) ${range.label} où le modèle estime une issue plus probable que le marché (écart positif, sans dépasser 6 points). Ce sont des estimations ; demandez-moi d'en faire un coupon si vous le souhaitez.`,
       intent: "analyser_matchs",
       coupons: [],
       payload: { opportunities: ops },
@@ -367,7 +368,7 @@ class Assistant {
     const { choices, pricing } = await loadAiSetup(this.db, (k) => env(k));
     const ai = await runValidated(fiche, prompt.system_prompt, choices, (raw) => validateCouponSummary(raw, fiche), pricing);
     await logAi(this.db, this.userId, "coupon_summary", ai.logs);
-    return ai.status === "ok" ? { ...ai.value, source: "ia", ai_model: ai.model } : { ...defaultSummary(p), source: "calcul" };
+    return ai.status === "ok" ? { ...ai.value, source: "ia" } : { ...defaultSummary(p), source: "calcul" };
   }
 
   async saveProposals(result: Result, conversationId: string, messageId: string): Promise<string[]> {
@@ -468,7 +469,7 @@ Deno.serve(async (req) => {
       const credits = (await db.rpc("svc_credit_summary", { p_user: caller.id })).data as { total: number; unlimited: boolean } | null;
       if (PAID_INTENTS.includes(intent.intent) && credits && !credits.unlimited && credits.total < assistant.cost) {
         result = {
-          content: `Il vous faut ${assistant.cost} crédit(s) pour cette action et votre solde est de ${credits.total}. Vos crédits du forfait se renouvellent chaque mois ; les packs de crédits arriveront avec les forfaits.`,
+          content: `Il vous faut ${assistant.cost} crédit(s) pour cette action et votre solde est de ${credits.total}. Vos crédits du forfait se renouvellent chaque mois ; des packs de crédits sont disponibles dans Abonnement et crédits.`,
           intent: "credits_insuffisants",
           coupons: [],
           payload: { credits },

@@ -174,6 +174,7 @@ export async function generateMatchAnalysis(
     cost_usd: l?.costUsd ?? null,
     latency_ms: l?.latencyMs ?? null,
     error: l?.error ?? (result.status === "stats_only" ? result.reason : null),
+    quota: l?.quota ?? null,
   })));
 
   return saved;
