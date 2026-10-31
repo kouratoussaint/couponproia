@@ -21,6 +21,11 @@ import '../../features/matches/presentation/match_detail_screen.dart';
 import '../../features/matches/presentation/matches_screen.dart';
 import '../../features/matches/presentation/sports_admin_screen.dart';
 import '../../features/billing/billing_screen.dart';
+import '../../features/community/presentation/community_screen.dart';
+import '../../features/community/presentation/moderation_screen.dart';
+import '../../features/community/presentation/post_screen.dart';
+import '../../features/community/presentation/tipster_edit_screen.dart';
+import '../../features/community/presentation/tipster_screen.dart';
 import '../../features/performance/performance_screen.dart';
 import '../../features/studio/presentation/branding_screen.dart';
 import '../../features/studio/presentation/studio_home_screen.dart';
@@ -148,6 +153,36 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.performance,
         builder: (context, state) => const PerformanceScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.community,
+        builder: (context, state) => const CommunityScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.myTipsterProfile,
+        builder: (context, state) => const TipsterEditScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.tipster,
+        builder: (context, state) =>
+            TipsterScreen(userId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.post,
+        builder: (context, state) =>
+            PostScreen(postId: int.tryParse(state.pathParameters['id']!) ?? 0),
+      ),
+      GoRoute(
+        path: AppRoutes.moderation,
+        builder: (context, state) => const ModerationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.blockedUsers,
+        builder: (context, state) => const BlockedUsersScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.favoriteTeams,
+        builder: (context, state) => const FavoriteTeamsScreen(),
       ),
       GoRoute(
         path: AppRoutes.lab,

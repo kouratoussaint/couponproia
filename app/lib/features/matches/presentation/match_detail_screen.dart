@@ -10,6 +10,8 @@ import '../data/sports_models.dart';
 import '../data/sports_repository.dart';
 import 'match_tabs.dart';
 import 'sports_widgets.dart';
+import '../../community/data/community_repository.dart';
+import '../../../core/widgets/form_widgets.dart';
 
 /// Fiche d'un match : en-tête, puis 4 onglets (Pronostic, Analyse, Marchés, Stats).
 /// Les estimations viennent du moteur (serveur) ; chaque fait indique sa source et son heure.
@@ -142,6 +144,7 @@ class MatchHeader extends ConsumerWidget {
                   style: theme.textTheme.titleSmall
                       ?.copyWith(fontWeight: FontWeight.w700),
                   maxLines: 2),
+              _FollowTeamButton(team: t),
               if (form != null && form.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 // Du plus ancien au plus récent (le plus récent à droite).
@@ -251,4 +254,42 @@ class MatchHeader extends ConsumerWidget {
 String _dateLine(DateTime kickoff) {
   final label = dayLabel(kickoff, DateTime.now());
   return label.contains('/') ? label : '$label ${shortDate(kickoff)}';
+}
+
+/// Suivre une équipe : ses matchs passent en premier sur l'accueil.
+class _FollowTeamButton extends ConsumerWidget {
+  const _FollowTeamButton({required this.team});
+
+  final TeamRef team;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final favorites = ref.watch(favoriteTeamsProvider).valueOrNull;
+    if (favorites == null) return const SizedBox(height: 4);
+    final on = favorites.containsKey(team.id);
+    return TextButton.icon(
+      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+      onPressed: () async {
+        try {
+          await ref
+              .read(communityRepositoryProvider)
+              .setFavoriteTeam(team.id, !on);
+          ref.invalidate(favoriteTeamsProvider);
+          if (context.mounted) {
+            showMessage(
+                context,
+                on
+                    ? 'Tu ne suis plus ${team.name}.'
+                    : 'Tu suis ${team.name} : ses matchs passent en premier sur l’accueil.');
+          }
+        } catch (e) {
+          if (context.mounted) {
+            showMessage(context, communityErrorMessage(e), error: true);
+          }
+        }
+      },
+      icon: Icon(on ? Icons.star : Icons.star_border, size: 18),
+      label: Text(on ? 'Suivie' : 'Suivre'),
+    );
+  }
 }

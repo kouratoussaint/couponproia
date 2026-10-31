@@ -15,6 +15,7 @@ import '../matches/data/sports_format.dart';
 import '../matches/data/sports_models.dart';
 import '../matches/data/sports_repository.dart';
 import '../matches/presentation/sports_widgets.dart';
+import '../community/data/community_repository.dart';
 import '../onboarding/data/preferences_repository.dart';
 import '../onboarding/presentation/onboarding_sheet.dart';
 import '../profile/data/profile_repository.dart';
@@ -49,8 +50,14 @@ String longDate(DateTime d) =>
 
 /// Matchs à mettre en avant : pas encore terminés, compétitions suivies puis prioritaires d'abord.
 List<MatchSummary> highlightedMatches(List<MatchSummary> all,
-    {int max = 5, Set<int> favorites = const {}}) {
-  int fav(MatchSummary m) => favorites.contains(m.competition.id) ? 0 : 1;
+    {int max = 5, Set<int> favorites = const {}, Set<int> teams = const {}}) {
+  // Équipes suivies d'abord, puis compétitions suivies, puis priorité.
+  int fav(MatchSummary m) =>
+      teams.contains(m.home.id) || teams.contains(m.away.id)
+          ? 0
+          : favorites.contains(m.competition.id)
+              ? 1
+              : 2;
   final open =
       all.where((m) => m.status == MatchStatus.scheduled || m.isLive).toList()
         ..sort((a, b) {
@@ -413,6 +420,12 @@ class _MatchesBlock extends ConsumerWidget {
                         .watch(myPreferencesProvider)
                         .valueOrNull
                         ?.favoriteCompetitions ??
+                    const {},
+                teams: ref
+                        .watch(favoriteTeamsProvider)
+                        .valueOrNull
+                        ?.keys
+                        .toSet() ??
                     const {});
             if (shown.isEmpty) {
               return Card(

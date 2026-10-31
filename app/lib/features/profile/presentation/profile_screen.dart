@@ -113,6 +113,24 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () => showOnboarding(context, fromProfile: true),
                   ),
                   ListTile(
+                    leading: const Icon(Icons.star_outline),
+                    title: const Text('Équipes suivies'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.favoriteTeams),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.forum_outlined),
+                    title: const Text('Mon profil Tipster'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.myTipsterProfile),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.block),
+                    title: const Text('Utilisateurs bloqués'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.blockedUsers),
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.workspace_premium_outlined),
                     title: const Text('Abonnement'),
                     subtitle: Text(

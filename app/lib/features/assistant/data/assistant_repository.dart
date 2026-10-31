@@ -6,7 +6,7 @@ import 'assistant_models.dart';
 
 const _userCouponColumns =
     'id, status, title, total_odd, combined_probability, implied_probability, risk_level, '
-    'engine_version, conversation_id, created_at, analysis, result, settled_odd, user_coupon_selections(position, selection_key, odd, result, '
+    'engine_version, conversation_id, created_at, analysis, result, settled_odd, published_at, user_coupon_selections(position, selection_key, odd, result, '
     'odd_best, bookmakers, odds_captured_at, model_probability, implied_probability, edge, reliability, justification, '
     'match:matches(id, kickoff_at, status, home_goals, away_goals, home:teams!matches_home_team_fk(name, logo_url), '
     'away:teams!matches_away_team_fk(name, logo_url), competition:competitions(name)))';
@@ -108,6 +108,8 @@ class AssistantRepository {
     final rows = await _client
         .from('user_coupons')
         .select(_userCouponColumns)
+        // Les coupons publiés des Tipsters sont lisibles par tous : ne garder que les siens.
+        .eq('user_id', _client.auth.currentUser?.id ?? '')
         .eq('status', 'saved')
         .order('created_at', ascending: false)
         .limit(100);

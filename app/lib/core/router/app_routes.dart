@@ -36,6 +36,16 @@ abstract final class AppRoutes {
   static const studioEditor = '/studio/:kind/:id';
 
   static String studioFor(String kind, String id) => '/studio/$kind/$id';
+  static const community = '/communaute';
+  static const myTipsterProfile = '/communaute/mon-profil';
+  static const tipster = '/tipster/:id';
+  static const post = '/publication/:id';
+  static const moderation = '/admin/moderation';
+  static const blockedUsers = '/bloques';
+  static const favoriteTeams = '/equipes-suivies';
+
+  static String tipsterFor(String id) => '/tipster/$id';
+  static String postFor(int id) => '/publication/$id';
   static const myCoupons = '/mes-coupons';
   static const myCouponDetail = '/mes-coupons/:id';
 

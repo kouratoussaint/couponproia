@@ -117,6 +117,12 @@ class AppDrawer extends ConsumerWidget {
         ),
         ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+          leading: const Icon(Icons.forum_outlined),
+          title: const Text('Communauté et Tipsters'),
+          onTap: () => open(AppRoutes.community),
+        ),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
           leading: const Icon(Icons.science_outlined),
           title: const Text('Laboratoire IA'),
           onTap: () => open(AppRoutes.lab),

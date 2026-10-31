@@ -12,6 +12,9 @@ import '../../coupons/data/coupon_models.dart';
 import '../../coupons/presentation/coupon_widgets.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
+import '../../community/data/community_repository.dart';
+import '../../community/presentation/community_widgets.dart';
+import '../../studio/data/studio_models.dart';
 import '../data/assistant_models.dart';
 import '../data/assistant_repository.dart';
 
@@ -168,11 +171,21 @@ class MyCouponDetailScreen extends ConsumerWidget {
                       ),
                     ),
                   ],
+                  if (c.isPublished) ...[
+                    const SizedBox(height: 8),
+                    PublishedBadge(publishedAt: c.publishedAt!),
+                  ],
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
+                      if (!c.isPublished && c.status != 'archived')
+                        FilledButton.icon(
+                          onPressed: () => _publish(context, ref, c.id),
+                          icon: const Icon(Icons.public),
+                          label: const Text('Publier sur mon profil Tipster'),
+                        ),
                       if (!c.isSaved)
                         FilledButton.icon(
                           onPressed: () async {
@@ -208,24 +221,25 @@ class MyCouponDetailScreen extends ConsumerWidget {
                         icon: const Icon(Icons.copy),
                         label: const Text('Copier pour partager'),
                       ),
-                      TextButton.icon(
-                        onPressed: () async {
-                          try {
-                            await ref
-                                .read(assistantRepositoryProvider)
-                                .deleteCoupon(c.id);
-                            ref.invalidate(savedCouponsProvider);
-                            if (context.mounted) context.pop();
-                          } catch (e) {
-                            if (context.mounted) {
-                              showMessage(context, userMessageFor(e),
-                                  error: true);
+                      if (!c.isPublished)
+                        TextButton.icon(
+                          onPressed: () async {
+                            try {
+                              await ref
+                                  .read(assistantRepositoryProvider)
+                                  .deleteCoupon(c.id);
+                              ref.invalidate(savedCouponsProvider);
+                              if (context.mounted) context.pop();
+                            } catch (e) {
+                              if (context.mounted) {
+                                showMessage(context, userMessageFor(e),
+                                    error: true);
+                              }
                             }
-                          }
-                        },
-                        icon: const Icon(Icons.delete_outline),
-                        label: const Text('Supprimer'),
-                      ),
+                          },
+                          icon: const Icon(Icons.delete_outline),
+                          label: const Text('Supprimer'),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -240,4 +254,70 @@ class MyCouponDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Publication sur le profil Tipster : définitive, avant le premier coup d'envoi.
+Future<void> _publish(
+    BuildContext context, WidgetRef ref, String couponId) async {
+  final comment = TextEditingController();
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: const Text('Publier ce coupon ?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+              'Il apparaîtra sur ton profil Tipster et dans le fil de tes abonnés. '
+              'Une fois publié, il ne peut plus être modifié ni supprimé : son résultat comptera '
+              'dans tes statistiques, qu’il soit gagné ou perdu.'),
+          const SizedBox(height: 12),
+          TextField(
+            controller: comment,
+            maxLength: 500,
+            maxLines: 3,
+            minLines: 1,
+            decoration: const InputDecoration(
+                labelText: 'Ton commentaire (facultatif)'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Annuler')),
+        FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Publier')),
+      ],
+    ),
+  );
+  if (ok == true) {
+    final bad = forbiddenWordIn(comment.text);
+    if (bad != null) {
+      if (context.mounted) {
+        showMessage(
+            context, 'Texte refusé : « $bad ». Pas de promesse de résultat.',
+            error: true);
+      }
+    } else {
+      try {
+        await ref
+            .read(communityRepositoryProvider)
+            .publishCoupon(couponId, comment.text);
+        ref.invalidate(userCouponProvider(couponId));
+        ref.invalidate(savedCouponsProvider);
+        ref.invalidate(feedProvider);
+        if (context.mounted) {
+          showMessage(context, 'Coupon publié sur ton profil Tipster.');
+        }
+      } catch (e) {
+        if (context.mounted) {
+          showMessage(context, communityErrorMessage(e), error: true);
+        }
+      }
+    }
+  }
+  comment.dispose();
 }

@@ -178,6 +178,7 @@ class UserCoupon {
     this.summaryFromAi = false,
     this.result,
     this.settledOdd,
+    this.publishedAt,
   });
 
   factory UserCoupon.fromJson(Map<String, dynamic> j) {
@@ -203,6 +204,7 @@ class UserCoupon {
       summaryFromAi: analysis['source'] == 'ia',
       result: j['result'] as String?,
       settledOdd: _dn(j['settled_odd']),
+      publishedAt: j['published_at'] == null ? null : _date(j['published_at']),
     );
   }
 
@@ -224,7 +226,11 @@ class UserCoupon {
   final String? result;
   final double? settledOdd;
 
+  /// Publié sur le profil Tipster : immuable.
+  final DateTime? publishedAt;
+
   bool get isSaved => status == 'saved';
+  bool get isPublished => publishedAt != null;
 }
 
 /// Texte partageable d'un coupon (copié dans le presse-papiers).
