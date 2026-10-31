@@ -21,6 +21,7 @@ import '../matches/presentation/sports_widgets.dart';
 import '../community/data/community_repository.dart';
 import '../notifications/data/notifications_repository.dart';
 import '../notifications/presentation/notifications_screens.dart';
+import '../legal/legal_repository.dart';
 import '../onboarding/data/preferences_repository.dart';
 import '../onboarding/presentation/onboarding_sheet.dart';
 import '../profile/data/profile_repository.dart';
@@ -599,7 +600,13 @@ class _OnboardingTriggerState extends ConsumerState<OnboardingTrigger> {
   @override
   Widget build(BuildContext context) {
     final prefs = ref.watch(myPreferencesProvider).valueOrNull;
-    if (prefs != null && prefs.needsOnboarding && !_shownThisSession) {
+    // Après l'acceptation des conditions (l'écran d'acceptation passe avant).
+    final legal = ref.watch(legalStatusProvider);
+    final legalDone = legal.hasError || (legal.valueOrNull?.isEmpty ?? false);
+    if (prefs != null &&
+        legalDone &&
+        prefs.needsOnboarding &&
+        !_shownThisSession) {
       _shownThisSession = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) showOnboarding(context);

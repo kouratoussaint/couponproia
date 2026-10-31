@@ -22,9 +22,11 @@ import '../../features/matches/presentation/matches_screen.dart';
 import '../../features/matches/presentation/sports_admin_screen.dart';
 import '../../features/admin/presentation/admin_console_screen.dart';
 import '../../features/admin/presentation/admin_settings_screen.dart';
+import '../../features/admin/presentation/legal_admin_screen.dart';
 import '../../features/admin/presentation/promos_admin_screen.dart';
 import '../../features/admin/presentation/users_admin_screen.dart';
 import '../../features/billing/billing_screen.dart';
+import '../../features/legal/legal_screens.dart';
 import '../../features/community/presentation/community_screen.dart';
 import '../../features/notifications/presentation/notifications_screens.dart';
 import '../../features/profile/presentation/responsible_gaming_screen.dart';
@@ -53,6 +55,7 @@ String? resolveRedirect({
   if (!isConfigured) {
     return location == AppRoutes.missingConfig ? null : AppRoutes.missingConfig;
   }
+  if (AppRoutes.isOpenRoute(location)) return null;
   final isPublic = AppRoutes.publicRoutes.contains(location);
   if (!isSignedIn) {
     return isPublic ? null : AppRoutes.signIn;
@@ -115,6 +118,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.resetPassword,
         builder: (context, state) => ResetPasswordScreen(
             email: state.uri.queryParameters['email'] ?? ''),
+      ),
+      GoRoute(
+        path: AppRoutes.legalDocument,
+        builder: (context, state) =>
+            LegalDocumentScreen(code: state.pathParameters['code'] ?? 'terms'),
+      ),
+      GoRoute(
+        path: AppRoutes.adminLegal,
+        builder: (context, state) => const LegalAdminScreen(),
       ),
       GoRoute(
         path: AppRoutes.matchDetail,

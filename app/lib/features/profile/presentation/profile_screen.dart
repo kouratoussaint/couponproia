@@ -264,7 +264,9 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   ListTile(
                     leading: const Icon(Icons.gavel_outlined),
-                    title: const Text('Mentions et avertissements'),
+                    title: const Text('Conditions et mentions'),
+                    subtitle: const Text(
+                        'CGU, confidentialité, règles de la communauté, avertissements'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.legal),
                   ),

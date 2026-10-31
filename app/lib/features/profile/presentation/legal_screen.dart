@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../legal/legal_repository.dart';
+import '../../legal/legal_screens.dart';
 import '../../system/system_providers.dart';
 
 /// Mentions de responsabilité (section 23 du cahier des charges).
@@ -14,7 +16,7 @@ class LegalScreen extends ConsumerWidget {
     final disclaimers =
         ref.watch(disclaimersProvider).valueOrNull ?? fallbackDisclaimers;
     return Scaffold(
-      appBar: AppBar(title: const Text('Mentions et avertissements')),
+      appBar: AppBar(title: const Text('Mentions et documents')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -41,11 +43,18 @@ class LegalScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            'Conditions générales d’utilisation et politique de confidentialité : en cours de rédaction, '
-            'elles seront publiées avant l’ouverture au public.',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          Card(
+            child: Column(
+              children: [
+                for (final code in legalCodes)
+                  ListTile(
+                    leading: const Icon(Icons.description_outlined),
+                    title: Text(legalTitles[code]!),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => openLegalDocument(context, code),
+                  ),
+              ],
+            ),
           ),
         ],
       ),

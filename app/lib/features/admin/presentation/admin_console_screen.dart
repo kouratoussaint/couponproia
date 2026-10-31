@@ -76,6 +76,13 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
           'Prix, crédits, quotas, limites',
           AppRoutes.adminSettings
         ),
+      if (perms.contains('settings.manage'))
+        (
+          'Documents légaux',
+          Icons.description_outlined,
+          'CGU, confidentialité, règles : nouvelles versions',
+          AppRoutes.adminLegal
+        ),
       if (perms.contains('billing.manage'))
         (
           'Paiements',

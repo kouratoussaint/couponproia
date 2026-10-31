@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
+import '../../../core/providers.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/validators.dart';
 import '../../../core/widgets/form_widgets.dart';
+import '../../legal/legal_repository.dart';
+import '../../legal/legal_screens.dart';
 import '../data/auth_repository.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -23,6 +26,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _confirm = TextEditingController();
   bool _adult = false;
   bool _acceptedTerms = false;
+  bool _acceptedLegal = false;
   bool _busy = false;
 
   @override
@@ -36,13 +40,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (!_adult || !_acceptedTerms) {
-      showMessage(context, 'Cochez les deux cases pour continuer.',
+    if (!_adult || !_acceptedTerms || !_acceptedLegal) {
+      showMessage(context, 'Cochez les trois cases pour continuer.',
           error: true);
       return;
     }
     setState(() => _busy = true);
     try {
+      await _rememberAcceptedVersions();
       final needsCode = await ref.read(authRepositoryProvider).signUp(
             email: _email.text,
             password: _password.text,
@@ -54,6 +59,27 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       if (mounted) showMessage(context, userMessageFor(e), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Versions lues et acceptées ici : enregistrées à la première connexion (pas de seconde demande).
+  Future<void> _rememberAcceptedVersions() async {
+    try {
+      final docs = await Future.wait([
+        ref.read(legalDocumentProvider('terms').future),
+        ref.read(legalDocumentProvider('privacy').future),
+      ]);
+      final ids = [
+        for (final d in docs)
+          if (d != null) d.id
+      ];
+      if (ids.length == 2) {
+        await ref
+            .read(sharedPreferencesProvider)
+            .setString(legalSignupKey, ids.join(','));
+      }
+    } catch (_) {
+      // Hors ligne : l'acceptation sera demandée à la première connexion.
     }
   }
 
@@ -128,6 +154,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   'Je comprends que les pronostics sont des estimations et qu’aucun gain n’est garanti.',
                   style: theme.textTheme.bodyMedium,
                 ),
+              ),
+              CheckboxListTile(
+                value: _acceptedLegal,
+                onChanged: (v) => setState(() => _acceptedLegal = v ?? false),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                title: const LegalConsentText(withAge: false),
               ),
               const SizedBox(height: 16),
               BusyButton(

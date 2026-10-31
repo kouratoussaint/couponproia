@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/theme_mode_controller.dart';
+import '../auth/data/auth_repository.dart';
+import '../legal/legal_repository.dart';
+import '../legal/legal_screens.dart';
 import '../notifications/data/push_service.dart';
 import '../system/maintenance_screen.dart';
 import '../system/system_providers.dart';
@@ -143,6 +146,20 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         !permissions.contains('admin.access')) {
       return MaintenanceScreen(
           onRetry: () => ref.invalidate(featureFlagsProvider));
+    }
+
+    // CGU et politique de confidentialité en vigueur à accepter (première connexion ou mise à jour).
+    // Hors ligne ou en erreur, l'app reste utilisable : la demande reviendra plus tard.
+    final pendingLegal =
+        ref.watch(legalStatusProvider).valueOrNull ?? const <PendingDocument>[];
+    if (pendingLegal.isNotEmpty) {
+      return LegalAcceptanceScreen(
+        pending: pendingLegal,
+        onSignOut: () async {
+          await ref.read(pushServiceProvider).stop();
+          await ref.read(authRepositoryProvider).signOut();
+        },
+      );
     }
 
     final scheme = Theme.of(context).colorScheme;

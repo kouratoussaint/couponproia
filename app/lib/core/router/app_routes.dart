@@ -18,6 +18,12 @@ abstract final class AppRoutes {
   static const profile = '/profil';
   static const legal = '/profil/mentions';
 
+  /// Documents légaux : lisibles connecté ou non.
+  static const legalDocument = '/documents/:code';
+  static String legalDocumentFor(String code) => '/documents/$code';
+  static bool isOpenRoute(String location) =>
+      location.startsWith('/documents/');
+
   // Écrans plein écran (au-dessus des onglets)
   static const matchDetail = '/match/:id';
   static const competitions = '/competitions';
@@ -55,6 +61,7 @@ abstract final class AppRoutes {
   static const adminSettings = '/admin/reglages';
   static const adminPayments = '/admin/paiements';
   static const adminPromos = '/admin/promos';
+  static const adminLegal = '/admin/documents';
   static const adminAudit = '/admin/journal';
 
   static String adminUserFor(String id) => '/admin/utilisateurs/$id';
