@@ -58,9 +58,10 @@ class Acc {
 }
 
 const grid: Model2Options[] = [];
-for (const halfLifeDays of [90, 180, 365]) {
-  for (const rho of [0, -0.08]) {
-    for (const shrinkK of [2, 5]) grid.push({ ...DEFAULT_OPTIONS_2, halfLifeDays, rho, shrinkK });
+// Grille élargie après le premier passage (31/10) : le meilleur réglage était en bordure.
+for (const halfLifeDays of [180, 365, 540, 730]) {
+  for (const rho of [0, -0.04]) {
+    for (const shrinkK of [5, 8, 12]) grid.push({ ...DEFAULT_OPTIONS_2, halfLifeDays, rho, shrinkK });
   }
 }
 const label = (o: Model2Options) => `demi-vie ${o.halfLifeDays} j · ρ ${o.rho} · k ${o.shrinkK}`;
@@ -99,7 +100,7 @@ for (const list of byComp.values()) {
     const p11 = runModel([...prior, ...same], m.homeId, m.awayId).probabilities;
     accOf("poisson-1.1", m.season).add(vec(p11), outcome, p11["OU.OVER.2.5"], over, p11["BTTS.YES"], btts);
     const v2: Record<string, number[]> = {};
-    const recent = before.filter((x) => m.t - x.t <= 730 * 86400_000);
+    const recent = before.filter((x) => m.t - x.t <= 800 * 86400_000);
     for (const o of grid) {
       const key = `${label(o)}|${j}`;
       const s = cache.get(key) ?? cache.set(key, fitStrengths(recent, m.t, o)).get(key)!;
