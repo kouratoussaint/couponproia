@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -98,6 +99,8 @@ final installedPackageProvider =
 
 final latestAndroidVersionProvider =
     FutureProvider<AppVersionInfo?>((ref) async {
+  // Mises à jour par APK : Android uniquement (iOS et web passeront par leurs propres canaux).
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
   final row = await ref
       .watch(supabaseClientProvider)
       .from('app_versions')

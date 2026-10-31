@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -386,7 +387,8 @@ class _EditorState extends ConsumerState<_Editor> {
                             setState(() => _type = v ?? StudioFileType.png),
                       ),
                       const Spacer(),
-                      if (_type != StudioFileType.pdf)
+                      // Galerie : téléphone uniquement (sur le web, « Partager » télécharge).
+                      if (_type != StudioFileType.pdf && !kIsWeb)
                         IconButton.outlined(
                           tooltip: 'Enregistrer dans la galerie',
                           onPressed: _busy || !_ready

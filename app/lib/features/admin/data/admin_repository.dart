@@ -114,6 +114,9 @@ class AdminRepository {
   Future<List<Map<String, dynamic>>> payments(String? status) async =>
       asList(await _client.rpc('admin_payments', params: {'p_status': status}));
 
+  Future<Map<String, dynamic>> costs(int days) async =>
+      asMap(await _client.rpc('admin_costs', params: {'p_days': days}));
+
   Future<List<Map<String, dynamic>>> promoCodes() async =>
       asList(await _client.rpc('admin_promo_codes'));
 
@@ -182,3 +185,7 @@ final adminAuditProvider = FutureProvider.autoDispose
 final adminPromosProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>(
         (ref) => ref.watch(adminRepositoryProvider).promoCodes());
+
+final adminCostsProvider = FutureProvider.autoDispose
+    .family<Map<String, dynamic>, int>(
+        (ref, days) => ref.watch(adminRepositoryProvider).costs(days));

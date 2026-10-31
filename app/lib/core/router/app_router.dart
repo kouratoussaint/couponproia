@@ -23,6 +23,7 @@ import '../../features/matches/presentation/sports_admin_screen.dart';
 import '../../features/admin/presentation/admin_console_screen.dart';
 import '../../features/admin/presentation/admin_settings_screen.dart';
 import '../../features/admin/presentation/legal_admin_screen.dart';
+import '../../features/admin/presentation/costs_admin_screen.dart';
 import '../../features/admin/presentation/promos_admin_screen.dart';
 import '../../features/admin/presentation/users_admin_screen.dart';
 import '../../features/billing/billing_screen.dart';
@@ -196,6 +197,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.adminPayments,
         builder: (context, state) => const PaymentsAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminCosts,
+        builder: (context, state) => const CostsAdminScreen(),
       ),
       GoRoute(
         path: AppRoutes.adminPromos,

@@ -27,6 +27,22 @@ jobs:
       - run: flutter analyze --no-fatal-infos
       - run: flutter test
 
+  web:
+    name: Web (compilation)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      # Préparation de la future interface web : le code doit continuer à compiler pour le navigateur.
+      - run: flutter build web --release --dart-define-from-file=env/prod.json
+
   database:
     name: Base de données (migrations + tests RLS)
     runs-on: ubuntu-24.04

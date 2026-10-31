@@ -61,6 +61,7 @@ abstract final class AppRoutes {
   static const adminSettings = '/admin/reglages';
   static const adminPayments = '/admin/paiements';
   static const adminPromos = '/admin/promos';
+  static const adminCosts = '/admin/couts';
   static const adminLegal = '/admin/documents';
   static const adminAudit = '/admin/journal';
 

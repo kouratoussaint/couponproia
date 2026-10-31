@@ -97,6 +97,13 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
           'Réductions, durée, nombre d’utilisations',
           AppRoutes.adminPromos
         ),
+      if (perms.contains('billing.manage'))
+        (
+          'Coûts',
+          Icons.query_stats,
+          'Coût moyen par utilisateur actif',
+          AppRoutes.adminCosts
+        ),
       if (perms.contains('moderation.manage'))
         (
           'Modération',
@@ -178,39 +185,7 @@ class DashboardView extends StatelessWidget {
     final totalErrors = errors.values.fold<int>(0, (a, b) => a + asInt(b));
 
     Widget group(String title, List<(String, String)> tiles, {Color? accent}) =>
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(title,
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w800, color: accent)),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 12,
-                  children: [
-                    for (final (label, value) in tiles)
-                      SizedBox(
-                        width: 104,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(value,
-                                style: theme.textTheme.titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.w800)),
-                            Text(label, style: theme.textTheme.bodySmall),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
+        MetricGroup(title: title, tiles: tiles, accent: accent);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -320,6 +295,64 @@ class _DailyChart extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text('Maximum : $max par jour', style: theme.textTheme.bodySmall),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Carte de chiffres clés (valeur en grand, libellé dessous), utilisée par les tableaux de bord.
+class MetricGroup extends StatelessWidget {
+  const MetricGroup(
+      {super.key,
+      required this.title,
+      required this.tiles,
+      this.accent,
+      this.footer});
+
+  final String title;
+  final List<(String, String)> tiles;
+  final Color? accent;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title,
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w800, color: accent)),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 12,
+              children: [
+                for (final (label, value) in tiles)
+                  SizedBox(
+                    width: 104,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(value,
+                              style: theme.textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800)),
+                        ),
+                        Text(label, style: theme.textTheme.bodySmall),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            if (footer != null) ...[const SizedBox(height: 10), footer!],
           ],
         ),
       ),

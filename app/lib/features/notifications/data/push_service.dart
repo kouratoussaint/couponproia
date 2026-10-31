@@ -55,7 +55,9 @@ class PushService {
   final _subs = <StreamSubscription<Object?>>[];
 
   bool get available =>
-      _config.isConfigured && defaultTargetPlatform == TargetPlatform.android;
+      _config.isConfigured &&
+      !kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.android;
 
   /// Appelé après la connexion. [onOpen] reçoit la route à ouvrir (notification touchée),
   /// [onForeground] le titre d'une notification reçue app ouverte.
