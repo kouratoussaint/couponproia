@@ -2,6 +2,7 @@
 import { assert, assertAlmostEquals, assertEquals } from "jsr:@std/assert@1";
 import { buildFiche, formOf, impliedProbabilities, type OddsRow } from "./fiche.ts";
 import { evaluate } from "./evaluate.ts";
+import { dixonColesMatrix, fitStrengths, runModel2 } from "./poisson2.ts";
 import {
   expectedGoals,
   marketProbabilities,
@@ -200,4 +201,36 @@ Deno.test("saison précédente pondérée : une équipe dominante n'est plus ram
   const withPrior = runModel([...lastSeason.map((x) => ({ ...x, weight: 0.5 })), ...current], 1, 2);
   assert(withPrior.probabilities["1X2.HOME"] > without.probabilities["1X2.HOME"] + 0.1);
   assertEquals(withPrior.sample.homeTeamHomeMatches, 6, "1 match + 10 × 0,5");
+});
+
+// ---------------------------------------------------------------------------
+// poisson-2.0 (candidat)
+// ---------------------------------------------------------------------------
+
+Deno.test("poisson-2.0 : probabilités cohérentes et petits scores corrigés", () => {
+  const plain = dixonColesMatrix(1.3, 1.1, 0);
+  const dc = dixonColesMatrix(1.3, 1.1, -0.1);
+  const sum = dc.flat().reduce((a, b) => a + b, 0);
+  assert(Math.abs(sum - 1) < 1e-9, "matrice normalisée");
+  assert(dc[0][0] > plain[0][0] && dc[1][1] > plain[1][1], "ρ < 0 : plus de 0-0 et de 1-1");
+  assert(dc[1][0] < plain[1][0], "et moins de 1-0");
+});
+
+Deno.test("poisson-2.0 : les matchs à l'extérieur comptent, les anciens matchs pèsent moins", () => {
+  const day = (d: number) => new Date(Date.UTC(2026, 0, 1) + d * 86400_000).toISOString();
+  // L'équipe 1 gagne largement partout, y compris à l'extérieur ; l'équipe 2 perd partout.
+  const history = [] as { kickoffAt: string; homeId: number; awayId: number; homeGoals: number; awayGoals: number }[];
+  for (let i = 0; i < 10; i++) {
+    history.push({ kickoffAt: day(i * 7), homeId: 3 + (i % 4), awayId: 1, homeGoals: 0, awayGoals: 3 });
+    history.push({ kickoffAt: day(i * 7 + 1), homeId: 2, awayId: 3 + (i % 4), homeGoals: 0, awayGoals: 2 });
+  }
+  const s = fitStrengths(history, Date.parse(day(80)));
+  assert(s.attack.get(1)! > 1.5, "attaque de l'équipe 1 mesurée sur ses matchs à l'extérieur");
+  assert(s.attack.get(2)! < 0.7, "attaque faible de l'équipe 2 mesurée à domicile");
+  const r = runModel2(history, 1, 2, day(80));
+  assert(r.probabilities["1X2.HOME"] > 0.6, "l'équipe 1 favorite à domicile alors qu'elle n'y a jamais joué");
+  // Décroissance : un résultat très ancien pèse moins qu'un résultat récent.
+  const old = fitStrengths([{ kickoffAt: day(0), homeId: 1, awayId: 2, homeGoals: 5, awayGoals: 0 }], Date.parse(day(720)));
+  const recent = fitStrengths([{ kickoffAt: day(700), homeId: 1, awayId: 2, homeGoals: 5, awayGoals: 0 }], Date.parse(day(720)));
+  assert(recent.attack.get(1)! > old.attack.get(1)!, "le match récent pèse davantage");
 });

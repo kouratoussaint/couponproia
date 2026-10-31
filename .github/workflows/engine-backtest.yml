@@ -1,0 +1,83 @@
+# Backtest du moteur : poisson-1.1 (production) contre les variantes de poisson-2.0, sur
+# l'historique réel des compétitions suivies, puis comparaison aux cotes de clôture conservées.
+# Lecture seule : exporte les matchs terminés (Management API, requête SELECT), calcule,
+# et publie le rapport sur la branche « rapports-moteur » (docs/engine/backtest.md).
+#
+# Secret requis : SUPABASE_ACCESS_TOKEN.
+name: Backtest du moteur
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * 1'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: engine-backtest
+  cancel-in-progress: true
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Export des matchs terminés et des cotes de clôture (lecture seule)
+        run: |
+          URL="$(jq -r .SUPABASE_URL app/env/prod.json)"
+          REF="$(echo "$URL" | sed -E 's#^https://([a-z0-9]+)\.supabase\.co/?$#\1#')"
+          QUERY=$(cat <<'SQL'
+          select json_build_object(
+            'matches', (
+              select json_agg(json_build_array(m.competition_id, c.name, m.season,
+                       extract(epoch from m.kickoff_at)::bigint, m.home_team_id, m.away_team_id,
+                       m.home_goals, m.away_goals, m.id) order by m.kickoff_at, m.id)
+              from public.matches m join public.competitions c on c.id = m.competition_id
+              where c.is_active and m.status in ('finished', 'awarded')
+                and m.home_goals is not null and m.away_goals is not null
+                and m.season >= coalesce(c.current_season, extract(year from now())::int) - 2),
+            'odds', (
+              select json_agg(json_build_array(x.match_id, x.outcome_code, x.odd_median))
+              from (
+                select distinct on (o.match_id, o.outcome_code) o.match_id, o.outcome_code, o.odd_median
+                from public.odds_snapshots o join public.matches m on m.id = o.match_id
+                where o.market_code = '1X2' and o.captured_at < m.kickoff_at
+                  and m.status in ('finished', 'awarded')
+                order by o.match_id, o.outcome_code, o.captured_at desc) x)
+          ) as data
+          SQL
+          )
+          jq -n --arg q "$QUERY" '{query: $q}' > body.json
+          status="$(curl -s -o raw.json -w '%{http_code}' -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" --data @body.json)"
+          if [ "${status:0:1}" != "2" ]; then echo "::error::Export : HTTP $status $(head -c 300 raw.json)"; exit 1; fi
+          jq '.[0].data' raw.json > data.json
+          echo "::notice::Export : $(jq '.matches | length' data.json) matchs, $(jq '(.odds // []) | length' data.json) cotes de clôture"
+
+      - name: Backtest
+        run: |
+          deno run --allow-read scripts/engine/backtest.ts data.json > backtest.md
+          cat backtest.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publier le rapport (branche rapports-moteur)
+        run: |
+          mkdir -p /tmp/report && cp backtest.md /tmp/report/backtest.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin rapports-moteur || true
+          if git rev-parse --verify origin/rapports-moteur >/dev/null 2>&1; then
+            git checkout -B rapports-moteur origin/rapports-moteur
+          else
+            git checkout --orphan rapports-moteur && git rm -rqf .
+          fi
+          mkdir -p docs/engine && cp /tmp/report/backtest.md docs/engine/backtest.md
+          git add docs/engine/backtest.md
+          git commit -qm "Backtest du moteur ($(date -u +%Y-%m-%dT%H:%M)Z)" || echo "Rapport inchangé"
+          git push -q origin rapports-moteur
