@@ -145,11 +145,19 @@ class AppDrawer extends ConsumerWidget {
           title: const Text('Studio graphique'),
           onTap: () => open(AppRoutes.studio),
         ),
-        if (permissions.contains('sports.configure') ||
+        if (permissions.contains('admin.access') ||
+            permissions.contains('sports.configure') ||
             permissions.contains('ai.configure') ||
             permissions.contains('generation.manage')) ...[
           const Divider(indent: 24, endIndent: 24),
           _SectionTitle('Administration'),
+          if (permissions.contains('admin.access'))
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+              leading: const Icon(Icons.admin_panel_settings_outlined),
+              title: const Text('Console d’administration'),
+              onTap: () => open(AppRoutes.adminConsole),
+            ),
           if (permissions.contains('sports.configure'))
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 28),

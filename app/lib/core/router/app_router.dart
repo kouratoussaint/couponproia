@@ -20,6 +20,9 @@ import '../../features/matches/presentation/competitions_screen.dart';
 import '../../features/matches/presentation/match_detail_screen.dart';
 import '../../features/matches/presentation/matches_screen.dart';
 import '../../features/matches/presentation/sports_admin_screen.dart';
+import '../../features/admin/presentation/admin_console_screen.dart';
+import '../../features/admin/presentation/admin_settings_screen.dart';
+import '../../features/admin/presentation/users_admin_screen.dart';
 import '../../features/billing/billing_screen.dart';
 import '../../features/community/presentation/community_screen.dart';
 import '../../features/community/presentation/moderation_screen.dart';
@@ -153,6 +156,35 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.performance,
         builder: (context, state) => const PerformanceScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminConsole,
+        builder: (context, state) => const AdminConsoleScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminUsers,
+        builder: (context, state) => const UsersAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminUser,
+        builder: (context, state) =>
+            UserAdminDetailScreen(userId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.adminFlags,
+        builder: (context, state) => const FlagsAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminSettings,
+        builder: (context, state) => const SettingsAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminPayments,
+        builder: (context, state) => const PaymentsAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminAudit,
+        builder: (context, state) => const AuditAdminScreen(),
       ),
       GoRoute(
         path: AppRoutes.community,

@@ -45,6 +45,15 @@ abstract final class AppRoutes {
   static const favoriteTeams = '/equipes-suivies';
 
   static String tipsterFor(String id) => '/tipster/$id';
+  static const adminConsole = '/admin';
+  static const adminUsers = '/admin/utilisateurs';
+  static const adminUser = '/admin/utilisateurs/:id';
+  static const adminFlags = '/admin/modules';
+  static const adminSettings = '/admin/reglages';
+  static const adminPayments = '/admin/paiements';
+  static const adminAudit = '/admin/journal';
+
+  static String adminUserFor(String id) => '/admin/utilisateurs/$id';
   static String postFor(int id) => '/publication/$id';
   static const myCoupons = '/mes-coupons';
   static const myCouponDetail = '/mes-coupons/:id';
