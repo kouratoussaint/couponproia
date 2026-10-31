@@ -4,13 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
 import '../../../core/router/app_routes.dart';
-import '../../../core/widgets/form_widgets.dart';
 import '../../analysis/data/analysis_format.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/coupon_models.dart';
 import '../data/coupon_repository.dart';
+import 'coupon_actions.dart';
 import 'coupon_widgets.dart';
 
 /// Fiche d'un coupon : sélections avec cote publiée (conservée) et cote actuelle,
@@ -71,9 +71,10 @@ class _CouponBody extends ConsumerWidget {
         const <String, double>{};
     final muted = theme.textTheme.bodySmall
         ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
-    final canManage =
-        (ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{})
-            .contains('generation.manage');
+    final perms =
+        ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
+    final canManage = perms.contains('generation.manage');
+    final canDelete = perms.contains('coupons.publish');
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
@@ -226,9 +227,24 @@ class _CouponBody extends ConsumerWidget {
         if (canManage && c.status == 'published') ...[
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () => _withdraw(context, ref),
+            onPressed: () => withdrawCoupon(context, ref, c),
             icon: const Icon(Icons.remove_circle_outline),
             label: const Text('Retirer ce coupon (administrateur)'),
+          ),
+        ],
+        if (canDelete && c.isWithdrawn) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+                foregroundColor: theme.colorScheme.error),
+            onPressed: () async {
+              if (await deleteWithdrawnCoupons(context, ref, [c]) &&
+                  context.mounted) {
+                context.pop();
+              }
+            },
+            icon: const Icon(Icons.delete_forever_outlined),
+            label: const Text('Supprimer définitivement (administrateur)'),
           ),
         ],
         const SizedBox(height: 16),
@@ -254,38 +270,5 @@ class _CouponBody extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  Future<void> _withdraw(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    final reason = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Retirer le coupon'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-              labelText: 'Motif (affiché aux utilisateurs)'),
-          maxLines: 2,
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler')),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, controller.text.trim()),
-              child: const Text('Retirer')),
-        ],
-      ),
-    );
-    if (reason == null || reason.isEmpty) return;
-    try {
-      await ref.read(couponRepositoryProvider).withdraw(coupon.id, reason);
-      ref.invalidate(couponProvider(coupon.id));
-      ref.invalidate(publishedCouponsProvider);
-      if (context.mounted) showMessage(context, 'Coupon retiré.');
-    } catch (e) {
-      if (context.mounted) showMessage(context, userMessageFor(e), error: true);
-    }
   }
 }

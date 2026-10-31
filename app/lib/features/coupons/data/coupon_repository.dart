@@ -135,6 +135,12 @@ class CouponRepository {
       _client.rpc('admin_withdraw_coupon',
           params: {'p_coupon': couponId, 'p_reason': reason});
 
+  /// Suppression définitive de coupons retirés (équipe) ; renvoie le nombre supprimé.
+  Future<int> deleteWithdrawn(List<String> ids, String reason) async =>
+      ((await _client.rpc('admin_delete_withdrawn_coupons',
+              params: {'p_ids': ids, 'p_reason': reason})) as num)
+          .toInt();
+
   Future<void> updateProfile(int profileId, Map<String, dynamic> patch) =>
       _client.rpc('admin_update_coupon_profile',
           params: {'p_profile': profileId, 'p_patch': patch});

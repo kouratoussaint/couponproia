@@ -1,6 +1,6 @@
 -- Tests pgTAP du LOT 12 : règles de sécurité structurelles, vérifiées sur toute la base.
 begin;
-select plan(8);
+select plan(9);
 
 select is((select count(*)::int from pg_class c join pg_namespace n on n.oid = c.relnamespace
            where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity), 0,
@@ -44,6 +44,13 @@ select is((select count(*)::int from pg_constraint c join pg_namespace n on n.oi
 select ok((select bool_and(pg_get_functiondef('app_private.invoke_sports_sync(text)'::regprocedure) like '%''' || j || '''%')
            from unnest(array['daily', 'odds', 'live', 'matchday']) j),
           '8. toutes les tâches planifiées de synchronisation sont autorisées');
+
+-- Une fonction STABLE est exécutée par l'API dans une transaction en lecture seule : si elle écrit
+-- (ou appelle credit_summary / refresh_plan_credits, qui peuvent écrire), l'appel échoue (HTTP 405).
+select is((select string_agg(n.nspname || '.' || p.proname, ', ') from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname in ('public', 'app_private') and p.prokind = 'f' and p.provolatile in ('s', 'i')
+             and pg_get_functiondef(p.oid) ~* '(credit_summary|refresh_plan_credits|insert into|update public\.|delete from|app_private\.notify\()'), null,
+          '9. aucune fonction en lecture seule (STABLE) n''écrit');
 
 select * from finish();
 rollback;

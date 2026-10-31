@@ -84,26 +84,49 @@ class ResultBadge extends StatelessWidget {
   }
 }
 
+/// « Aujourd’hui 31/10 », « jeu. 29/10 » : la date n'est ajoutée qu'aux jours relatifs
+/// (dayLabel contient déjà la date pour les autres jours).
+String dayWithDate(DateTime local, DateTime now) {
+  final label = dayLabel(local, now);
+  return label.contains('/') ? label : '$label ${shortDate(local)}';
+}
+
 String couponDateLabel(DateTime local, DateTime now) =>
-    '${dayLabel(local, now)} ${shortDate(local)} · ${timeLabel(local)}';
+    '${dayWithDate(local, now)} · ${timeLabel(local)}';
 
 class CouponCard extends StatelessWidget {
   const CouponCard(
-      {super.key, required this.coupon, required this.onTap, this.trailing});
+      {super.key,
+      required this.coupon,
+      required this.onTap,
+      this.onLongPress,
+      this.trailing});
 
   final Coupon coupon;
   final VoidCallback onTap;
+
+  /// Appui long : menu d'actions (partager, copier, visuel, actions d'équipe).
+  final VoidCallback? onLongPress;
   final Widget? trailing;
+
+  /// Niveaux de gris : un coupon retiré reste visible (transparence) mais se distingue nettement.
+  static const _greyscale = ColorFilter.matrix(<double>[
+    0.2126, 0.7152, 0.0722, 0, 0, //
+    0.2126, 0.7152, 0.0722, 0, 0, //
+    0.2126, 0.7152, 0.0722, 0, 0, //
+    0, 0, 0, 1, 0,
+  ]);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = coupon;
     final now = DateTime.now();
-    return Card(
+    final card = Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -119,9 +142,15 @@ class CouponCard extends StatelessWidget {
                   if (c.result != null && !c.isWithdrawn)
                     ResultBadge(result: c.result, odd: c.settledOdd)
                   else if (c.isWithdrawn)
-                    Text('Retiré',
-                        style: theme.textTheme.labelMedium
-                            ?.copyWith(color: theme.colorScheme.error))
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.block,
+                          size: 14, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 4),
+                      Text('Retiré',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w700)),
+                    ])
                   else
                     RiskBadge(risk: c.riskLevel, compact: true),
                 ],
@@ -155,15 +184,24 @@ class CouponCard extends StatelessWidget {
                 Text('+ ${c.selections.length - 4} autre(s)',
                     style: theme.textTheme.bodySmall),
               const Divider(height: 18),
-              Row(
+              // Passe sur deux lignes si l'écran est étroit ou le texte agrandi.
+              Wrap(
+                spacing: 12,
+                runSpacing: 4,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Text('Cote ${decimal(c.totalOdd)}',
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(color: theme.colorScheme.primary)),
-                  const SizedBox(width: 12),
-                  Text('Modèle ${pct(c.combinedProbability)}',
-                      style: theme.textTheme.bodySmall),
-                  const Spacer(),
+                  Wrap(
+                    spacing: 12,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text('Cote ${decimal(c.totalOdd)}',
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(color: theme.colorScheme.primary)),
+                      Text('Modèle ${pct(c.combinedProbability)}',
+                          style: theme.textTheme.bodySmall),
+                    ],
+                  ),
                   trailing ??
                       Text(
                         'Début ${couponDateLabel(c.firstKickoffAt, now)}',
@@ -175,6 +213,13 @@ class CouponCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+    if (!c.isWithdrawn) return card;
+    return Semantics(
+      label: 'Coupon retiré',
+      child: Opacity(
+          opacity: 0.6,
+          child: ColorFiltered(colorFilter: _greyscale, child: card)),
     );
   }
 }
@@ -205,7 +250,7 @@ class SelectionCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                '${m.competition} · ${dayLabel(m.kickoffAt, now)} ${shortDate(m.kickoffAt)} à ${timeLabel(m.kickoffAt)}',
+                '${m.competition} · ${dayWithDate(m.kickoffAt, now)} à ${timeLabel(m.kickoffAt)}',
                 style: theme.textTheme.labelSmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),

@@ -4,15 +4,18 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/errors/error_messages.dart';
 import '../../core/router/app_routes.dart';
-import '../../core/widgets/history_filter.dart';
 import '../matches/presentation/sports_widgets.dart';
 import '../shell/app_drawer.dart';
 import '../system/system_providers.dart';
 import 'data/coupon_models.dart';
+import 'data/coupon_query.dart';
 import 'data/coupon_repository.dart';
+import 'presentation/coupon_actions.dart';
+import 'presentation/coupon_query_bar.dart';
 import 'presentation/coupon_widgets.dart';
 
-/// Onglet Coupons : coupons publiés par la plateforme, filtrables par catégorie.
+/// Onglet Coupons : coupons publiés par la plateforme, triables et filtrables (catégorie, état,
+/// risque, cote, période). Appui long : actions. Les coupons retirés restent visibles, grisés.
 class CouponsScreen extends ConsumerStatefulWidget {
   const CouponsScreen({super.key});
 
@@ -23,7 +26,7 @@ class CouponsScreen extends ConsumerStatefulWidget {
 class _CouponsScreenState extends ConsumerState<CouponsScreen>
     with AutomaticKeepAliveClientMixin {
   String? _category;
-  HistoryFilter _history = const HistoryFilter();
+  CouponQuery _query = const CouponQuery();
 
   @override
   bool get wantKeepAlive => true;
@@ -72,18 +75,17 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
                       .toList()
                       .indexOf(a)
                       .compareTo(categoryLabels.keys.toList().indexOf(b)));
-                final list = _category == null
-                    ? all
-                    : all.where((c) => c.category == _category).toList();
-                final open = list.where((c) => c.isOpen(now)).toList()
-                  ..sort(
-                      (a, b) => a.firstKickoffAt.compareTo(b.firstKickoffAt));
-                final allPast = list.where((c) => !c.isOpen(now)).toList();
-                final past = allPast
-                    .where((c) => _history.accepts(
-                        c.isWithdrawn ? 'withdrawn' : c.result,
-                        c.publishedAt ?? c.publishAt))
-                    .toList();
+                final (:open, :past) =
+                    _query.apply(all, category: _category, now: now);
+                final perms = ref.watch(myPermissionsProvider).valueOrNull ??
+                    const <String>{};
+                final withdrawn = past.where((c) => c.isWithdrawn).toList();
+                Widget card(Coupon c) => CouponCard(
+                      coupon: c,
+                      onTap: () =>
+                          context.push(AppRoutes.couponDetailFor(c.id)),
+                      onLongPress: () => showCouponActions(context, ref, c),
+                    );
                 return RefreshIndicator(
                   onRefresh: refresh,
                   child: ListView(
@@ -118,6 +120,12 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
                             ],
                           ),
                         ),
+                      if (all.isNotEmpty)
+                        CouponQueryBar(
+                          query: _query,
+                          count: open.length + past.length,
+                          onChanged: (q) => setState(() => _query = q),
+                        ),
                       if (all.isEmpty)
                         const InfoMessage(
                           icon: Icons.receipt_long,
@@ -125,30 +133,42 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
                           body:
                               'Le moteur publie des coupons seulement quand des matchs à venir ont des cotes '
                               'récentes et que des sélections remplissent ses critères. Sinon, il s’abstient.',
+                        )
+                      else if (open.isEmpty && past.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(children: [
+                            const Text('Aucun coupon pour ces filtres.'),
+                            TextButton(
+                              onPressed: () => setState(() {
+                                _query = _query.cleared;
+                                _category = null;
+                              }),
+                              child: const Text('Effacer les filtres'),
+                            ),
+                          ]),
                         ),
                       if (open.isNotEmpty)
                         const SectionTitle('En cours et à venir'),
-                      for (final c in open)
-                        CouponCard(
-                            coupon: c,
-                            onTap: () =>
-                                context.push(AppRoutes.couponDetailFor(c.id))),
-                      if (allPast.isNotEmpty) ...[
+                      for (final c in open) card(c),
+                      if (past.isNotEmpty)
                         const SectionTitle('Historique, pertes comprises'),
-                        HistoryFilterBar(
-                            value: _history,
-                            onChanged: (v) => setState(() => _history = v)),
-                        if (past.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Text('Aucun coupon pour ce filtre.'),
+                      if (withdrawn.isNotEmpty &&
+                          perms.contains('coupons.publish'))
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                                foregroundColor: theme.colorScheme.error),
+                            onPressed: () =>
+                                deleteWithdrawnCoupons(context, ref, withdrawn),
+                            icon: const Icon(Icons.delete_sweep_outlined),
+                            label: Text(withdrawn.length == 1
+                                ? 'Supprimer le coupon retiré affiché'
+                                : 'Supprimer les ${withdrawn.length} coupons retirés affichés'),
                           ),
-                      ],
-                      for (final c in past)
-                        CouponCard(
-                            coupon: c,
-                            onTap: () =>
-                                context.push(AppRoutes.couponDetailFor(c.id))),
+                        ),
+                      for (final c in past) card(c),
                       if (all.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Text(
