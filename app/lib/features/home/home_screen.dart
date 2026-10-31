@@ -189,7 +189,13 @@ class _BlockTitle extends StatelessWidget {
               child: Text(title,
                   style: theme.textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.w800))),
-          if (action != null) action!,
+          if (action != null)
+            Flexible(
+              child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: action!),
+            ),
         ],
       ),
     );
@@ -260,12 +266,19 @@ class _CouponOfTheDay extends ConsumerWidget {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Text('Cote ${decimal(c.totalOdd)}',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                                color: scheme.primary,
-                                fontWeight: FontWeight.w800)),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text('Cote ${decimal(c.totalOdd)}',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                    color: scheme.primary,
+                                    fontWeight: FontWeight.w800)),
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
+                          flex: 2,
                           child: Text(
                             'Probabilité estimée ${pct(c.combinedProbability)} · ${frequencyLabel(c.combinedProbability)}',
                             style: theme.textTheme.bodySmall,

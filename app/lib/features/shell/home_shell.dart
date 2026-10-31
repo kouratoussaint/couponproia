@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -19,7 +20,77 @@ class HomeShell extends ConsumerStatefulWidget {
   ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
+/// Retour depuis un onglet : revient à l'onglet précédent, puis à l'Accueil ;
+/// sur l'Accueil, un premier appui prévient, un second (dans les 2 s) quitte l'app.
+class TabBackHistory {
+  final List<int> _visited = [];
+  DateTime? _lastExitRequest;
+
+  void visited(int from, int to) {
+    if (from == to) return;
+    _visited
+      ..remove(to)
+      ..add(from);
+  }
+
+  /// Onglet où revenir, ou null si l'utilisateur est sur l'Accueil sans historique.
+  int? back(int current) {
+    while (_visited.isNotEmpty) {
+      final previous = _visited.removeLast();
+      if (previous != current) return previous;
+    }
+    return current == 0 ? null : 0;
+  }
+
+  /// true si ce second appui doit quitter l'app.
+  bool confirmExit(DateTime now) {
+    final last = _lastExitRequest;
+    if (last != null && now.difference(last) < const Duration(seconds: 2)) {
+      _lastExitRequest = null;
+      return true;
+    }
+    _lastExitRequest = now;
+    return false;
+  }
+}
+
 class _HomeShellState extends ConsumerState<HomeShell> {
+  final _history = TabBackHistory();
+  bool _goingBack = false;
+
+  @override
+  void didUpdateWidget(covariant HomeShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final from = oldWidget.navigationShell.currentIndex;
+    final to = widget.navigationShell.currentIndex;
+    if (!_goingBack) _history.visited(from, to);
+    _goingBack = false;
+  }
+
+  void _onBack() {
+    final scaffold = shellScaffoldKey.currentState;
+    if (scaffold?.isDrawerOpen ?? false) {
+      scaffold!.closeDrawer();
+      return;
+    }
+    final target = _history.back(widget.navigationShell.currentIndex);
+    if (target != null) {
+      _goingBack = true;
+      widget.navigationShell.goBranch(target);
+      return;
+    }
+    if (_history.confirmExit(DateTime.now())) {
+      SystemNavigator.pop();
+      return;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(
+        content: Text('Appuie encore sur Retour pour quitter'),
+        duration: Duration(seconds: 2),
+      ));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -49,44 +120,56 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           onRetry: () => ref.invalidate(featureFlagsProvider));
     }
 
-    return Scaffold(
-      key: shellScaffoldKey,
-      drawer: AppDrawer(
-        currentIndex: widget.navigationShell.currentIndex,
-        onSelectTab: _selectTab,
-      ),
-      drawerEdgeDragWidth: 24,
-      body: widget.navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: widget.navigationShell.currentIndex,
-        onDestinationSelected: _selectTab,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Accueil',
+    final scheme = Theme.of(context).colorScheme;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _onBack();
+      },
+      child: Scaffold(
+        key: shellScaffoldKey,
+        drawer: AppDrawer(
+          currentIndex: widget.navigationShell.currentIndex,
+          onSelectTab: _selectTab,
+        ),
+        drawerEdgeDragWidth: 24,
+        body: widget.navigationShell,
+        bottomNavigationBar: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: scheme.outline)),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.sports_soccer_outlined),
-            selectedIcon: Icon(Icons.sports_soccer),
-            label: 'Matchs',
+          child: NavigationBar(
+            selectedIndex: widget.navigationShell.currentIndex,
+            onDestinationSelected: _selectTab,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Accueil',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.sports_soccer_outlined),
+                selectedIcon: Icon(Icons.sports_soccer),
+                label: 'Matchs',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.receipt_long_outlined),
+                selectedIcon: Icon(Icons.receipt_long),
+                label: 'Coupons',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.smart_toy_outlined),
+                selectedIcon: Icon(Icons.smart_toy),
+                label: 'Assistant IA',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
+                label: 'Profil',
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'Coupons',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.smart_toy_outlined),
-            selectedIcon: Icon(Icons.smart_toy),
-            label: 'Assistant IA',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profil',
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -33,13 +33,23 @@ class AppLogo extends StatelessWidget {
       children: [
         emblem,
         SizedBox(width: size * 0.2),
-        Text.rich(
-          TextSpan(
-            text: 'Coupon Pro ',
-            style: style,
-            children: [
-              TextSpan(text: 'IA', style: style.copyWith(color: scheme.primary))
-            ],
+        // Le nom fait partie du logo : il garde sa taille quel que soit le réglage du texte,
+        // et se réduit seulement si la barre manque de place.
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text.rich(
+              textScaler: TextScaler.noScaling,
+              TextSpan(
+                text: 'Coupon Pro ',
+                style: style,
+                children: [
+                  TextSpan(
+                      text: 'IA', style: style.copyWith(color: scheme.primary))
+                ],
+              ),
+            ),
           ),
         ),
       ],

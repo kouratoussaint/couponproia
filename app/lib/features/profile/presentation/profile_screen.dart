@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/text_scale_controller.dart';
 import '../../../core/theme/theme_mode_controller.dart';
 import '../../../core/validators.dart';
 import '../../../core/widgets/form_widgets.dart';
@@ -183,6 +184,34 @@ class ProfileScreen extends ConsumerWidget {
                             .read(themeModeProvider.notifier)
                             .setMode(s.first),
                       ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text('Taille du texte', style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: SegmentedButton<TextSize>(
+                        showSelectedIcon: false,
+                        segments: [
+                          for (final t in TextSize.values)
+                            ButtonSegment(
+                              value: t,
+                              label: Text('A',
+                                  style: TextStyle(
+                                      fontSize: 14 * t.factor,
+                                      fontWeight: FontWeight.w700)),
+                              tooltip: t.label,
+                            ),
+                        ],
+                        selected: {ref.watch(textSizeProvider)},
+                        onSelectionChanged: (s) =>
+                            ref.read(textSizeProvider.notifier).set(s.first),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${ref.watch(textSizeProvider).label} : voici à quoi ressemble le texte de l’app.',
+                      style: theme.textTheme.bodyMedium,
                     ),
                   ],
                 ),

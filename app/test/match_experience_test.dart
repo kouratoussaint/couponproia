@@ -213,15 +213,38 @@ void main() {
         ];
 
     Future<void> pump(WidgetTester tester, Widget child,
-        {bool analysis = true}) async {
+        {bool analysis = true, double scale = 1}) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 2.6;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(ProviderScope(
         overrides: overrides(analysis: analysis),
-        child: MaterialApp(home: Scaffold(body: child)),
+        child: MaterialApp(
+          home: Scaffold(body: child),
+          builder: (c, w) => MediaQuery(
+              data: MediaQuery.of(c)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
+              child: w!),
+        ),
       ));
       await tester.pumpAndSettle();
+    }
+
+    // Taille de texte maximale autorisée par l'app : aucun onglet ne déborde, jusqu'en bas.
+    for (final (name, tab) in [
+      ('Pronostic', PronosticTab(match: match)),
+      ('Analyse', AnalysisTab(match: match)),
+      ('Marchés', MarketsTab(match: match)),
+      ('Stats', StatsTab(match: match)),
+    ]) {
+      testWidgets('$name en très grand texte, sans débordement',
+          (tester) async {
+        await pump(tester, tab, scale: 1.6);
+        await tester.drag(
+            find.byType(Scrollable).first, const Offset(0, -20000));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      });
     }
 
     testWidgets('Pronostic : pronostic de l’IA, cote juste, scores',

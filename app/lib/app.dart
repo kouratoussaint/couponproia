@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/text_scale_controller.dart';
 import 'core/theme/theme_mode_controller.dart';
 
 class CouponProApp extends ConsumerWidget {
@@ -21,6 +22,7 @@ class CouponProApp extends ConsumerWidget {
       locale: const Locale('fr'),
       supportedLocales: const [Locale('fr')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      builder: (context, child) => AppTextScale(child: child),
     );
   }
 }

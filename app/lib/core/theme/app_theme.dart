@@ -107,7 +107,8 @@ abstract final class AppTheme {
       cardTheme: CardThemeData(
         color: scheme.surfaceContainer,
         elevation: 0,
-        margin: EdgeInsets.zero,
+        // Espace régulier entre deux cartes empilées (12 px), partout dans l'app.
+        margin: const EdgeInsets.symmetric(vertical: 6),
         shape: RoundedRectangleBorder(
           borderRadius: radius,
           side: BorderSide(color: scheme.outlineVariant),
@@ -145,10 +146,33 @@ abstract final class AppTheme {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
+      // Barre du bas : sobre, fond plein, pastille discrète derrière l'icône active,
+      // libellé en couleur de marque.
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: scheme.surfaceContainerLow,
-        indicatorColor: scheme.primary.withValues(alpha: 0.18),
-        labelTextStyle: WidgetStatePropertyAll(textTheme.labelSmall),
+        height: 66,
+        elevation: 0,
+        backgroundColor: scheme.surfaceContainer,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        indicatorColor: scheme.primary.withValues(alpha: 0.16),
+        indicatorShape: const StadiumBorder(),
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+              size: 24,
+              color: states.contains(WidgetState.selected)
+                  ? scheme.primary
+                  : scheme.onSurfaceVariant,
+            )),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return GoogleFonts.inter(
+            fontSize: 11.5,
+            height: 1.2,
+            letterSpacing: 0.1,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            color: selected ? scheme.primary : scheme.onSurfaceVariant,
+          );
+        }),
       ),
       snackBarTheme:
           const SnackBarThemeData(behavior: SnackBarBehavior.floating),

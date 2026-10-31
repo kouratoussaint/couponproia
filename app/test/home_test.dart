@@ -53,52 +53,64 @@ void main() {
         isNull);
   });
 
-  testWidgets('accueil complet sans débordement', (tester) async {
-    tester.view.physicalSize = const Size(1080, 2400);
-    tester.view.devicePixelRatio = 2.6;
-    addTearDown(tester.view.reset);
-    final now = DateTime.now();
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        myProfileProvider.overrideWith((ref) async => null),
-        myPreferencesProvider.overrideWith(
-            (ref) async => UserPreferences(onboardedAt: DateTime(2026))),
-        myCreditsProvider.overrideWith((ref) async => Credits.fromJson({
-              'plan': 'FREE',
-              'total': 2,
-              'plan_credits': 2,
-              'extra_credits': 0,
-              'unlimited': false
-            })),
-        publishedCouponsProvider.overrideWith((ref) async => [
-              _coupon('b', 'du_jour', first: now.add(const Duration(hours: 5))),
-              _coupon('w', 'prudent',
-                  result: 'won', first: now.subtract(const Duration(days: 1))),
-              _coupon('l', 'prudent',
-                  result: 'lost', first: now.subtract(const Duration(days: 2))),
-            ]),
-        featuredMatchProvider.overrideWith((ref) async => 5988),
-        matchProvider.overrideWith((ref, id) async => lilleLens()),
-        matchesOfDayProvider.overrideWith((ref, day) async => [lilleLens()]),
-        market1x2OfDayProvider.overrideWith((ref, day) async => {
-              5988: const Market1x2(
-                  matchId: 5988,
-                  pHome: 0.35,
-                  pDraw: 0.29,
-                  pAway: 0.36,
-                  bookmakers: 10)
-            }),
-      ],
-      child: const MaterialApp(home: HomeScreen()),
-    ));
-    await tester.pumpAndSettle();
-    expect(find.text('Coupon du jour'), findsOneWidget);
-    expect(find.text('Analyse offerte du jour'), findsOneWidget);
-    expect(find.text('Lille – Lens'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Derniers résultats'), 300);
-    await tester.scrollUntilVisible(
-        find.text('Tout l’historique, pertes comprises'), 300);
-    expect(find.text('Perdu'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+  for (final scale in [1.0, 1.6]) {
+    testWidgets('accueil complet sans débordement (texte ×$scale)',
+        (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.6;
+      addTearDown(tester.view.reset);
+      final now = DateTime.now();
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          myProfileProvider.overrideWith((ref) async => null),
+          myPreferencesProvider.overrideWith(
+              (ref) async => UserPreferences(onboardedAt: DateTime(2026))),
+          myCreditsProvider.overrideWith((ref) async => Credits.fromJson({
+                'plan': 'FREE',
+                'total': 2,
+                'plan_credits': 2,
+                'extra_credits': 0,
+                'unlimited': false
+              })),
+          publishedCouponsProvider.overrideWith((ref) async => [
+                _coupon('b', 'du_jour',
+                    first: now.add(const Duration(hours: 5))),
+                _coupon('w', 'prudent',
+                    result: 'won',
+                    first: now.subtract(const Duration(days: 1))),
+                _coupon('l', 'prudent',
+                    result: 'lost',
+                    first: now.subtract(const Duration(days: 2))),
+              ]),
+          featuredMatchProvider.overrideWith((ref) async => 5988),
+          matchProvider.overrideWith((ref, id) async => lilleLens()),
+          matchesOfDayProvider.overrideWith((ref, day) async => [lilleLens()]),
+          market1x2OfDayProvider.overrideWith((ref, day) async => {
+                5988: const Market1x2(
+                    matchId: 5988,
+                    pHome: 0.35,
+                    pDraw: 0.29,
+                    pAway: 0.36,
+                    bookmakers: 10)
+              }),
+        ],
+        child: MaterialApp(
+          home: const HomeScreen(),
+          builder: (c, child) => MediaQuery(
+              data: MediaQuery.of(c)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('Coupon du jour'), findsOneWidget);
+      expect(find.text('Analyse offerte du jour'), findsOneWidget);
+      expect(find.text('Lille – Lens'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Derniers résultats'), 300);
+      await tester.scrollUntilVisible(
+          find.text('Tout l’historique, pertes comprises'), 300);
+      expect(find.text('Perdu'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

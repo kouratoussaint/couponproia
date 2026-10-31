@@ -4,7 +4,7 @@ publish_to: 'none'
 
 # version: <nom>+<numéro de build>. Le numéro de build est surchargé en CI
 # (--build-number) et doit toujours augmenter pour que les mises à jour s'installent.
-version: 0.12.0+1
+version: 0.12.1+1
 
 environment:
   # Flutter >= 3.27 requis (CardThemeData, Color.withValues).
