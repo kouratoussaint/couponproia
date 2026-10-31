@@ -55,6 +55,42 @@ class CouponRepository {
     return await _coupons(rows);
   }
 
+  /// Coupons publiés pas encore décidés (onglets « À jouer » et « En cours »).
+  Future<List<Coupon>> active() async {
+    final rows = await _client
+        .from('coupons')
+        .select(_couponColumns)
+        .eq('status', 'published')
+        .isFilter('result', null)
+        .order('first_kickoff_at')
+        .limit(200);
+    return await _coupons(rows);
+  }
+
+  /// Coupons décidés (gagnés, perdus, annulés), les plus récents d'abord ; [limit] grandit
+  /// avec « Voir les jours précédents ». Rien n'est jamais effacé : tout l'historique reste lisible.
+  Future<List<Coupon>> decided({int limit = 60}) async {
+    final rows = await _client
+        .from('coupons')
+        .select(_couponColumns)
+        .eq('status', 'published')
+        .not('result', 'is', null)
+        .order('settled_at', ascending: false, nullsFirst: false)
+        .limit(limit);
+    return await _coupons(rows);
+  }
+
+  /// Coupons retirés par l'équipe (affichés grisés, repliés en bas des résultats).
+  Future<List<Coupon>> withdrawnList() async {
+    final rows = await _client
+        .from('coupons')
+        .select(_couponColumns)
+        .eq('status', 'withdrawn')
+        .order('published_at', ascending: false)
+        .limit(50);
+    return await _coupons(rows);
+  }
+
   Future<Coupon?> coupon(String id) async {
     final row = await _client
         .from('coupons')
@@ -153,6 +189,30 @@ final couponRepositoryProvider = Provider<CouponRepository>(
 final publishedCouponsProvider = FutureProvider.autoDispose<List<Coupon>>(
   (ref) => ref.watch(couponRepositoryProvider).published(),
 );
+
+final activeCouponsProvider = FutureProvider.autoDispose<List<Coupon>>(
+  (ref) => ref.watch(couponRepositoryProvider).active(),
+);
+
+/// Nombre de résultats chargés : la page en demande davantage avec « Voir plus ».
+const decidedPageSize = 60;
+
+final decidedCouponsProvider =
+    FutureProvider.autoDispose.family<List<Coupon>, int>(
+  (ref, limit) => ref.watch(couponRepositoryProvider).decided(limit: limit),
+);
+
+final withdrawnCouponsProvider = FutureProvider.autoDispose<List<Coupon>>(
+  (ref) => ref.watch(couponRepositoryProvider).withdrawnList(),
+);
+
+/// Après une action (retrait, suppression, génération) : toutes les listes sont relues.
+void invalidateCouponLists(WidgetRef ref) {
+  ref.invalidate(publishedCouponsProvider);
+  ref.invalidate(activeCouponsProvider);
+  ref.invalidate(decidedCouponsProvider);
+  ref.invalidate(withdrawnCouponsProvider);
+}
 
 final couponProvider = FutureProvider.autoDispose.family<Coupon?, String>(
   (ref, id) => ref.watch(couponRepositoryProvider).coupon(id),

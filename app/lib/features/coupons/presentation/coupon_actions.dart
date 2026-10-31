@@ -134,7 +134,7 @@ Future<void> withdrawCoupon(
   try {
     await ref.read(couponRepositoryProvider).withdraw(coupon.id, reason);
     ref.invalidate(couponProvider(coupon.id));
-    ref.invalidate(publishedCouponsProvider);
+    invalidateCouponLists(ref);
     if (context.mounted) showMessage(context, 'Coupon retiré.');
   } catch (e) {
     if (context.mounted) {
@@ -195,7 +195,7 @@ Future<bool> deleteWithdrawnCoupons(
     final deleted = await ref
         .read(couponRepositoryProvider)
         .deleteWithdrawn([for (final c in targets) c.id], reason);
-    ref.invalidate(publishedCouponsProvider);
+    invalidateCouponLists(ref);
     if (context.mounted) {
       showMessage(context,
           deleted == 1 ? 'Coupon supprimé.' : '$deleted coupons supprimés.');

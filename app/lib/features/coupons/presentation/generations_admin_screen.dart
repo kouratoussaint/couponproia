@@ -46,7 +46,7 @@ class _GenerationsAdminScreenState
     ref.invalidate(couponProfilesProvider);
     ref.invalidate(generationRunsProvider);
     ref.invalidate(unpublishedCouponsProvider);
-    ref.invalidate(publishedCouponsProvider);
+    invalidateCouponLists(ref);
   }
 
   Future<void> _generate(CouponProfile p) async {

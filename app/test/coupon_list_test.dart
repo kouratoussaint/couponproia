@@ -1,6 +1,6 @@
 import 'package:coupon_pro_ia/features/coupons/coupons_screen.dart';
 import 'package:coupon_pro_ia/features/coupons/data/coupon_models.dart';
-import 'package:coupon_pro_ia/features/coupons/data/coupon_query.dart';
+import 'package:coupon_pro_ia/features/coupons/data/coupon_phase.dart';
 import 'package:coupon_pro_ia/features/coupons/data/coupon_repository.dart';
 import 'package:coupon_pro_ia/features/coupons/presentation/coupon_actions.dart';
 import 'package:coupon_pro_ia/features/coupons/presentation/coupon_widgets.dart';
@@ -12,60 +12,81 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/coupon_fixtures.dart';
 
 final _now = fixtureNow;
-final _all = fixtureCoupons;
 
-Widget _screen(Set<String> perms) => ProviderScope(
+Coupon _byId(String id) => fixtureCoupons.firstWhere((c) => c.id == id);
+
+List<String> _ids(Iterable<Coupon> l) => [for (final c in l) c.id];
+
+Widget _screen(Set<String> perms, {double scale = 1}) => ProviderScope(
       overrides: [
-        publishedCouponsProvider.overrideWith((ref) async => _all),
+        activeCouponsProvider.overrideWith((ref) async => fixtureActive),
+        decidedCouponsProvider
+            .overrideWith((ref, limit) async => fixtureDecided),
+        withdrawnCouponsProvider.overrideWith((ref) async => fixtureWithdrawn),
         featureFlagsProvider.overrideWith((ref) async => const {}),
         myPermissionsProvider.overrideWith((ref) async => perms),
       ],
-      child: const MaterialApp(home: CouponsScreen()),
+      child: MaterialApp(
+        builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(scale)),
+            child: child!),
+        home: const CouponsScreen(),
+      ),
     );
 
-List<String> _ids(List<Coupon> l) => [for (final c in l) c.id];
+Future<void> _pump(WidgetTester tester, Widget w) async {
+  tester.view.physicalSize = const Size(400 * 3, 2400 * 3);
+  tester.view.devicePixelRatio = 3;
+  await tester.pumpWidget(w);
+  await tester.pumpAndSettle();
+}
 
 void main() {
-  group('tri et filtres', () {
-    test(
-        'par défaut : en jeu par coup d’envoi, historique récent d’abord, retirés en historique',
-        () {
-      final r = const CouponQuery().apply(_all, now: _now);
-      expect(_ids(r.open), ['b', 'a']);
-      expect(_ids(r.past), ['w', 'c', 'd']);
+  group('répartition en onglets', () {
+    test('à jouer, en cours, décidé, retiré', () {
+      expect(phaseOf(_byId('a'), _now), CouponPhase.toPlay);
+      expect(phaseOf(_byId('l'), _now), CouponPhase.live);
+      // Perdu alors qu'un match reste à jouer : décidé, donc dans Résultats.
+      expect(phaseOf(_byId('d1'), _now), CouponPhase.decided);
+      expect(phaseOf(_byId('x'), _now), CouponPhase.withdrawn);
     });
 
-    test('cote la plus haute, probabilité, sélections', () {
+    test('à jouer trié par coup d’envoi, puis par cote', () {
+      final s = splitActive(fixtureActive, _now);
+      expect(_ids(s.toPlay), ['b', 'a']);
+      expect(_ids(s.live), ['l']);
       expect(
-          _ids(const CouponQuery(sort: CouponSort.oddDesc)
-              .apply(_all, now: _now)
-              .open),
-          ['b', 'a']);
-      expect(
-          _ids(const CouponQuery(sort: CouponSort.probabilityDesc)
-              .apply(_all, now: _now)
-              .open),
+          _ids(splitActive(fixtureActive, _now, sort: ToPlaySort.oddDesc)
+              .toPlay),
           ['a', 'b']);
+      expect(_ids(splitActive(fixtureActive, _now, category: 'du_jour').toPlay),
+          ['a']);
     });
 
-    test('filtres : état, risque, cote, période, catégorie', () {
-      List<String> ids(CouponQuery q, {String? category}) {
-        final r = q.apply(_all, category: category, now: _now);
-        return [..._ids(r.open), ..._ids(r.past)];
-      }
+    test('sélections : état, score, progression, détail du résultat', () {
+      final l = _byId('l');
+      expect(selectionState(l.selections[0]), SelectionState.won);
+      expect(selectionState(l.selections[1]), SelectionState.pending);
+      expect(progressOf(l), (won: 1, total: 2));
+      expect(resultDetail(_byId('d1')), 'Raté : Alpha 0–2 Beta');
+      expect(resultDetail(_byId('w')), 'Toutes les sélections validées');
+    });
 
-      expect(ids(const CouponQuery(states: {CouponState.lost})), ['d']);
-      expect(ids(const CouponQuery(states: {CouponState.withdrawn})), ['w']);
-      expect(ids(const CouponQuery(risks: {'audacieux'})), ['b']);
-      expect(ids(const CouponQuery(oddRange: OddRange.high)), ['b']);
-      expect(ids(const CouponQuery(oddRange: OddRange.low)), ['a', 'w']);
-      expect(ids(const CouponQuery(days: 7)), ['b', 'a', 'w', 'c']);
-      expect(ids(const CouponQuery(), category: 'cote_elevee'), ['b']);
+    test(
+        'résultats : par jour, période, type de résultat ; anciens accessibles',
+        () {
+      final days = groupByDay(fixtureDecided);
+      expect(days.length, 3);
+      expect(_ids(days.first.coupons), ['d1']);
+      expect(days.first.lost, 1);
+      expect(_ids(filterDecided(fixtureDecided, _now, days: 7)), ['d1', 'w']);
+      expect(_ids(filterDecided(fixtureDecided, _now)), ['d1', 'w', 'old']);
+      expect(resultPeriods.keys, isNot(contains(null)));
       expect(
-          const CouponQuery(
-                  states: {CouponState.won}, oddRange: OddRange.mid, days: 7)
-              .activeFilters,
-          3);
+          _ids(filterDecided(fixtureDecided, _now)
+              .where(ResultKind.lost.accepts)),
+          ['d1', 'old']);
     });
   });
 
@@ -78,88 +99,92 @@ void main() {
   });
 
   test('texte partagé : sélections, cote, mention d’estimation', () {
-    final t = couponShareText(_all.first);
+    final t = couponShareText(_byId('a'));
     expect(t, contains('Alpha – Beta'));
-    expect(t, contains('Cote totale 1,80'));
+    expect(t, contains('Cote totale 2,53'));
     expect(t, contains('aucune certitude'));
     for (final w in ['sûr', 'garanti', 'assuré']) {
       expect(t.toLowerCase(), isNot(contains(w)));
     }
   });
 
-  testWidgets(
-      'écran : retiré grisé, appui long, suppression réservée à l’équipe',
-      (tester) async {
-    tester.view.physicalSize = const Size(400 * 3, 2400 * 3);
-    tester.view.devicePixelRatio = 3;
-    await tester.pumpWidget(_screen(const {}));
-    await tester.pumpAndSettle();
-    expect(find.text('5 coupons'), findsOneWidget);
-    expect(
-        find.ancestor(
-            of: find.text('Coupon w'), matching: find.byType(ColorFiltered)),
-        findsOneWidget);
-    expect(
-        find.ancestor(
-            of: find.text('Coupon a'), matching: find.byType(ColorFiltered)),
-        findsNothing);
-    expect(find.textContaining('coupons retirés affichés'), findsNothing);
+  testWidgets('À jouer par défaut, Coupon du jour en avant', (tester) async {
+    await _pump(tester, _screen(const {}));
+    expect(find.text('À jouer · 2'), findsOneWidget);
+    expect(find.text('En cours · 1'), findsOneWidget);
+    expect(find.text('Résultats · 2'), findsOneWidget);
+    expect(find.text('COUPON DU JOUR'), findsOneWidget);
+    expect(find.text('Coupon prudent'), findsNothing);
+    expect(find.text('Prudent'), findsWidgets);
+  });
 
-    await tester.longPress(find.text('Coupon a'));
+  testWidgets('En cours : progression et état des sélections', (tester) async {
+    await _pump(tester, _screen(const {}));
+    await tester.tap(find.text('En cours · 1'));
+    await tester.pumpAndSettle();
+    expect(
+        find.text('1 sélection validée sur 2 · encore en jeu'), findsOneWidget);
+    expect(find.text('Alpha 2–0 Beta'), findsOneWidget);
+    expect(find.textContaining('PROCHAIN MATCH'), findsOneWidget);
+  });
+
+  testWidgets('Résultats : bilan du jour, match décisif, anciens avec « Tout »',
+      (tester) async {
+    await _pump(tester, _screen(const {}));
+    await tester.tap(find.text('Résultats · 2'));
+    await tester.pumpAndSettle();
+    expect(find.text('Raté : Alpha 0–2 Beta'), findsOneWidget);
+    expect(find.textContaining('pertes comprises'), findsWidgets);
+    expect(find.text('Coupons retirés (1)'), findsOneWidget);
+    expect(find.textContaining('Raté : Alpha 1–1 Beta'), findsNothing);
+
+    await tester.tap(find.text('7 jours'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tout').last);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Raté : Alpha 1–1 Beta'), findsOneWidget);
+    expect(find.text('Résultats · 3'), findsOneWidget);
+
+    await tester.tap(find.text('Perdus'));
+    await tester.pumpAndSettle();
+    expect(find.text('Toutes les sélections validées'), findsNothing);
+  });
+
+  testWidgets('retirés : repliés, suppression réservée à l’équipe',
+      (tester) async {
+    await _pump(tester, _screen(const {}));
+    await tester.tap(find.text('Résultats · 2'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Coupons retirés (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Supprimer définitivement'), findsNothing);
+
+    // Nouvel arbre : les permissions d'un autre compte (équipe).
+    await tester.pumpWidget(const SizedBox());
+    await _pump(tester, _screen(const {'coupons.publish'}));
+    await tester.tap(find.text('Résultats · 2'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Coupons retirés (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Supprimer définitivement'), findsOneWidget);
+  });
+
+  testWidgets('appui long : actions', (tester) async {
+    await _pump(tester, _screen(const {}));
+    await tester.longPress(find.text('COUPON DU JOUR'));
     await tester.pumpAndSettle();
     expect(find.text('Partager en texte'), findsOneWidget);
     expect(find.text('Supprimer définitivement'), findsNothing);
   });
 
-  testWidgets('équipe : suppression des retirés proposée', (tester) async {
-    tester.view.physicalSize = const Size(400 * 3, 2400 * 3);
-    tester.view.devicePixelRatio = 3;
-    await tester
-        .pumpWidget(_screen(const {'coupons.publish', 'generation.manage'}));
-    await tester.pumpAndSettle();
-    expect(find.text('Supprimer le coupon retiré affiché'), findsOneWidget);
-
-    await tester.longPress(find.text('Coupon w'));
-    await tester.pumpAndSettle();
-    expect(find.text('Supprimer définitivement'), findsOneWidget);
-    expect(find.text('Retirer ce coupon'), findsNothing);
-  });
-
-  testWidgets('filtrer : panneau, application, compteur', (tester) async {
-    tester.view.physicalSize = const Size(400 * 3, 2400 * 3);
-    tester.view.devicePixelRatio = 3;
-    await tester.pumpWidget(_screen(const {}));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Filtrer'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Perdus'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Appliquer'));
-    await tester.pumpAndSettle();
-    expect(find.text('1 coupon'), findsOneWidget);
-    expect(find.text('Coupon d'), findsOneWidget);
-    expect(find.text('Coupon a'), findsNothing);
-  });
-
-  testWidgets('écran : texte ×1,6 sans débordement', (tester) async {
-    tester.view.physicalSize = const Size(400 * 3, 3200 * 3);
-    tester.view.devicePixelRatio = 3;
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        publishedCouponsProvider.overrideWith((ref) async => _all),
-        featureFlagsProvider.overrideWith((ref) async => const {}),
-        myPermissionsProvider
-            .overrideWith((ref) async => const {'coupons.publish'}),
-      ],
-      child: MaterialApp(
-        builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context)
-                .copyWith(textScaler: const TextScaler.linear(1.6)),
-            child: child!),
-        home: const CouponsScreen(),
-      ),
-    ));
-    await tester.pumpAndSettle();
+  testWidgets('texte ×1,6 sans débordement, sur les trois onglets',
+      (tester) async {
+    await _pump(tester, _screen(const {'coupons.publish'}, scale: 1.6));
     expect(tester.takeException(), isNull);
+    for (final t in ['En cours · 1', 'Résultats · 2']) {
+      await tester.tap(find.text(t));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    }
   });
 }
