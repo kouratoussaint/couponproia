@@ -5,10 +5,10 @@
 // Aucun droit n'est accordé sans confirmation de l'agrégateur.
 import { callerFrom, corsHeaders, env, json, readSettings, serverContext } from "../_shared/http.ts";
 import { applyPromo, creditsPrice, newTransactionId, PaymentProviderError, type PlanSetting, subscriptionPrice } from "../_shared/payments/provider.ts";
-import { type PaymentRow, providerFromEnv, syncPayment } from "../_shared/payments/service.ts";
+import { orderedProviders, type PaymentRow, providersFromEnv, syncPayment } from "../_shared/payments/service.ts";
 import { safeEqual } from "../_shared/sports/normalize.ts";
 
-const COLUMNS = "id, user_id, transaction_id, amount_xof, currency, status, fulfilled_at";
+const COLUMNS = "id, user_id, transaction_id, provider, provider_ref, amount_xof, currency, status, fulfilled_at";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -18,21 +18,21 @@ Deno.serve(async (req) => {
   const { db, url } = ctx;
   const body = await req.json().catch(() => ({}));
   const action = String(body?.action ?? "");
-  const provider = providerFromEnv((k) => env(k));
+  const providers = providersFromEnv((k) => env(k), `${url}/functions/v1/payment-return`);
 
   try {
     if (action === "reconcile") {
       const secret = env("CRON_SECRET");
       const header = req.headers.get("x-cron-secret");
       if (!(secret && header && safeEqual(header, secret))) return json({ error: "unauthorized" }, 401);
-      if (!provider) return json({ skipped: "provider_not_configured" });
+      if (providers.size === 0) return json({ skipped: "provider_not_configured" });
       const since = new Date(Date.now() - 3 * 86400_000).toISOString();
       const before = new Date(Date.now() - 5 * 60_000).toISOString();
       const { data } = await db.from("payments").select(COLUMNS).eq("status", "pending")
         .gte("created_at", since).lte("created_at", before).limit(100);
       const results: Record<string, number> = {};
       for (const p of (data ?? []) as PaymentRow[]) {
-        const s = await syncPayment(db, provider, p, "check");
+        const s = await syncPayment(db, providers, p, "check");
         results[s] = (results[s] ?? 0) + 1;
       }
       // Paiements abandonnés depuis plus de 3 jours : annulés (aucun droit accordé).
@@ -43,6 +43,23 @@ Deno.serve(async (req) => {
 
     const caller = await callerFrom(req, ctx);
     if (!caller) return json({ error: "unauthorized" }, 401);
+
+    // Console : agrégateurs dont les clés sont configurées (jamais les clés elles-mêmes).
+    if (action === "providers") {
+      if (!caller.permissions.includes("billing.manage")) return json({ error: "forbidden" }, 403);
+      const s = await readSettings(db, ["payments.providers"]);
+      const order = orderedProviders(providers, s["payments.providers"]).map((p) => p.name);
+      return json({
+        providers: (["ligdicash", "cinetpay"] as const).map((name) => ({
+          name,
+          configured: providers.has(name),
+          secrets: name === "ligdicash" ? ["LIGDICASH_API_KEY", "LIGDICASH_API_TOKEN"] : ["CINETPAY_API_KEY", "CINETPAY_SITE_ID", "CINETPAY_SECRET_KEY"],
+        })),
+        setting: s["payments.providers"] ?? null,
+        active: order,
+      });
+    }
+
     const { data: flag } = await db.from("feature_flags").select("enabled").eq("key", "payments").maybeSingle();
     if (!flag?.enabled) return json({ error: "feature_disabled" }, 403);
 
@@ -50,13 +67,12 @@ Deno.serve(async (req) => {
       const { data: p } = await db.from("payments").select(COLUMNS).eq("id", String(body?.payment_id ?? ""))
         .eq("user_id", caller.id).maybeSingle();
       if (!p) return json({ error: "payment_not_found" }, 404);
-      const state = provider ? await syncPayment(db, provider, p as PaymentRow, "return") : (p as PaymentRow).status;
+      const state = await syncPayment(db, providers, p as PaymentRow, "return");
       const { data: ent } = await db.rpc("svc_credit_summary", { p_user: caller.id });
       return json({ status: state, credits: ent });
     }
 
     if (action !== "checkout") return json({ error: "unknown_action", allowed: ["checkout", "status"] }, 400);
-    if (!provider) return json({ error: "provider_not_configured" }, 503);
 
     const settings = await readSettings(db, [
       "pricing.plans",
@@ -64,7 +80,10 @@ Deno.serve(async (req) => {
       "pricing.annual_discount_percent",
       "pricing.credit_pack_max_quantity",
       "payments.channels",
+      "payments.providers",
     ]);
+    const candidates = orderedProviders(providers, settings["payments.providers"]);
+    if (candidates.length === 0) return json({ error: "provider_not_configured" }, 503);
     const product = String(body?.product ?? "");
     let row: Record<string, unknown>;
     let description: string;
@@ -109,36 +128,57 @@ Deno.serve(async (req) => {
       .eq("user_id", caller.id).eq("status", "pending");
     if ((count ?? 0) >= 5) return json({ error: "too_many_pending" }, 429);
 
-    const transactionId = newTransactionId();
-    const { data: payment, error } = await db.from("payments").insert({
-      ...row,
-      user_id: caller.id,
-      provider: provider.name,
-      transaction_id: transactionId,
-      currency: "XOF",
-    }).select("id").single();
-    if (error) throw new Error(error.message);
-
-    try {
-      const out = await provider.checkout({
-        transactionId,
-        amountXof: row.amount_xof as number,
-        description,
-        notifyUrl: `${url}/functions/v1/payment-webhook`,
-        returnUrl: `${url}/functions/v1/payment-return`,
-        customerId: caller.id,
-        channels: String(settings["payments.channels"] ?? "MOBILE_MONEY"),
-      });
-      await db.from("payments").update({ payment_url: out.paymentUrl, provider_payload: out.raw as Record<string, unknown> })
-        .eq("id", payment.id);
-      return json({ payment_id: payment.id, payment_url: out.paymentUrl, amount_xof: row.amount_xof, discount_xof: row.discount_xof ?? 0 });
-    } catch (e) {
-      await db.from("payments").update({
-        status: "failed",
-        provider_status: e instanceof PaymentProviderError ? `${e.code} ${e.message}` : String(e),
-      }).eq("id", payment.id);
-      return json({ error: "provider_error", message: e instanceof Error ? e.message : String(e) }, 502);
+    // Agrégateurs dans l'ordre choisi dans la console : si le premier refuse la facture,
+    // le suivant prend le relais (nouvelle référence, l'échec reste journalisé).
+    const { data: profile } = await db.from("profiles").select("display_name").eq("id", caller.id).maybeSingle();
+    const { data: authUser } = await db.auth.admin.getUserById(caller.id);
+    let lastError = "";
+    for (const provider of candidates) {
+      const transactionId = newTransactionId();
+      const { data: payment, error } = await db.from("payments").insert({
+        ...row,
+        user_id: caller.id,
+        provider: provider.name,
+        transaction_id: transactionId,
+        currency: "XOF",
+      }).select("id").single();
+      if (error) throw new Error(error.message);
+      try {
+        const out = await provider.checkout({
+          transactionId,
+          amountXof: row.amount_xof as number,
+          description,
+          notifyUrl: `${url}/functions/v1/payment-webhook?p=${provider.name}`,
+          returnUrl: `${url}/functions/v1/payment-return`,
+          cancelUrl: `${url}/functions/v1/payment-return?annule=1`,
+          customerId: caller.id,
+          channels: String(settings["payments.channels"] ?? "MOBILE_MONEY"),
+          customer: {
+            firstname: String(profile?.display_name ?? "").slice(0, 60),
+            email: authUser?.user?.email ?? "",
+          },
+        });
+        await db.from("payments").update({
+          payment_url: out.paymentUrl,
+          provider_ref: out.providerRef,
+          provider_payload: out.raw as Record<string, unknown>,
+        }).eq("id", payment.id);
+        return json({
+          payment_id: payment.id,
+          payment_url: out.paymentUrl,
+          provider: provider.name,
+          amount_xof: row.amount_xof,
+          discount_xof: row.discount_xof ?? 0,
+        });
+      } catch (e) {
+        lastError = e instanceof Error ? e.message : String(e);
+        await db.from("payments").update({
+          status: "failed",
+          provider_status: e instanceof PaymentProviderError ? `${e.code} ${e.message}` : lastError,
+        }).eq("id", payment.id);
+      }
     }
+    return json({ error: "provider_error", message: lastError }, 502);
   } catch (e) {
     console.error("payments", e);
     return json({ error: "internal_error", message: String((e as Error).message ?? e).slice(0, 200) }, 500);

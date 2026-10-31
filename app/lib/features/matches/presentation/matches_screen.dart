@@ -8,6 +8,7 @@ import '../../shell/app_drawer.dart';
 import '../../system/system_providers.dart';
 import '../data/sports_format.dart';
 import '../data/sports_repository.dart';
+import '../../analysis/presentation/analyze_access.dart';
 import 'sports_widgets.dart';
 
 /// Calendrier des matchs : un jour à la fois (hier à J+6), recherche et filtre par compétition.
@@ -241,7 +242,8 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                                 if (i > 0) const Divider(height: 1),
                                 MatchCard(
                                     match: list[i],
-                                    market: markets[list[i].id]),
+                                    market: markets[list[i].id],
+                                    action: AnalyzeMatchButton(match: list[i])),
                               ],
                             ],
                           ),

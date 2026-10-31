@@ -31,6 +31,8 @@ config = {
     "mailer_otp_length": 6,
     "mailer_otp_exp": 3600,
     "password_min_length": 8,
+    # Changement d'adresse : un code à la nouvelle adresse ; l'app redemande le mot de passe avant.
+    "mailer_secure_email_change_enabled": False,
     "site_url": f"https://{ref}.supabase.co/functions/v1/email-confirmed",
 }
 
@@ -50,6 +52,8 @@ if smtp_user and smtp_pass and smtp_sender:
         "mailer_templates_confirmation_content": template("confirmation.html"),
         "mailer_subjects_recovery": "Réinitialisation de votre mot de passe Coupon Pro IA",
         "mailer_templates_recovery_content": template("recovery.html"),
+        "mailer_subjects_email_change": "Confirmez votre nouvelle adresse Coupon Pro IA",
+        "mailer_templates_email_change_content": template("email_change.html"),
     })
     print("mode=smtp", file=sys.stderr)
 else:

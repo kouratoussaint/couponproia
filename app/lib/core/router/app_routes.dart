@@ -16,6 +16,7 @@ abstract final class AppRoutes {
   static const coupons = '/coupons';
   static const assistant = '/assistant';
   static const profile = '/profil';
+  static const profileEdit = '/profil/modifier';
   static const legal = '/profil/mentions';
 
   /// Documents légaux : lisibles connecté ou non.

@@ -7,7 +7,6 @@ import '../../../core/providers.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/text_scale_controller.dart';
 import '../../../core/theme/theme_mode_controller.dart';
-import '../../../core/validators.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../billing/billing_repository.dart';
@@ -56,6 +55,9 @@ class ProfileScreen extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         radius: 28,
+                        foregroundImage: p?.avatarUrl == null
+                            ? null
+                            : NetworkImage(p!.avatarUrl!),
                         backgroundColor:
                             theme.colorScheme.primary.withValues(alpha: 0.15),
                         child: Text(
@@ -82,11 +84,11 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ),
                       IconButton(
-                        tooltip: 'Modifier le nom',
+                        tooltip: 'Modifier le profil',
                         icon: const Icon(Icons.edit_outlined),
                         onPressed: p == null
                             ? null
-                            : () => _editName(context, ref, p.displayName),
+                            : () => context.push(AppRoutes.profileEdit),
                       ),
                     ],
                   ),
@@ -306,22 +308,6 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _editName(
-      BuildContext context, WidgetRef ref, String current) async {
-    final name = await showDialog<String>(
-      context: context,
-      builder: (_) => _EditNameDialog(initial: current),
-    );
-    if (name == null || name.trim() == current || !context.mounted) return;
-    try {
-      await ref.read(profileRepositoryProvider).updateDisplayName(name);
-      ref.invalidate(myProfileProvider);
-      if (context.mounted) showMessage(context, 'Nom mis à jour.');
-    } catch (e) {
-      if (context.mounted) showMessage(context, userMessageFor(e), error: true);
-    }
-  }
-
   Future<void> _confirmDeletion(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -334,56 +320,6 @@ class ProfileScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) showMessage(context, userMessageFor(e), error: true);
     }
-  }
-}
-
-class _EditNameDialog extends StatefulWidget {
-  const _EditNameDialog({required this.initial});
-
-  final String initial;
-
-  @override
-  State<_EditNameDialog> createState() => _EditNameDialogState();
-}
-
-class _EditNameDialogState extends State<_EditNameDialog> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.initial);
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.of(context).pop(_controller.text.trim());
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Nom affiché'),
-      content: Form(
-        key: _formKey,
-        child: TextFormField(
-          controller: _controller,
-          autofocus: true,
-          maxLength: 40,
-          validator: Validators.displayName,
-          onFieldSubmitted: (_) => _save(),
-        ),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annuler')),
-        FilledButton(onPressed: _save, child: const Text('Enregistrer')),
-      ],
-    );
   }
 }
 

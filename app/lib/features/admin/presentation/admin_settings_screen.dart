@@ -9,6 +9,7 @@ import '../../billing/billing_screen.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
+import 'payment_providers_card.dart';
 import '../data/admin_repository.dart';
 import 'promos_admin_screen.dart';
 import 'users_admin_screen.dart';
@@ -378,7 +379,7 @@ class _PaymentsAdminScreenState extends ConsumerState<PaymentsAdminScreen> {
             ListTile(
               leading: const Icon(Icons.undo),
               title: const Text('Enregistrer un remboursement'),
-              subtitle: const Text('Après remboursement chez CinetPay'),
+              subtitle: const Text('Après remboursement chez l’agrégateur'),
               onTap: () => Navigator.pop(c, 'refund'),
             ),
         ]),
@@ -397,6 +398,8 @@ class _PaymentsAdminScreenState extends ConsumerState<PaymentsAdminScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
+          const PaymentProvidersCard(),
+          const SizedBox(height: 8),
           Wrap(spacing: 8, children: [
             ChoiceChip(
                 label: const Text('Tous'),
@@ -410,7 +413,7 @@ class _PaymentsAdminScreenState extends ConsumerState<PaymentsAdminScreen> {
           ]),
           const SizedBox(height: 8),
           Text(
-              'Remboursement : rendre l’argent depuis le tableau de bord CinetPay, puis toucher le paiement '
+              'Remboursement : rendre l’argent depuis le tableau de bord de l’agrégateur du paiement (LigdiCash ou CinetPay), puis toucher le paiement '
               'confirmé ici pour l’enregistrer (les droits accordés sont retirés).',
               style: Theme.of(context).textTheme.bodySmall),
           ...list.when(
@@ -430,7 +433,7 @@ class _PaymentsAdminScreenState extends ConsumerState<PaymentsAdminScreen> {
                               '${fcfa(asInt(p['amount_xof']))} · ${p['kind'] == 'subscription' ? 'Forfait ${p['plan']} (${p['period']})' : '${p['credits']} crédits'}'),
                           subtitle: Text([
                             '${p['email'] ?? ''}',
-                            '${_when(p['created_at'] as String?)} · ${p['transaction_id']}',
+                            '${_when(p['created_at'] as String?)} · ${p['transaction_id']}${p['provider'] == null ? '' : ' · ${p['provider'] == 'ligdicash' ? 'LigdiCash' : 'CinetPay'}'}',
                             if (p['promo_code'] != null)
                               'Code ${p['promo_code']} (−${fcfa(asInt(p['discount_xof']))})',
                             if (p['refund_reason'] != null)

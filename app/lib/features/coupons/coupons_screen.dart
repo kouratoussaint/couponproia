@@ -21,6 +21,9 @@ import 'presentation/coupon_widgets.dart';
 /// - « Résultats » : coupons décidés, groupés par jour avec leur bilan, pertes comprises ;
 ///   les coupons retirés sont repliés en bas, grisés.
 /// Un coupon passe dans « Résultats » dès que le serveur l'a décidé.
+/// Onglet demandé depuis un autre écran (0 À jouer, 1 En cours, 2 Résultats), lu une fois.
+final couponsTabRequestProvider = StateProvider<int?>((ref) => null);
+
 class CouponsScreen extends ConsumerStatefulWidget {
   const CouponsScreen({super.key});
 
@@ -54,6 +57,13 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
     super.build(context);
     final flags =
         ref.watch(featureFlagsProvider).valueOrNull ?? const <String, bool>{};
+    final requested = ref.watch(couponsTabRequestProvider);
+    if (requested != null) {
+      _tab = requested;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.read(couponsTabRequestProvider.notifier).state = null;
+      });
+    }
     final active = ref.watch(activeCouponsProvider);
     final decided = ref.watch(decidedCouponsProvider(_limit));
     final withdrawn = ref.watch(withdrawnCouponsProvider);

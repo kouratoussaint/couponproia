@@ -368,7 +368,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'Paiement Orange Money ou Moov Money via CinetPay. Votre abonnement ou vos crédits ne sont activés qu’après '
+              'Paiement Orange Money ou Moov Money par un agrégateur agréé (LigdiCash ou CinetPay). Votre abonnement ou vos crédits ne sont activés qu’après '
               'confirmation de l’opérateur, vérifiée par notre serveur. Coupon Pro IA vend un service d’analyse : aucun '
               'pari n’est pris et aucun gain n’est garanti.',
               style: theme.textTheme.bodySmall

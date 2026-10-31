@@ -43,9 +43,12 @@ class SportsLogo extends StatelessWidget {
 
 /// Ligne d'un match dans les listes.
 class MatchCard extends StatelessWidget {
-  const MatchCard({super.key, required this.match, this.market});
+  const MatchCard({super.key, required this.match, this.market, this.action});
 
   final MatchSummary match;
+
+  /// Action à droite (bouton « Analyser »), facultative.
+  final Widget? action;
 
   /// Répartition 1/N/2 selon les cotes (affichée tant que le match n'est pas joué).
   final Market1x2? market;
@@ -125,6 +128,10 @@ class MatchCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (action != null) ...[
+              const SizedBox(width: 10),
+              action!,
+            ],
           ],
         ),
       ),

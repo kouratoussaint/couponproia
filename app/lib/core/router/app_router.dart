@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/presentation/ai_providers_screen.dart';
+import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/analysis/presentation/engine_admin_screen.dart';
 import '../../features/assistant/presentation/assistant_screen.dart';
 import '../../features/assistant/presentation/my_coupons_screen.dart';
@@ -252,6 +253,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.blockedUsers,
         builder: (context, state) => const BlockedUsersScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.profileEdit,
+        builder: (context, state) => const EditProfileScreen(),
       ),
       GoRoute(
         path: AppRoutes.favoriteTeams,

@@ -36,6 +36,9 @@ String analysisErrorMessage(int status, Object? details) {
       return 'Action réservée aux administrateurs.';
     case 'unauthorized':
       return 'Session expirée : reconnectez-vous.';
+    case 'subscription_required':
+      return 'Analyse réservée aux comptes avec un forfait payant ou des crédits IA. '
+          'L’analyse offerte du jour reste gratuite.';
   }
   return 'L’analyse n’a pas pu être réalisée. Réessayez dans un instant.';
 }

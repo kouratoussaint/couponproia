@@ -10,6 +10,12 @@ import {
   subscriptionPrice,
   verifyCinetPayToken,
 } from "./provider.ts";
+import {
+  interpretLigdiCashConfirm,
+  LigdiCashProvider,
+  ligdiCashTransactionId,
+} from "./provider.ts";
+import { orderedProviders, providersFromEnv } from "./service.ts";
 
 const PLANS = [
   { code: "FREE", name: "FREE", monthly_xof: 0, ai_credits: 2 },
@@ -72,4 +78,91 @@ Deno.test("code promo : réduction arrondie au multiple de 5, reste à payer pos
     const r = applyPromo(a, p);
     assert(r.amount > 0 && r.amount % 5 === 0 && r.amount + r.discount === a);
   }
+});
+
+// ---------------------------------------------------------------------------
+// LigdiCash
+// ---------------------------------------------------------------------------
+
+const ligCustom = (id: string) => [
+  { keyof_customdata: "transaction_id", valueof_customdata: id, datecreation_customdata: "2026-10-31" },
+  { keyof_customdata: "logfile", valueof_customdata: "x", datecreation_customdata: "2026-10-31" },
+];
+
+Deno.test("LigdiCash : facture créée avec le jeton, en-têtes Apikey et Bearer", async () => {
+  let seen: { url: string; init: RequestInit } | null = null;
+  const fake = ((url: string, init: RequestInit) => {
+    seen = { url, init };
+    return Promise.resolve(new Response(JSON.stringify({
+      response_code: "00",
+      token: "TOK123",
+      response_text: "https://app.ligdicash.com/pay/invoice/TOK123",
+    })));
+  }) as unknown as typeof fetch;
+  const p = new LigdiCashProvider("KEY", "SECRET", "https://exemple.test", fake);
+  const out = await p.checkout({
+    transactionId: "CPIABC",
+    amountXof: 2000,
+    description: "Coupon Pro IA - forfait STARTER 1 mois",
+    notifyUrl: "https://x/functions/v1/payment-webhook?p=ligdicash",
+    returnUrl: "https://x/functions/v1/payment-return",
+    customerId: "u",
+    channels: "MOBILE_MONEY",
+  });
+  assertEquals(out.providerRef, "TOK123");
+  assertEquals(out.paymentUrl, "https://app.ligdicash.com/pay/invoice/TOK123");
+  const s = seen as unknown as { url: string; init: RequestInit };
+  const h = s.init.headers as Record<string, string>;
+  assertEquals(h.Apikey, "KEY");
+  assertEquals(h.Authorization, "Bearer SECRET");
+  const body = JSON.parse(String(s.init.body));
+  assertEquals(body.commande.invoice.total_amount, 2000);
+  assertEquals(body.commande.invoice.devise, "XOF");
+  assertEquals(body.commande.invoice.customer, "");
+  assertEquals(body.commande.custom_data.transaction_id, "CPIABC");
+  const refused = new LigdiCashProvider("KEY", "SECRET", "https://exemple.test", (() =>
+    Promise.resolve(new Response(JSON.stringify({ response_code: "01", token: "", response_text: "Echec (Code00)" })))) as unknown as typeof fetch);
+  await assertRejects(() => refused.checkout({
+    transactionId: "CPIABD", amountXof: 2000, description: "d", notifyUrl: "n", returnUrl: "r", customerId: "u", channels: "",
+  }), PaymentProviderError);
+});
+
+Deno.test("LigdiCash : statut relu, transaction vérifiée, numéro masqué", () => {
+  const ok = interpretLigdiCashConfirm({
+    response_code: "00", status: "completed", amount: 2000, montant: 2000, operator_name: "ORANGE BF",
+    customer: "22670000000", custom_data: ligCustom("CPIABC"), external_id: "CPIABC",
+  }, "CPIABC");
+  assertEquals(ok.state, "succeeded");
+  assertEquals(ok.amount, 2000);
+  assertEquals(ok.currency, "XOF");
+  assertEquals(ok.paymentMethod, "ORANGE BF");
+  assert(!JSON.stringify(ok.raw).includes("22670000000"), "numéro masqué");
+  assertEquals(interpretLigdiCashConfirm({ response_code: "00", status: "pending", custom_data: ligCustom("CPIABC") }, "CPIABC").state, "pending");
+  assertEquals(interpretLigdiCashConfirm({ response_code: "00", status: "notcompleted", custom_data: ligCustom("CPIABC") }, "CPIABC").state, "failed");
+  assertEquals(interpretLigdiCashConfirm({ response_code: "01", response_text: "Echec (Code01)", status: "" }, "CPIABC").state, "pending");
+  const other = interpretLigdiCashConfirm({ response_code: "00", status: "completed", amount: 2000, custom_data: ligCustom("CPIAUTRE") }, "CPIABC");
+  assertEquals(other.state, "failed", "jeton d'une autre transaction refusé");
+});
+
+Deno.test("LigdiCash : référence lue dans la notification JSON ou formulaire", () => {
+  assertEquals(ligdiCashTransactionId({ custom_data: ligCustom("CPIJSON") }), "CPIJSON");
+  assertEquals(ligdiCashTransactionId({
+    "custom_data[0][keyof_customdata]": "logfile",
+    "custom_data[0][valueof_customdata]": "x",
+    "custom_data[1][keyof_customdata]": "transaction_id",
+    "custom_data[1][valueof_customdata]": "CPIFORM",
+  }), "CPIFORM");
+  assertEquals(ligdiCashTransactionId({ external_id: "123;CPIEXT" }), "CPIEXT");
+  assertEquals(ligdiCashTransactionId({}), null);
+});
+
+Deno.test("ordre des agrégateurs : réglage de la console, limité aux clés présentes", () => {
+  const env = (all: Record<string, string>) => (k: string) => all[k];
+  const both = providersFromEnv(env({ LIGDICASH_API_KEY: "a", LIGDICASH_API_TOKEN: "b", CINETPAY_API_KEY: "c", CINETPAY_SITE_ID: "d" }));
+  assertEquals(orderedProviders(both, null).map((p) => p.name), ["ligdicash", "cinetpay"]);
+  assertEquals(orderedProviders(both, ["cinetpay", "ligdicash"]).map((p) => p.name), ["cinetpay", "ligdicash"]);
+  assertEquals(orderedProviders(both, ["cinetpay"]).map((p) => p.name), ["cinetpay"]);
+  const onlyCinet = providersFromEnv(env({ CINETPAY_API_KEY: "c", CINETPAY_SITE_ID: "d" }));
+  assertEquals(orderedProviders(onlyCinet, ["ligdicash", "cinetpay"]).map((p) => p.name), ["cinetpay"]);
+  assertEquals(orderedProviders(providersFromEnv(env({})), null).length, 0);
 });

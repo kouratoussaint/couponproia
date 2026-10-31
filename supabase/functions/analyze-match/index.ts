@@ -7,6 +7,7 @@
 // Le match offert du jour ne compte pas dans le quota quotidien.
 import { ANALYSIS_COLUMNS, generateMatchAnalysis, isFresh, MATCH_COLUMNS, type MatchRow, PLAYED } from "../_shared/analysis/generate.ts";
 import { planFeatures } from "../_shared/billing.ts";
+import { analysisAllowed } from "../_shared/analysis/access.ts";
 import { callerFrom, corsHeaders, json, readSettings, serverContext } from "../_shared/http.ts";
 
 Deno.serve(async (req) => {
@@ -71,6 +72,12 @@ Deno.serve(async (req) => {
     const limit = Number(features.match_analyses_per_day ?? settings["ai.max_new_analyses_per_user_day"] ?? 20);
     const { data: featured } = await db.from("featured_matches").select("match_id").eq("match_id", m.id)
       .gte("day", new Date(Date.now() - 36 * 3600_000).toISOString().slice(0, 10)).limit(1).maybeSingle();
+    // Nouvelle analyse : réservée aux comptes avec un forfait payant ou des crédits (l'analyse
+    // offerte du jour reste ouverte à tous). Les analyses déjà réalisées restent consultables.
+    if (!canManage && !featured) {
+      const { data: summary } = await db.rpc("svc_credit_summary", { p_user: caller.id });
+      if (!analysisAllowed(summary)) return json({ error: "subscription_required" }, 402);
+    }
     if (!canManage && !featured) {
       const dayStart = new Date();
       dayStart.setUTCHours(0, 0, 0, 0);
@@ -91,3 +98,4 @@ Deno.serve(async (req) => {
     return json({ error: "internal_error", message: String((e as Error).message ?? e).slice(0, 200) }, 500);
   }
 });
+

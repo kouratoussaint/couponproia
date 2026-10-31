@@ -13,6 +13,7 @@ import '../data/analysis_format.dart';
 import '../data/analysis_models.dart';
 import '../data/analysis_repository.dart';
 import '../data/match_reading.dart';
+import 'analyze_access.dart';
 
 // Composants de la fiche match (onglets Pronostic, Analyse, Marchés). Chaque chiffre vient de la
 // fiche du moteur ; les textes de l'IA ont été vérifiés par le serveur.
@@ -36,6 +37,22 @@ class AnalyzeButton extends ConsumerStatefulWidget {
 
 class _AnalyzeButtonState extends ConsumerState<AnalyzeButton> {
   bool _running = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ouvert depuis le bouton « Analyser » d'une liste : l'analyse démarre seule.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (ref.read(autoAnalyzeProvider) != widget.match.id) return;
+      ref.read(autoAnalyzeProvider.notifier).state = null;
+      final has =
+          ref.read(currentAnalysisProvider(widget.match.id)).valueOrNull;
+      if (has == null && ref.read(analysisAllowedProvider(widget.match.id))) {
+        _run();
+      }
+    });
+  }
 
   Future<void> _run({bool force = false}) async {
     setState(() => _running = true);
@@ -85,6 +102,16 @@ class _AnalyzeButtonState extends ConsumerState<AnalyzeButton> {
             Text('Analyse en cours…'),
           ],
         ),
+      );
+    }
+    final allowed = ref.watch(analysisAllowedProvider(match.id));
+    if (!allowed) {
+      return FilledButton.tonalIcon(
+        onPressed: () => showAnalysisLocked(context),
+        icon: const Icon(Icons.lock_outline),
+        label: Text(analysis == null
+            ? 'Analyse réservée aux abonnés'
+            : 'Mise à jour réservée aux abonnés'),
       );
     }
     if (analysis == null) {

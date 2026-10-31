@@ -9,10 +9,13 @@ import '../../core/router/app_routes.dart';
 import '../../core/theme/brand_colors.dart';
 import '../../core/widgets/app_logo.dart';
 import '../analysis/data/analysis_format.dart';
+import '../analysis/presentation/analyze_access.dart';
 import '../assistant/data/assistant_repository.dart';
 import '../coupons/data/coupon_models.dart';
 import '../coupons/data/coupon_phase.dart';
 import '../coupons/data/coupon_repository.dart';
+import '../coupons/coupons_screen.dart' show couponsTabRequestProvider;
+import '../coupons/presentation/coupon_tiles.dart';
 import '../coupons/presentation/coupon_widgets.dart';
 import '../matches/data/insights_models.dart';
 import '../matches/data/sports_format.dart';
@@ -153,15 +156,15 @@ class HomeScreen extends ConsumerWidget {
             _StatusTiles(day: today),
             _LiveBlock(day: today),
             const SizedBox(height: 16),
-            const _CouponOfTheDay(),
-            const SizedBox(height: 20),
-            const _Shortcuts(),
-            const SizedBox(height: 20),
             const _FeaturedMatch(),
+            const SizedBox(height: 16),
+            const _CouponOfTheDay(),
             const SizedBox(height: 24),
             _MatchesBlock(today: today, tomorrow: tomorrow),
-            const SizedBox(height: 20),
-            const _WeekSummary(),
+            const SizedBox(height: 24),
+            const _LastCoupons(),
+            const SizedBox(height: 24),
+            const _Shortcuts(),
             const SizedBox(height: 20),
             Text(
               'Les pronostics sont des estimations, jamais des certitudes. Interdit aux moins de 18 ans.',
@@ -514,56 +517,94 @@ class _FeaturedMatch extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
+    // Cadeau : teinte dorée, distincte du vert des coupons.
+    const gold = BrandColors.orange;
+    final ink = dark ? const Color(0xFFF4C46B) : const Color(0xFF8A5300);
     final id = ref.watch(featuredMatchProvider).valueOrNull;
     final match = id == null ? null : ref.watch(matchProvider(id)).valueOrNull;
-    return _Surface(
-      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-      onTap: match == null
-          ? null
-          : () => context.push(AppRoutes.matchDetailFor(match.id)),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: scheme.primaryContainer,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(Icons.card_giftcard, color: scheme.onPrimaryContainer),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _Eyebrow('Analyse offerte du jour'),
-                const SizedBox(height: 3),
-                if (match == null)
-                  Text(
-                    'Chaque matin, un match du jour est choisi et son analyse complète est ouverte à tous, '
-                    'sans compter dans votre quota.',
-                    style: theme.textTheme.bodyMedium,
-                  )
-                else ...[
-                  Text('${match.home.name} – ${match.away.name}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w700)),
-                  Text(
-                      '${match.competition.name} · ${timeLabel(match.kickoffAt)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: scheme.onSurfaceVariant)),
+    return Material(
+      color: gold.withValues(alpha: dark ? 0.16 : 0.12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: gold.withValues(alpha: 0.75), width: 1.5),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: match == null
+            ? null
+            : () => context.push(AppRoutes.matchDetailFor(match.id)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: gold,
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: const Icon(Icons.card_giftcard,
+                        color: Colors.white, size: 26),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('CADEAU · ANALYSE OFFERTE DU JOUR',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                                color: ink,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8)),
+                        const SizedBox(height: 3),
+                        if (match == null)
+                          Text(
+                            'Chaque matin, un match est choisi et son analyse complète est offerte à tous, '
+                            'sans crédit.',
+                            style: theme.textTheme.bodyMedium,
+                          )
+                        else ...[
+                          Text('${match.home.name} – ${match.away.name}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800)),
+                          Text(
+                              '${match.competition.name} · ${timeLabel(match.kickoffAt)} · gratuite, sans crédit',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant)),
+                        ],
+                      ],
+                    ),
+                  ),
                 ],
+              ),
+              if (match != null) ...[
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: gold,
+                    foregroundColor: const Color(0xFF2B1A00),
+                    minimumSize: const Size.fromHeight(44),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  onPressed: () =>
+                      context.push(AppRoutes.matchDetailFor(match.id)),
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('Voir l’analyse offerte'),
+                ),
               ],
-            ),
+            ],
           ),
-          if (match != null)
-            Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-        ],
+        ),
       ),
     );
   }
@@ -808,6 +849,7 @@ class _MatchRow extends StatelessWidget {
                   ),
                 ),
               ],
+              AnalyzeMatchButton(match: m, compact: true),
             ],
           ),
         ),
@@ -816,54 +858,69 @@ class _MatchRow extends StatelessWidget {
   }
 }
 
-/// Bilan des 7 derniers jours : coupons réglés, gagnés comme perdus.
-class _WeekSummary extends ConsumerWidget {
-  const _WeekSummary();
+/// Les 5 derniers coupons réglés (gagnés comme perdus), avec le bilan des 7 derniers jours
+/// et « Tout voir » vers l'onglet Résultats.
+class _LastCoupons extends ConsumerWidget {
+  const _LastCoupons();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final since = DateTime.now().subtract(const Duration(days: 7));
+    final all = ref.watch(publishedCouponsProvider).valueOrNull;
     final settled = [
-      for (final c in ref.watch(publishedCouponsProvider).valueOrNull ??
-          const <Coupon>[])
-        if (c.result != null &&
-            !c.isWithdrawn &&
-            (c.settledAt ?? c.lastKickoffAt).isAfter(since))
-          c
-    ];
-    final won = settled.where((c) => c.result == 'won').length;
-    final lost = settled.where((c) => c.result == 'lost').length;
-    final other = settled.length - won - lost;
-    return _Surface(
-      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-      onTap: () => context.push(AppRoutes.performance),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Bilan des 7 derniers jours',
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 2),
-                Text(
-                  settled.isEmpty
-                      ? 'Pas encore de coupon réglé · pertes toujours comprises'
-                      : '$won gagné${won > 1 ? 's' : ''} · $lost perdu${lost > 1 ? 's' : ''}'
-                          '${other > 0 ? ' · $other annulé${other > 1 ? 's' : ''}' : ''}'
-                          ' sur ${settled.length} réglé${settled.length > 1 ? 's' : ''} · pertes comprises',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              ],
+      for (final c in all ?? const <Coupon>[])
+        if (c.result != null && !c.isWithdrawn) c
+    ]..sort((a, b) => (b.settledAt ?? b.lastKickoffAt)
+        .compareTo(a.settledAt ?? a.lastKickoffAt));
+    final since = DateTime.now().subtract(const Duration(days: 7));
+    final week = settled
+        .where((c) => (c.settledAt ?? c.lastKickoffAt).isAfter(since))
+        .toList();
+    final won = week.where((c) => c.result == 'won').length;
+    final lost = week.where((c) => c.result == 'lost').length;
+    void openAll() {
+      ref.read(couponsTabRequestProvider.notifier).state = 2;
+      context.go(AppRoutes.coupons);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text('Derniers coupons',
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800)),
             ),
-          ),
-          Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-        ],
-      ),
+            TextButton(onPressed: openAll, child: const Text('Tout voir')),
+          ],
+        ),
+        Text(
+          week.isEmpty
+              ? '7 derniers jours : pas encore de coupon réglé · pertes toujours comprises'
+              : '7 derniers jours : $won gagné${won > 1 ? 's' : ''} · $lost perdu${lost > 1 ? 's' : ''}'
+                  ' sur ${week.length} réglé${week.length > 1 ? 's' : ''} · pertes comprises',
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 8),
+        if (all == null)
+          const LinearProgressIndicator()
+        else if (settled.isEmpty)
+          _Surface(
+            child: Text(
+                'Les résultats apparaissent ici dès que les premiers coupons sont réglés, gagnés comme perdus.',
+                style: theme.textTheme.bodyMedium),
+          )
+        else
+          for (final c in settled.take(5))
+            ResultCouponTile(
+              coupon: c,
+              onTap: () => context.push(AppRoutes.couponDetailFor(c.id)),
+            ),
+      ],
     );
   }
 }

@@ -103,20 +103,28 @@ void main() {
         ),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('COUPON DU JOUR'), findsOneWidget);
+      final list = find.byType(Scrollable).first;
+      expect(find.text('CADEAU · ANALYSE OFFERTE DU JOUR'), findsOneWidget);
       expect(find.text('à jouer'), findsOneWidget);
-      expect(find.text('Voir le coupon'), findsOneWidget);
-      await tester.scrollUntilVisible(
-          find.text('ANALYSE OFFERTE DU JOUR'), 300);
-      expect(find.text('Lille – Lens'), findsWidgets);
-      await tester.scrollUntilVisible(find.text('Marché : 1 · N · 2'), 300);
+      await tester.scrollUntilVisible(find.text('Voir le coupon'), 300,
+          scrollable: list);
+      expect(find.text('COUPON DU JOUR'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Marché : 1 · N · 2'), 300,
+          scrollable: list);
       expect(find.text('35 · 29 · 36'), findsOneWidget);
       await tester.tap(find.text('Demain'));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Derniers coupons'), 300,
+          scrollable: list);
       await tester.scrollUntilVisible(
-          find.text('Bilan des 7 derniers jours'), 300);
-      expect(find.textContaining('1 gagné · 1 perdu sur 2 réglés'),
-          findsOneWidget);
+          find.textContaining('1 gagné · 1 perdu sur 2 réglés'), 300,
+          scrollable: list);
+      await tester.scrollUntilVisible(find.text('Perdu'), 300,
+          scrollable: list);
+      expect(find.text('Gagné'), findsOneWidget);
+      // Les raccourcis viennent en dernier.
+      await tester.scrollUntilVisible(find.text('Laboratoire'), 300,
+          scrollable: list);
       expect(tester.takeException(), isNull);
     });
   }

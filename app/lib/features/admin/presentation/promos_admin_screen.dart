@@ -339,7 +339,7 @@ Future<void> recordRefund(
       content: Column(mainAxisSize: MainAxisSize.min, children: [
         Text(
             '${fcfa(asInt(payment['amount_xof']))} · ${payment['transaction_id']}\n\n'
-            'Remboursez d’abord ce montant depuis le tableau de bord CinetPay. '
+            'Remboursez d’abord ce montant depuis le tableau de bord de l’agrégateur (${payment['provider'] == 'cinetpay' ? 'CinetPay' : 'LigdiCash'}). '
             'Ici, ${payment['kind'] == 'subscription' ? 'le forfait payé est arrêté' : 'les crédits encore disponibles de ce pack sont retirés'}, '
             'et l’opération est inscrite au journal. Cette action est définitive.'),
         const SizedBox(height: 8),

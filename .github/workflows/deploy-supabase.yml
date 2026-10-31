@@ -8,6 +8,8 @@
 #                          synchronisation est journalisée « ignorée »
 #   FCM_SERVICE_ACCOUNT : JSON du compte de service Firebase (Paramètres du projet → Comptes de
 #     service → Générer une clé privée) ; sans lui, les notifications restent dans l'app.
+#   LIGDICASH_API_KEY, LIGDICASH_API_TOKEN : projet API LigdiCash (agrégateur prioritaire par
+#                          défaut ; ordre réglable dans la console → Paiements).
 #   CINETPAY_API_KEY, CINETPAY_SITE_ID, CINETPAY_SECRET_KEY : compte marchand CinetPay (menu
 #                          Intégrations) ; sans eux, les achats sont indisponibles.
 #   GEMINI_API_KEY         clé Google AI Studio (aistudio.google.com) pour l'analyse IA ;
@@ -81,6 +83,8 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          LIGDICASH_API_KEY: ${{ secrets.LIGDICASH_API_KEY }}
+          LIGDICASH_API_TOKEN: ${{ secrets.LIGDICASH_API_TOKEN }}
           CINETPAY_API_KEY: ${{ secrets.CINETPAY_API_KEY }}
           CINETPAY_SITE_ID: ${{ secrets.CINETPAY_SITE_ID }}
           CINETPAY_SECRET_KEY: ${{ secrets.CINETPAY_SECRET_KEY }}
@@ -100,11 +104,16 @@ jobs:
           for k in GEMINI_API_KEY ANTHROPIC_API_KEY GROQ_API_KEY; do
             if [ -n "${!k}" ]; then args+=("$k=${!k}"); ai_keys=$((ai_keys + 1)); fi
           done
-          for k in CINETPAY_API_KEY CINETPAY_SITE_ID CINETPAY_SECRET_KEY; do
+          for k in LIGDICASH_API_KEY LIGDICASH_API_TOKEN CINETPAY_API_KEY CINETPAY_SITE_ID CINETPAY_SECRET_KEY; do
             if [ -n "${!k}" ]; then args+=("$k=${!k}"); fi
           done
-          if [ -z "$CINETPAY_API_KEY" ] || [ -z "$CINETPAY_SITE_ID" ]; then
-            echo "::warning::CINETPAY_API_KEY / CINETPAY_SITE_ID absents : les achats répondront « paiement pas encore configuré »."
+          aggregators=""
+          if [ -n "$LIGDICASH_API_KEY" ] && [ -n "$LIGDICASH_API_TOKEN" ]; then aggregators="$aggregators LigdiCash"; fi
+          if [ -n "$CINETPAY_API_KEY" ] && [ -n "$CINETPAY_SITE_ID" ]; then aggregators="$aggregators CinetPay"; fi
+          if [ -z "$aggregators" ]; then
+            echo "::warning::Aucun agrégateur configuré (LIGDICASH_API_KEY + LIGDICASH_API_TOKEN, ou CINETPAY_API_KEY + CINETPAY_SITE_ID) : les achats répondront « paiement pas encore configuré »."
+          else
+            echo "::notice::Agrégateurs configurés :$aggregators"
           fi
           # Compte de service Firebase (JSON) : compacté sur une ligne pour être transmis tel quel.
           if [ -n "$FCM_SERVICE_ACCOUNT" ]; then
