@@ -14,6 +14,7 @@ import { type CandidateLoad, liveFingerprints, loadCandidates, loadLiveChecks } 
 import {
   buildCoupons,
   type Criteria,
+  dailyLimit,
   defaultSummary,
   filterCandidates,
   outcomeLabel,
@@ -23,7 +24,7 @@ import {
   riskLevel,
   type RiskThresholds,
 } from "../_shared/coupons/generator.ts";
-import { dueSlots, localDate, type Slot } from "../_shared/coupons/schedule.ts";
+import { dueSlots, localDate, localDayBounds, type Slot } from "../_shared/coupons/schedule.ts";
 import { freshAnalysis, generateMatchAnalysis, MATCH_COLUMNS, type MatchRow } from "../_shared/analysis/generate.ts";
 import { loadEngineQuality } from "../_shared/engine/quality.ts";
 import { ENGINE_VERSION } from "../_shared/engine/poisson.ts";
@@ -204,7 +205,20 @@ class CouponEngine {
     }
 
     let created = 0;
+    const perDay = dailyLimit(profile.category, criteria);
     for (const proposal of proposals) {
+      if (perDay > 0) {
+        const first = proposal.selections.reduce((a, s) => (s.kickoffAt < a ? s.kickoffAt : a), proposal.selections[0].kickoffAt);
+        const day = localDate(new Date(first), this.timeZone);
+        const { start, end } = localDayBounds(day, this.timeZone);
+        const { count: sameDay } = await this.db.from("coupons").select("id", { count: "exact", head: true })
+          .eq("category", profile.category).in("status", ["pending_review", "ready", "published"])
+          .gte("first_kickoff_at", start.toISOString()).lt("first_kickoff_at", end.toISOString());
+        if ((sameDay ?? 0) >= perDay) {
+          reasons.push(`« ${profile.name} » déjà en circulation pour le ${day} (${sameDay} sur ${perDay} autorisé${perDay > 1 ? "s" : ""}) : aucun autre n'est créé.`);
+          continue;
+        }
+      }
       const live = await loadLiveChecks(this.db, proposal.selections);
       const qc = qualityCheck(proposal, live, criteria, this.now, taken);
       if (qc.length) {

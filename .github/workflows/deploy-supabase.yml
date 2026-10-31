@@ -186,6 +186,19 @@ jobs:
             echo "::warning::Réglages Auth de base appliqués. Sans SMTP, Supabase envoie un lien (pas de code) et seulement aux membres de l'équipe."
           fi
 
+      - name: Mots de passe compromis refusés (facultatif)
+        # Contrôle des mots de passe divulgués (HaveIBeenPwned) : selon l'offre Supabase, il peut être refusé.
+        run: |
+          status="$(curl -s -o hibp.json -w '%{http_code}' -X PATCH \
+            "https://api.supabase.com/v1/projects/${{ steps.project.outputs.ref }}/config/auth" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" \
+            --data '{"password_hibp_enabled": true}')"
+          if [ "$status" = "200" ]; then
+            echo "::notice::Mots de passe divulgués refusés à l'inscription"
+          else
+            echo "::warning::Contrôle des mots de passe divulgués non activé (HTTP $status) : $(head -c 200 hibp.json)"
+          fi
+
       - name: Vérification avec la clé publique
         run: bash scripts/supabase/smoke_test.sh app/env/prod.json
 

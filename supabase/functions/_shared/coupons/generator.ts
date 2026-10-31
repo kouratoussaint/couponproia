@@ -38,6 +38,8 @@ export interface Criteria {
   require_validated_markets: boolean;
   /** Plafond de sélections d'une même compétition dans un coupon (0 = pas de plafond). */
   max_per_competition: number;
+  /** Coupons de la même catégorie par jour de match (heure locale) ; null = règle de la catégorie. */
+  max_per_day: number | null;
 }
 
 export const DEFAULT_CRITERIA: Criteria = {
@@ -60,6 +62,7 @@ export const DEFAULT_CRITERIA: Criteria = {
   max_odds_age_hours: 12,
   require_validated_markets: true,
   max_per_competition: 0,
+  max_per_day: null,
 };
 
 /** Critères d'un profil (JSON libre) complétés par les valeurs par défaut et bornés. */
@@ -93,6 +96,9 @@ export function parseCriteria(raw: unknown): Criteria {
       ? DEFAULT_CRITERIA.require_validated_markets
       : r.require_validated_markets === true,
     max_per_competition: Math.round(num("max_per_competition", 0, 12)),
+    max_per_day: r.max_per_day === undefined || r.max_per_day === null || !Number.isFinite(Number(r.max_per_day))
+      ? null
+      : Math.round(Math.min(20, Math.max(0, Number(r.max_per_day)))),
   };
   if (c.max_selections < c.min_selections) c.max_selections = c.min_selections;
   if (c.max_total_odd < c.min_total_odd) c.max_total_odd = c.min_total_odd;
@@ -441,3 +447,13 @@ export const CATEGORY_TITLES: Record<string, string> = {
   marche: "Coupon spécial marché",
   strategie: "Coupon stratégie",
 };
+
+/**
+ * Nombre maximal de coupons d'une catégorie pour un même jour de match.
+ * Le « Coupon du jour » est unique par jour, quelle que soit la façon dont il est généré
+ * (créneau, génération continue ou à la demande). 0 = pas de limite.
+ */
+export function dailyLimit(category: string, criteria: Criteria): number {
+  if (criteria.max_per_day !== null) return criteria.max_per_day;
+  return category === "du_jour" ? 1 : 0;
+}

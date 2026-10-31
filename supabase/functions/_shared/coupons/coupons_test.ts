@@ -222,3 +222,18 @@ Deno.test("recherche : une cote cible atteignable n'est pas manquée à cause de
   assert(c, "coupon trouvé");
   assert(c.totalOdd >= 3.4 && c.totalOdd <= 4.6, `cote ${c.totalOdd}`);
 });
+
+Deno.test("coupon du jour : un seul par jour de match, limite réglable pour les autres catégories", async () => {
+  const { dailyLimit, parseCriteria } = await import("./generator.ts");
+  const { localDayBounds } = await import("./schedule.ts");
+  assertEquals(dailyLimit("du_jour", parseCriteria({})), 1);
+  assertEquals(dailyLimit("prudent", parseCriteria({})), 0);
+  assertEquals(dailyLimit("prudent", parseCriteria({ max_per_day: 2 })), 2);
+  assertEquals(dailyLimit("du_jour", parseCriteria({ max_per_day: 0 })), 0);
+  assertEquals(parseCriteria({ max_per_day: 99 }).max_per_day, 20);
+  const ouaga = localDayBounds("2026-10-31", "Africa/Ouagadougou");
+  assertEquals(ouaga.start.toISOString(), "2026-10-31T00:00:00.000Z");
+  assertEquals(ouaga.end.toISOString(), "2026-11-01T00:00:00.000Z");
+  const paris = localDayBounds("2026-07-14", "Europe/Paris");
+  assertEquals(paris.start.toISOString(), "2026-07-13T22:00:00.000Z");
+});

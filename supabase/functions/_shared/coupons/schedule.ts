@@ -21,6 +21,13 @@ export function localDate(at: Date, timeZone: string): string {
   return new Date(at.getTime() + tzOffsetMs(at, timeZone)).toISOString().slice(0, 10);
 }
 
+/** Début et fin (UTC) d'un jour local « AAAA-MM-JJ ». */
+export function localDayBounds(day: string, timeZone: string): { start: Date; end: Date } {
+  const guess = Date.parse(`${day}T00:00:00Z`);
+  const start = guess - tzOffsetMs(new Date(guess), timeZone);
+  return { start: new Date(start), end: new Date(start + 86400_000) };
+}
+
 export interface Slot {
   slotKey: string;
   slotAt: Date;
