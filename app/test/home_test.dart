@@ -6,6 +6,7 @@ import 'package:coupon_pro_ia/features/home/home_screen.dart';
 import 'package:coupon_pro_ia/features/matches/data/insights_models.dart';
 import 'package:coupon_pro_ia/features/matches/data/sports_repository.dart';
 import 'package:coupon_pro_ia/features/profile/data/profile_repository.dart';
+import 'package:coupon_pro_ia/features/onboarding/data/preferences_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,6 +61,8 @@ void main() {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         myProfileProvider.overrideWith((ref) async => null),
+        myPreferencesProvider.overrideWith(
+            (ref) async => UserPreferences(onboardedAt: DateTime(2026))),
         myCreditsProvider.overrideWith((ref) async => Credits.fromJson({
               'plan': 'FREE',
               'total': 2,

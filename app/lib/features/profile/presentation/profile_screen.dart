@@ -10,6 +10,8 @@ import '../../../core/validators.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../billing/billing_repository.dart';
+import '../../onboarding/data/preferences_repository.dart';
+import '../../onboarding/presentation/onboarding_sheet.dart';
 import '../../assistant/data/assistant_repository.dart';
 import '../../system/system_providers.dart';
 import '../data/profile_repository.dart';
@@ -92,6 +94,23 @@ class ProfileScreen extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.tune),
+                    title: const Text('Mes préférences'),
+                    subtitle: Text(() {
+                      final p = ref.watch(myPreferencesProvider).valueOrNull;
+                      final n = p?.favoriteCompetitions.length ?? 0;
+                      return [
+                        n == 0
+                            ? 'Aucune compétition suivie'
+                            : '$n compétition${n > 1 ? 's' : ''} suivie${n > 1 ? 's' : ''}',
+                        if (p?.level != null)
+                          'niveau ${p!.level!.label.toLowerCase()}',
+                      ].join(' · ');
+                    }()),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => showOnboarding(context, fromProfile: true),
+                  ),
                   ListTile(
                     leading: const Icon(Icons.workspace_premium_outlined),
                     title: const Text('Abonnement'),

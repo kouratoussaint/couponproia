@@ -8,6 +8,7 @@ import '../../analysis/data/analysis_repository.dart';
 import '../../analysis/data/match_reading.dart';
 import '../../analysis/presentation/analysis_section.dart';
 import '../../lab/data/lab_repository.dart';
+import '../../onboarding/data/preferences_repository.dart';
 import '../../system/system_providers.dart';
 import '../data/insights_models.dart';
 import '../data/sports_format.dart';
@@ -77,6 +78,12 @@ class PronosticTab extends ConsumerWidget {
                 if (played) ActualResultNotice(fiche: a.fiche, match: match),
                 if (pick != null)
                   MainPickCard(pick: pick, match: match, analysis: a),
+                if (ref
+                        .watch(myPreferencesProvider)
+                        .valueOrNull
+                        ?.showExplanations ??
+                    true)
+                  const GlossaryCard(),
                 ProbabilitiesCard(fiche: a.fiche, home: home, away: away),
                 ScoresCard(fiche: a.fiche, max: 3),
                 const SizedBox(height: 8),
@@ -470,3 +477,57 @@ class _OddTile extends StatelessWidget {
 
 /// Couleur de chaque équipe dans les comparatifs (constante dans toute la fiche).
 Color teamColor(bool home) => home ? BrandColors.vertIA : BrandColors.orange;
+
+/// Définitions des termes (masquées pour un utilisateur qui se déclare expert).
+class GlossaryCard extends StatelessWidget {
+  const GlossaryCard({super.key});
+
+  static const entries = [
+    (
+      'Estimation du modèle',
+      'La probabilité calculée par notre modèle à partir des résultats enregistrés. '
+          'C’est une estimation, pas une certitude.'
+    ),
+    (
+      'Cote juste',
+      'La cote qui correspondrait exactement à l’estimation (1 ÷ probabilité). '
+          'Une cote du marché plus haute que la cote juste est plus intéressante.'
+    ),
+    (
+      'Écart',
+      'La différence entre l’estimation du modèle et celle du marché (cotes, marge retirée).'
+    ),
+    (
+      'Fiabilité',
+      'Dépend du nombre de matchs enregistrés pour chaque équipe : peu de matchs, estimation moins solide.'
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Theme(
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          leading: Icon(Icons.help_outline, color: theme.colorScheme.primary),
+          title: const Text('Comprendre ces chiffres'),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          expandedCrossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final (term, text) in entries)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text.rich(TextSpan(children: [
+                  TextSpan(
+                      text: '$term : ',
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  TextSpan(text: text),
+                ])),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

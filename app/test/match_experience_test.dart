@@ -9,6 +9,7 @@ import 'package:coupon_pro_ia/features/matches/data/sports_repository.dart';
 import 'package:coupon_pro_ia/features/matches/presentation/match_detail_screen.dart';
 import 'package:coupon_pro_ia/features/matches/presentation/match_tabs.dart';
 import 'package:coupon_pro_ia/features/system/system_providers.dart';
+import 'package:coupon_pro_ia/features/onboarding/data/preferences_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -173,6 +174,14 @@ void main() {
         m(4, 5, 'scheduled', '2026-10-30T18:00:00Z'),
       ]);
       expect(list.map((x) => x.id), [4, 2, 1]);
+      // Compétition suivie : passe devant, même moins prioritaire.
+      final fav = highlightedMatches([
+        m(1, 50, 'scheduled', '2026-10-30T20:00:00Z'),
+        m(2, 5, 'scheduled', '2026-10-30T21:00:00Z'),
+      ], favorites: {
+        50
+      });
+      expect(fav.map((x) => x.id), [1, 2]);
       expect(longDate(DateTime(2026, 10, 30)), 'vendredi 30 octobre');
     });
   });
@@ -183,6 +192,8 @@ void main() {
           featureFlagsProvider
               .overrideWith((ref) async => {'match_analysis': true}),
           myPermissionsProvider.overrideWith((ref) async => <String>{}),
+          myPreferencesProvider.overrideWith((ref) async => UserPreferences(
+              level: UserLevel.expert, onboardedAt: DateTime(2026))),
           latestEvaluationProvider.overrideWith((ref) async => null),
           currentAnalysisProvider.overrideWith(
               (ref, id) => AsyncData(analysis ? lilleLensAnalysis() : null)),

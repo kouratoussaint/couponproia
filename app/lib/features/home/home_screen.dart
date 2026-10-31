@@ -15,6 +15,8 @@ import '../matches/data/sports_format.dart';
 import '../matches/data/sports_models.dart';
 import '../matches/data/sports_repository.dart';
 import '../matches/presentation/sports_widgets.dart';
+import '../onboarding/data/preferences_repository.dart';
+import '../onboarding/presentation/onboarding_sheet.dart';
 import '../profile/data/profile_repository.dart';
 import '../shell/app_drawer.dart';
 
@@ -45,11 +47,15 @@ const _months = [
 String longDate(DateTime d) =>
     '${_weekdays[d.weekday - 1]} ${d.day} ${_months[d.month - 1]}';
 
-/// Matchs à mettre en avant : pas encore terminés, compétitions prioritaires d'abord.
-List<MatchSummary> highlightedMatches(List<MatchSummary> all, {int max = 5}) {
+/// Matchs à mettre en avant : pas encore terminés, compétitions suivies puis prioritaires d'abord.
+List<MatchSummary> highlightedMatches(List<MatchSummary> all,
+    {int max = 5, Set<int> favorites = const {}}) {
+  int fav(MatchSummary m) => favorites.contains(m.competition.id) ? 0 : 1;
   final open =
       all.where((m) => m.status == MatchStatus.scheduled || m.isLive).toList()
         ..sort((a, b) {
+          final f = fav(a).compareTo(fav(b));
+          if (f != 0) return f;
           final p = a.competition.priority.compareTo(b.competition.priority);
           return p != 0 ? p : a.kickoffAt.compareTo(b.kickoffAt);
         });
@@ -133,6 +139,7 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
+            const OnboardingTrigger(),
             const _CouponOfTheDay(),
             const _FeaturedMatch(),
             _MatchesBlock(
@@ -388,7 +395,12 @@ class _MatchesBlock extends ConsumerWidget {
           loading: () => const LinearProgressIndicator(),
           error: (e, _) => Text(userMessageFor(e)),
           data: (all) {
-            final shown = highlightedMatches(all);
+            final shown = highlightedMatches(all,
+                favorites: ref
+                        .watch(myPreferencesProvider)
+                        .valueOrNull
+                        ?.favoriteCompetitions ??
+                    const {});
             if (shown.isEmpty) {
               return Card(
                 child: Padding(
@@ -536,5 +548,29 @@ class _Shortcuts extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Propose le premier lancement une seule fois (tant qu'il n'est ni terminé ni passé).
+class OnboardingTrigger extends ConsumerStatefulWidget {
+  const OnboardingTrigger({super.key});
+
+  @override
+  ConsumerState<OnboardingTrigger> createState() => _OnboardingTriggerState();
+}
+
+class _OnboardingTriggerState extends ConsumerState<OnboardingTrigger> {
+  static bool _shownThisSession = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final prefs = ref.watch(myPreferencesProvider).valueOrNull;
+    if (prefs != null && prefs.needsOnboarding && !_shownThisSession) {
+      _shownThisSession = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showOnboarding(context);
+      });
+    }
+    return const SizedBox.shrink();
   }
 }
