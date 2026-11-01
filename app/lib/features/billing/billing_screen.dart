@@ -31,7 +31,11 @@ const _statusLabels = {
 /// Abonnement et crédits : forfaits (mensuel ou annuel), packs de crédits, paiement Mobile Money
 /// dans la page de l'opérateur, puis vérification par le serveur avant tout droit accordé.
 class BillingScreen extends ConsumerStatefulWidget {
-  const BillingScreen({super.key});
+  const BillingScreen({super.key, this.renewPlan, this.renewAnnual = false});
+
+  /// Renouvellement en un geste (lien d'une notification ou du bandeau d'accueil).
+  final String? renewPlan;
+  final bool renewAnnual;
 
   @override
   ConsumerState<BillingScreen> createState() => _BillingScreenState();
@@ -46,6 +50,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
   final _promoCtrl = TextEditingController();
   PromoQuote? _promo;
   bool _checkingPromo = false;
+  bool _renewAsked = false;
 
   @override
   void initState() {
@@ -98,6 +103,36 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Renouvellement en un geste : même forfait et même durée, après confirmation.
+  Future<void> _confirmRenewal(PlanOffer offer, int discount) async {
+    final annual = widget.renewAnnual;
+    final price = annual
+        ? (offer.monthlyXof * 12 * (100 - discount) / 100).round()
+        : offer.monthlyXof;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text('Renouveler ${offer.name}'),
+        content: Text(
+            '${annual ? '12 mois' : '1 mois'} pour ${fcfa(price)}. Vous serez redirigé vers la page de paiement '
+            'sécurisée de l’opérateur ; la durée s’ajoute à la fin de votre forfait actuel.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(d, false),
+              child: const Text('Plus tard')),
+          FilledButton(
+              onPressed: () => Navigator.pop(d, true),
+              child: const Text('Renouveler')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _annual = annual);
+    await _pay(() => ref
+        .read(billingRepositoryProvider)
+        .checkoutPlan(offer.code, annual: annual));
   }
 
   Future<void> _applyPromo() async {
@@ -177,6 +212,14 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
     final maxPacks =
         (settings['pricing.credit_pack_max_quantity'] as num?)?.toInt() ?? 5;
     final current = ent.valueOrNull;
+    if (!_renewAsked && widget.renewPlan != null && plans.isNotEmpty) {
+      _renewAsked = true;
+      final offer = plans.where((p) => p.code == widget.renewPlan).firstOrNull;
+      if (offer != null && offer.monthlyXof > 0) {
+        WidgetsBinding.instance
+            .addPostFrameCallback((_) => _confirmRenewal(offer, discount));
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Abonnement et crédits')),

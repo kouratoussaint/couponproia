@@ -14,6 +14,7 @@ import '../../system/system_providers.dart';
 import '../data/coupon_models.dart';
 import '../data/coupon_phase.dart';
 import '../data/coupon_repository.dart';
+import 'coupon_edit_screen.dart' show confirmAiOverride;
 import 'coupon_widgets.dart';
 
 const _triggerLabels = {
@@ -107,31 +108,39 @@ class _GenerationsAdminScreenState
     }
   }
 
-  Future<void> _publishNow(Coupon c) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (d) => AlertDialog(
-        title: const Text('Publier maintenant ?'),
-        content: Text(
-            '« ${c.title} » sera visible tout de suite${c.status == 'pending_review' ? ' (il est aussi validé)' : ''}. '
-            'Un dernier contrôle vérifie que chaque match est toujours programmé. Une fois publié, '
-            'le coupon ne peut plus être modifié.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(d, false),
-              child: const Text('Annuler')),
-          FilledButton(
-              onPressed: () => Navigator.pop(d, true),
-              child: const Text('Publier')),
-        ],
-      ),
-    );
+  Future<void> _publishNow(Coupon c, {bool force = false}) async {
+    final ok = force ||
+        true ==
+            await showDialog<bool>(
+              context: context,
+              builder: (d) => AlertDialog(
+                title: const Text('Publier maintenant ?'),
+                content: Text(
+                    '« ${c.title} » sera visible tout de suite${c.status == 'pending_review' ? ' (il est aussi validé)' : ''}. '
+                    'Un dernier contrôle vérifie que chaque match est toujours programmé. Une fois publié, '
+                    'le coupon ne peut plus être modifié.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(d, false),
+                      child: const Text('Annuler')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(d, true),
+                      child: const Text('Publier')),
+                ],
+              ),
+            );
     if (ok != true) return;
     setState(() => _publishing = c.id);
     try {
-      await ref.read(couponRepositoryProvider).publishNow(c.id);
+      await ref.read(couponRepositoryProvider).publishNow(c.id, force: force);
       _refresh();
       if (mounted) showMessage(context, 'Coupon publié.');
+    } on CouponAiConflict catch (e) {
+      if (mounted) setState(() => _publishing = null);
+      if (mounted &&
+          await confirmAiOverride(context, e.items, 'Publier quand même')) {
+        await _publishNow(c, force: true);
+      }
     } catch (e) {
       if (mounted) {
         showMessage(
@@ -285,6 +294,14 @@ class _GenerationsAdminScreenState
                                       label: const Text('Valider'),
                                     ),
                                   ],
+                                  if (permissions.contains('coupons.edit'))
+                                    OutlinedButton.icon(
+                                      onPressed: () => context
+                                          .push(AppRoutes.couponEditFor(c.id))
+                                          .then((_) => _refresh()),
+                                      icon: const Icon(Icons.edit_outlined),
+                                      label: const Text('Modifier'),
+                                    ),
                                   if (canPublish)
                                     FilledButton.icon(
                                       onPressed: _publishing == null

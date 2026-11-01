@@ -52,6 +52,7 @@ class NotificationPrefs {
     this.analyses = true,
     this.betReminders = true,
     this.live = true,
+    this.news = true,
     this.couponCategories = const {},
     this.quietStart = 23,
     this.quietEnd = 7,
@@ -69,6 +70,7 @@ class NotificationPrefs {
         analyses: j['notify_analyses'] != false,
         betReminders: j['notify_bet_reminders'] != false,
         live: j['notify_live'] != false,
+        news: j['notify_news'] != false,
         couponCategories: {
           for (final c in (j['coupon_categories'] as List? ?? const [])) '$c'
         },
@@ -86,6 +88,7 @@ class NotificationPrefs {
   final bool analyses;
   final bool betReminders;
   final bool live;
+  final bool news;
 
   /// Types de coupons notifiés ; vide = tous.
   final Set<String> couponCategories;
@@ -95,7 +98,7 @@ class NotificationPrefs {
   static const columns =
       'notifications_enabled, notify_coupons, notify_results, notify_tipsters, '
       'notify_matches, notify_morning, notify_credits, notify_analyses, notify_bet_reminders, '
-      'notify_live, coupon_categories, quiet_start, quiet_end';
+      'notify_live, notify_news, coupon_categories, quiet_start, quiet_end';
 
   bool get hasQuietHours => quietStart != quietEnd;
 }
@@ -142,7 +145,16 @@ const notificationKinds = [
     'Scores en direct de mes paris',
     'À chaque but sur un match de votre carnet ou d’un coupon dont vous suivez la cote'
   ),
-  ('notify_credits', 'Crédits IA', 'Quand vos crédits sont presque épuisés'),
+  (
+    'notify_credits',
+    'Crédits IA et forfait',
+    'Crédits presque épuisés, forfait qui se termine (3 jours avant, la veille)'
+  ),
+  (
+    'notify_news',
+    'Annonces et offres',
+    'Nouveautés de l’application et offres de l’équipe, rarement'
+  ),
 ];
 
 bool prefValue(NotificationPrefs p, String column) => switch (column) {
@@ -154,6 +166,7 @@ bool prefValue(NotificationPrefs p, String column) => switch (column) {
       'notify_analyses' => p.analyses,
       'notify_bet_reminders' => p.betReminders,
       'notify_live' => p.live,
+      'notify_news' => p.news,
       _ => p.credits,
     };
 

@@ -35,6 +35,8 @@ abstract final class AppRoutes {
   static const couponDetail = '/coupon/:id';
 
   static String couponDetailFor(String id) => '/coupon/$id';
+  static const couponEdit = '/coupon/:id/modifier';
+  static String couponEditFor(String id) => '/coupon/$id/modifier';
   static const lab = '/laboratoire';
   static const performance = '/performances';
   static const billing = '/abonnement';
@@ -67,6 +69,8 @@ abstract final class AppRoutes {
   static const adminAi = '/admin/ia';
   static const adminFeatured = '/admin/analyse-offerte';
   static const adminHealth = '/admin/sante';
+  static const adminGrowth = '/admin/conversion';
+  static const adminCampaigns = '/admin/notifications';
   static const adminLegal = '/admin/documents';
   static const adminAudit = '/admin/journal';
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/errors/error_messages.dart';
+import '../../../core/share_links.dart';
 import '../../analysis/data/analysis_repository.dart';
 import '../../lab/presentation/manual_coupon_bar.dart';
 import '../data/insights_models.dart';
@@ -25,8 +27,18 @@ class MatchDetailScreen extends ConsumerWidget {
     final match = ref.watch(matchProvider(matchId));
     return Scaffold(
       bottomNavigationBar: const ManualCouponBar(),
-      appBar:
-          AppBar(title: Text(match.valueOrNull?.competition.name ?? 'Match')),
+      appBar: AppBar(
+        title: Text(match.valueOrNull?.competition.name ?? 'Match'),
+        actions: [
+          if (match.valueOrNull case final m?)
+            IconButton(
+              tooltip: 'Partager',
+              icon: const Icon(Icons.share_outlined),
+              onPressed: () => SharePlus.instance.share(ShareParams(
+                  text: matchShareText(m, shareLink(ref, matchId: m.id)))),
+            ),
+        ],
+      ),
       body: match.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
@@ -293,3 +305,12 @@ class _FollowTeamButton extends ConsumerWidget {
     );
   }
 }
+
+/// Texte de partage d'un match : affiche, date et lien qui ouvre la fiche dans l'application.
+String matchShareText(MatchSummary m, String? link) => [
+      '${m.home.name} – ${m.away.name}',
+      '${m.competition.name} · ${shortDate(m.kickoffAt)} à ${timeLabel(m.kickoffAt)}',
+      'Probabilités, forme et cotes sur Coupon Pro IA.',
+      if (link != null) link,
+      'Estimations, aucune certitude. 18+',
+    ].join('\n');

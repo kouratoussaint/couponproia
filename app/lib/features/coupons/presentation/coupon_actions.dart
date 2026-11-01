@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/router/app_routes.dart';
+import '../../../core/share_links.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../admin/data/admin_repository.dart';
 import '../../analysis/data/analysis_format.dart';
@@ -17,12 +18,13 @@ import 'bookmaker_actions.dart';
 
 /// Texte d'un coupon pour le partage ou le presse-papiers (jamais pour un coupon réservé :
 /// son contenu est masqué par le serveur).
-String couponShareText(Coupon c) => [
+String couponShareText(Coupon c, {String? link}) => [
       'Coupon Pro IA · ${categoryLabels[c.category] ?? c.category}',
       c.title,
       for (final s in c.selections)
         '• ${s.match.home} – ${s.match.away} : ${outcomeKeyLabel(s.key, s.match.home, s.match.away)} (cote ${decimal(s.odd)})',
       'Cote totale ${decimal(c.totalOdd)} · probabilité estimée ${pct(c.combinedProbability)}',
+      if (link != null) 'Ouvrir dans l’app : $link',
       'Estimations, aucune certitude. Pariez de façon responsable.',
     ].join('\n');
 
@@ -108,9 +110,11 @@ Future<void> showCouponActions(
     case 'open':
       await context.push(AppRoutes.couponDetailFor(c.id));
     case 'share':
-      await SharePlus.instance.share(ShareParams(text: couponShareText(c)));
+      await SharePlus.instance.share(ShareParams(
+          text: couponShareText(c, link: shareLink(ref, couponId: c.id))));
     case 'copy':
-      await Clipboard.setData(ClipboardData(text: couponShareText(c)));
+      await Clipboard.setData(ClipboardData(
+          text: couponShareText(c, link: shareLink(ref, couponId: c.id))));
       if (context.mounted) showMessage(context, 'Sélections copiées.');
     case 'simulate':
       await showStakeSimulator(context, [couponSim(c)]);

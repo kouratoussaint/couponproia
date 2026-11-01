@@ -22,6 +22,8 @@ import '../matches/data/sports_format.dart';
 import '../matches/data/sports_models.dart';
 import '../matches/data/sports_repository.dart';
 import '../matches/presentation/sports_widgets.dart';
+import '../billing/billing_repository.dart';
+import '../billing/renewal_banner.dart';
 import '../community/data/community_repository.dart';
 import '../notifications/data/notifications_repository.dart';
 import '../notifications/presentation/notifications_screens.dart';
@@ -111,6 +113,7 @@ class HomeScreen extends ConsumerWidget {
 
     Future<void> refresh() async {
       ref.invalidate(myProfileProvider);
+      ref.invalidate(renewalProvider);
       ref.invalidate(publishedCouponsProvider);
       ref.invalidate(featuredMatchProvider);
       ref.invalidate(matchesOfDayProvider(today));
@@ -154,6 +157,7 @@ class HomeScreen extends ConsumerWidget {
                     ?.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 16),
             const OnboardingTrigger(),
+            const RenewalBanner(),
             _StatusTiles(day: today),
             _LiveBlock(day: today),
             const SizedBox(height: 16),

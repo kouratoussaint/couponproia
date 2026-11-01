@@ -26,6 +26,7 @@ const offlineRpcs = {
   'tipster_stats',
   'community_feed',
   'post_detail',
+  'my_renewal',
 };
 
 /// Client HTTP de Supabase : enregistre les lectures réussies (tables et fonctions de lecture) et

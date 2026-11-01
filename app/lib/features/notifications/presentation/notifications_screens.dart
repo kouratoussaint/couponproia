@@ -21,6 +21,11 @@ const _kindIcons = {
   'credits': Icons.bolt,
   'odds': Icons.trending_down,
   'budget': Icons.shield_outlined,
+  'analysis': Icons.query_stats,
+  'reminder': Icons.alarm,
+  'live': Icons.sports_soccer,
+  'billing': Icons.workspace_premium_outlined,
+  'news': Icons.campaign_outlined,
   'system': Icons.info_outline,
 };
 

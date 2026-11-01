@@ -96,6 +96,13 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
                 Icons.card_giftcard,
                 ConsoleColors.money,
                 AppRoutes.adminFeatured),
+          if (perms.contains('campaigns.send'))
+            const ConsoleEntry(
+                'Notifications ciblées',
+                'Un message à un segment',
+                Icons.campaign_outlined,
+                ConsoleColors.users,
+                AppRoutes.adminCampaigns),
           if (perms.contains('moderation.manage'))
             ConsoleEntry(
                 'Modération',
@@ -156,6 +163,13 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
                 Icons.local_offer_outlined,
                 ConsoleColors.promo,
                 AppRoutes.adminPromos),
+            if (perms.contains('growth.read'))
+              const ConsoleEntry(
+                  'Conversion et rétention',
+                  'Entonnoir, J7, J30, renouvellements',
+                  Icons.trending_up,
+                  ConsoleColors.money,
+                  AppRoutes.adminGrowth),
             const ConsoleEntry('Coûts', 'Coût par utilisateur actif',
                 Icons.query_stats, ConsoleColors.costs, AppRoutes.adminCosts),
           ],

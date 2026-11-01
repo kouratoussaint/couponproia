@@ -272,7 +272,7 @@ export function totalOddOf(selections: Pick<Candidate, "odd">[]): number {
   return round(selections.reduce((p, s) => p * s.odd, 1), 2);
 }
 
-function propose(selections: Candidate[]): ProposedCoupon {
+export function propose(selections: Candidate[]): ProposedCoupon {
   const sorted = [...selections].sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt) || a.matchId - b.matchId);
   const implied = sorted.every((s) => s.impliedProbability !== null)
     ? round(sorted.reduce((p, s) => p * (s.impliedProbability as number), 1), 4)

@@ -92,3 +92,7 @@ verify_jwt = false
 [functions.ops-monitor]
 # Appelée par pg_cron (secret partagé) ou par la console (jeton vérifié dans la fonction)
 verify_jwt = false
+
+[functions.share]
+# Lien public de partage (ouvert depuis WhatsApp, un navigateur…) : sans jeton.
+verify_jwt = false

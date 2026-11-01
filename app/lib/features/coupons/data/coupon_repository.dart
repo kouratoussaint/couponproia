@@ -162,19 +162,64 @@ class CouponRepository {
   }
 
   /// Publication immédiate (coupon programmé ou à valider), après un dernier contrôle serveur.
-  Future<void> publishNow(String couponId) async {
+  Future<void> publishNow(String couponId, {bool force = false}) async {
     try {
-      await _client.functions.invoke('coupon-engine',
-          body: {'job': 'publish_now', 'coupon_id': couponId});
+      await _client.functions.invoke('coupon-engine', body: {
+        'job': 'publish_now',
+        'coupon_id': couponId,
+        if (force) 'force': true,
+      });
     } on FunctionException catch (e) {
-      final d = e.details is Map
-          ? Map<String, dynamic>.from(e.details as Map)
-          : const {};
-      throw AnalysisException(d['message'] as String? ??
-          (e.status == 403
-              ? 'Action réservée aux administrateurs.'
-              : 'Publication impossible pour le moment.'));
+      throw _engineError(e, 'Publication impossible pour le moment.');
     }
+  }
+
+  /// Modification d'un coupon généré (avant publication) : sélections remplacées, totaux recalculés.
+  Future<void> editCoupon(String couponId,
+      {required List<({int matchId, String key})> selections,
+      required String note,
+      String? title,
+      bool force = false}) async {
+    try {
+      await _client.functions.invoke('coupon-engine', body: {
+        'job': 'edit_coupon',
+        'coupon_id': couponId,
+        'selections': [
+          for (final s in selections) {'match_id': s.matchId, 'key': s.key}
+        ],
+        'note': note,
+        if (title != null) 'title': title,
+        if (force) 'force': true,
+      });
+    } on FunctionException catch (e) {
+      throw _engineError(e, 'Modification impossible pour le moment.');
+    }
+  }
+
+  /// Copie d'un coupon retiré, à modifier puis à valider. Renvoie l'identifiant de la copie.
+  Future<String> duplicateCoupon(String couponId) async {
+    try {
+      final res = await _client.functions.invoke('coupon-engine',
+          body: {'job': 'duplicate_coupon', 'coupon_id': couponId});
+      return (res.data as Map)['id'] as String;
+    } on FunctionException catch (e) {
+      throw _engineError(e, 'Duplication impossible pour le moment.');
+    }
+  }
+
+  static Exception _engineError(FunctionException e, String fallback) {
+    final d = e.details is Map
+        ? Map<String, dynamic>.from(e.details as Map)
+        : const <String, dynamic>{};
+    if (d['error'] == 'ai_contradiction') {
+      return CouponAiConflict([
+        for (final i in (d['items'] as List? ?? const [])) '$i',
+      ]);
+    }
+    return AnalysisException(d['message'] as String? ??
+        (e.status == 403
+            ? 'Action réservée au super administrateur.'
+            : fallback));
   }
 
   Future<Map<String, dynamic>> generateNow(int profileId) async {
@@ -235,6 +280,13 @@ final withdrawnCouponsProvider = FutureProvider.autoDispose<List<Coupon>>(
 );
 
 /// Après une action (retrait, suppression, génération) : toutes les listes sont relues.
+/// Listes de l'équipe (à valider, programmés, historique) et listes publiques.
+void invalidateCouponAdminLists(WidgetRef ref) {
+  ref.invalidate(unpublishedCouponsProvider);
+  ref.invalidate(couponHistoryProvider);
+  invalidateCouponLists(ref);
+}
+
 void invalidateCouponLists(WidgetRef ref) {
   ref.invalidate(publishedCouponsProvider);
   ref.invalidate(activeCouponsProvider);
@@ -270,3 +322,11 @@ final unpublishedCouponsProvider = FutureProvider.autoDispose<List<Coupon>>(
 final couponHistoryProvider = FutureProvider.autoDispose<List<Coupon>>(
   (ref) => ref.watch(couponRepositoryProvider).history(),
 );
+
+/// Une sélection contredit l'analyse IA de son match : l'équipe peut passer outre.
+class CouponAiConflict implements Exception {
+  const CouponAiConflict(this.items);
+  final List<String> items;
+  @override
+  String toString() => items.join('\n');
+}

@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../features/journal/presentation/journal_screen.dart';
 import '../../features/admin/presentation/ai_providers_screen.dart';
 import '../../features/admin/presentation/featured_admin_screen.dart';
+import '../../features/admin/presentation/campaigns_admin_screen.dart';
+import '../../features/coupons/presentation/coupon_edit_screen.dart';
+import '../../features/admin/presentation/growth_admin_screen.dart';
 import '../../features/admin/presentation/health_admin_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/analysis/presentation/engine_admin_screen.dart';
@@ -173,7 +176,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.billing,
-        builder: (context, state) => const BillingScreen(),
+        builder: (context, state) => BillingScreen(
+          renewPlan: state.uri.queryParameters['renouveler'],
+          renewAnnual: state.uri.queryParameters['periode'] == 'annual',
+        ),
       ),
       GoRoute(
         path: AppRoutes.performance,
@@ -223,6 +229,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.adminAudit,
         builder: (context, state) => const AuditAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.couponEdit,
+        builder: (context, state) =>
+            CouponEditScreen(couponId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.adminGrowth,
+        builder: (context, state) => const GrowthAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminCampaigns,
+        builder: (context, state) => const CampaignsAdminScreen(),
       ),
       GoRoute(
         path: AppRoutes.adminHealth,

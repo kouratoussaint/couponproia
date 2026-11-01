@@ -16,6 +16,9 @@ import 'core/offline/offline_http_client.dart';
 import 'core/offline/offline_store.dart';
 import 'core/providers.dart';
 
+/// Écoute du retour dans l'app (jour d'activité), conservée pendant toute la vie de l'app.
+AppLifecycleListener? appLifecycle;
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -55,6 +58,22 @@ Future<void> main() async {
       httpClient:
           OfflineHttpClient(http.Client(), store, onSlow: reporter.recordSlow),
     );
+    // Jour d'activité (rétention) : une fois par jour, à l'ouverture et au retour dans l'app.
+    Future<void> touchActivity() async {
+      final client = Supabase.instance.client;
+      final user = client.auth.currentUser;
+      if (user == null) return;
+      final now = DateTime.now();
+      final today = '${now.year}-${now.month}-${now.day}';
+      final key = 'activity_day_${user.id}';
+      if (prefs.getString(key) == today) return;
+      try {
+        await client.rpc('touch_activity');
+        await prefs.setString(key, today);
+      } catch (_) {}
+    }
+
+    appLifecycle = AppLifecycleListener(onResume: touchActivity);
     Supabase.instance.client.auth.onAuthStateChange.listen((s) {
       if (s.event == AuthChangeEvent.signedOut) {
         store.clear();
@@ -62,6 +81,7 @@ Future<void> main() async {
       } else if (s.event == AuthChangeEvent.signedIn ||
           s.event == AuthChangeEvent.initialSession) {
         reporter.flush();
+        touchActivity();
       }
     });
   }

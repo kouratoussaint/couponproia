@@ -20,6 +20,7 @@ import {
 import {
   blendWithMarket,
   buildCoupons,
+  type Candidate,
   type Criteria,
   dailyLimit,
   defaultSummary,
@@ -27,12 +28,14 @@ import {
   filterCandidates,
   outcomeLabel,
   parseCriteria,
+  propose,
   type ProposedCoupon,
   qualityCheck,
   recordUsage,
   riskLevel,
   type RiskThresholds,
 } from "../_shared/coupons/generator.ts";
+import { aiJustification, type AiPosition, aiPositionOf, contradictions } from "../_shared/coupons/ai_consistency.ts";
 import { dueSlots, localDate, localDayBounds, type Slot } from "../_shared/coupons/schedule.ts";
 import { freshAnalysis, generateMatchAnalysis, MATCH_COLUMNS, type MatchRow } from "../_shared/analysis/generate.ts";
 import { loadEngineQuality } from "../_shared/engine/quality.ts";
@@ -73,6 +76,10 @@ class CouponEngine {
   private settings: Record<string, unknown> = {};
   private candidateCache = new Map<number, Promise<CandidateLoad>>();
   private quality: Awaited<ReturnType<typeof loadEngineQuality>> = null;
+  /** Position de l'IA par match (null = analyse sans pronostic ou indisponible). */
+  private positions = new Map<number, AiPosition | null>();
+  /** Analyses IA que ce passage peut encore lancer (Coupon du jour). */
+  private aiBudget = 6;
 
   constructor(private readonly db: SupabaseClient, private readonly now: Date) {}
 
@@ -120,6 +127,105 @@ class CouponEngine {
       );
     }
     return this.candidateCache.get(w)!;
+  }
+
+  // -------------------------------------------------------------------------
+  /** Positions de l'IA déjà connues (analyses récentes), sans nouvel appel à l'IA. */
+  async knownPositions(matchIds: number[]): Promise<Map<number, AiPosition | null>> {
+    const out = new Map<number, AiPosition | null>();
+    const missing = matchIds.filter((id) => {
+      if (this.positions.has(id)) out.set(id, this.positions.get(id)!);
+      return !this.positions.has(id);
+    });
+    const ttl = Number(this.settings["ai.analysis_ttl_hours"] ?? 12);
+    const since = new Date(this.now.getTime() - Math.max(ttl, 24) * 3600_000).toISOString();
+    for (let i = 0; i < missing.length; i += 100) {
+      const { data, error } = await this.db.from("match_analyses").select("match_id, analysis, created_at")
+        .in("match_id", missing.slice(i, i + 100)).eq("status", "ok").gte("created_at", since)
+        .order("created_at", { ascending: false });
+      if (error) throw new Error(error.message);
+      for (const r of data ?? []) {
+        if (out.has(r.match_id)) continue;
+        const pos = aiPositionOf(r.analysis);
+        out.set(r.match_id, pos);
+        this.positions.set(r.match_id, pos);
+      }
+    }
+    return out;
+  }
+
+  /** Position de l'IA, en lançant l'analyse si besoin (budget limité). null = pas de pronostic exploitable. */
+  async ensurePosition(matchId: number): Promise<AiPosition | null> {
+    const known = await this.knownPositions([matchId]);
+    if (known.has(matchId)) return known.get(matchId) ?? null;
+    if (this.aiBudget <= 0) return null;
+    const { data: flag } = await this.db.from("feature_flags").select("enabled").eq("key", "match_analysis").maybeSingle();
+    if (!flag?.enabled) return null;
+    const { data: row } = await this.db.from("matches").select(MATCH_COLUMNS).eq("id", matchId).maybeSingle();
+    const m = row as unknown as MatchRow | null;
+    if (!m || !m.competition || !m.home || !m.away) return null;
+    const { data: prompt } = await this.db.from("ai_prompts").select("key, version, system_prompt")
+      .eq("key", "match_analysis").eq("is_active", true).maybeSingle();
+    if (!prompt) return null;
+    this.aiBudget--;
+    const saved = await generateMatchAnalysis(this.db, m, prompt, null);
+    const pos = saved.status === "ok" ? aiPositionOf(saved.analysis) : null;
+    this.positions.set(matchId, pos);
+    return pos;
+  }
+
+  /**
+   * Coupon du jour : chaque match retenu passe par l'analyse IA. Un match sans pronostic de l'IA est
+   * écarté ; une sélection qui contredit le pronostic est remplacée. Jusqu'à 4 recherches.
+   */
+  private async aiGatedProposals(
+    kept: Candidate[],
+    criteria: Criteria,
+    taken: Set<string>,
+    reasons: string[],
+    details: Record<string, unknown>,
+  ): Promise<ProposedCoupon[]> {
+    let pool = [...kept];
+    const noReco = new Set<number>();
+    let replaced = 0;
+    for (let round = 0; round < 4; round++) {
+      if (new Set(pool.map((c) => c.matchId)).size < criteria.min_selections) break;
+      const proposals = buildCoupons(pool, criteria, new Set(taken));
+      if (!proposals.length) break;
+      let clean = true;
+      for (const sel of proposals.flatMap((p) => p.selections)) {
+        const pos = await this.ensurePosition(sel.matchId);
+        if (!pos?.recommendation) {
+          noReco.add(sel.matchId);
+          pool = pool.filter((c) => c.matchId !== sel.matchId);
+          clean = false;
+        } else if (contradictions(sel.key, pos).length) {
+          pool = pool.filter((c) => c.matchId !== sel.matchId || contradictions(c.key, pos).length === 0);
+          replaced++;
+          clean = false;
+        }
+      }
+      if (clean) {
+        details.ai_gate = { analysed: [...this.positions.keys()].length, no_recommendation: noReco.size, replaced };
+        return proposals;
+      }
+    }
+    details.ai_gate = { analysed: [...this.positions.keys()].length, no_recommendation: noReco.size, replaced, failed: true };
+    reasons.push(
+      `Coupon du jour : pas assez de matchs avec un pronostic de l'IA cohérent (${noReco.size} sans pronostic, ${replaced} sélection(s) contraire(s) écartée(s), analyses restantes : ${this.aiBudget}).`,
+    );
+    return [];
+  }
+
+  /** Justification de chaque sélection : l'explication de l'IA quand elle existe, puis les chiffres. */
+  private withAiJustifications(p: ProposedCoupon): ProposedCoupon {
+    return {
+      ...p,
+      selections: p.selections.map((s) => ({
+        ...s,
+        justification: aiJustification(s.key, this.positions.get(s.matchId) ?? null, s.justification),
+      })),
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -218,8 +324,15 @@ class CouponEngine {
     );
     const usage = await liveMatchUsage(this.db);
     const diverse = diversify(filtered.kept, usage, profile.category, this.maxMatchUses);
-    const kept = diverse.kept;
-    const excluded = { ...filtered.excluded, ...diverse.excluded };
+    // Cohérence avec les analyses IA déjà réalisées (tous les coupons, sans nouvel appel à l'IA).
+    const known = await this.knownPositions([...new Set(diverse.kept.map((c) => c.matchId))]);
+    const aiExcluded: Record<string, number> = {};
+    const kept = diverse.kept.filter((c) => {
+      const bad = contradictions(c.key, known.get(c.matchId) ?? null).length > 0;
+      if (bad) aiExcluded["contraire au pronostic de l'IA"] = (aiExcluded["contraire au pronostic de l'IA"] ?? 0) + 1;
+      return !bad;
+    });
+    const excluded = { ...filtered.excluded, ...diverse.excluded, ...aiExcluded };
     details.excluded = excluded;
     details.kept = kept.length;
     details.market_weight = this.marketWeight;
@@ -233,7 +346,12 @@ class CouponEngine {
     }
 
     const taken = await liveFingerprints(this.db);
-    const proposals = buildCoupons(kept, criteria, taken);
+    // Coupon du jour : passage obligatoire par l'analyse IA de chaque match.
+    const requireAi = profile.category === "du_jour";
+    const proposals = (requireAi
+      ? await this.aiGatedProposals(kept, criteria, taken, reasons, details)
+      : buildCoupons(kept, criteria, taken)).map((p) => this.withAiJustifications(p));
+    if (requireAi && proposals.length === 0) return 0;
     if (proposals.length === 0) {
       reasons.push(
         `Aucune combinaison de ${criteria.min_selections} à ${criteria.max_selections} sélections avec une cote totale entre ${dec(criteria.min_total_odd)} et ${dec(criteria.max_total_odd)}.`,
@@ -453,11 +571,19 @@ class CouponEngine {
     let expired = 0;
     const nowIso = this.now.toISOString();
     const { data: due, error } = await this.db.from("coupons")
-      .select("id, coupon_selections(match_id, selection_key)").eq("status", "ready").lte("publish_at", nowIso).limit(50);
+      .select("id, ai_override, coupon_selections(match_id, selection_key)").eq("status", "ready").lte("publish_at", nowIso).limit(50);
     if (error) throw new Error(error.message);
     for (const c of due ?? []) {
       const sels = (c.coupon_selections ?? []) as { match_id: number; selection_key: string }[];
       const problems = await this.liveProblems(sels);
+      const aiProblems = problems.length || c.ai_override ? [] : await this.aiProblems(sels);
+      if (aiProblems.length) {
+        await this.db.from("coupons").update({
+          status: "pending_review",
+          status_note: `À revoir avant publication : ${aiProblems.join(" ; ")}. Modifiez la sélection ou validez le coupon.`,
+        }).eq("id", c.id);
+        continue;
+      }
       if (problems.length) {
         await this.db.from("coupons").update({ status: "expired", status_note: `Non publié : ${problems.join(", ")}` }).eq("id", c.id);
         expired++;
@@ -490,8 +616,195 @@ class CouponEngine {
     });
   }
 
+  /** Sélections qui contredisent une analyse IA connue de leur match. */
+  private async aiProblems(sels: { match_id: number; selection_key: string }[]): Promise<string[]> {
+    const known = await this.knownPositions([...new Set(sels.map((s) => s.match_id))]);
+    const { data: teams } = await this.db.from("matches").select("id, home:teams!matches_home_team_fk(name), away:teams!matches_away_team_fk(name)")
+      .in("id", [...new Set(sels.map((s) => s.match_id))]);
+    const names = new Map((teams ?? []).map((t) => {
+      const r = t as unknown as { id: number; home: { name: string } | null; away: { name: string } | null };
+      return [r.id, [r.home?.name ?? "?", r.away?.name ?? "?"] as const];
+    }));
+    return sels.flatMap((s) => {
+      const pos = known.get(s.match_id) ?? null;
+      const bad = contradictions(s.selection_key, pos);
+      if (!bad.length) return [];
+      const [h, a] = names.get(s.match_id) ?? ["?", "?"];
+      return [`« ${outcomeLabel(s.selection_key, h, a)} » contredit le pronostic de l'IA « ${outcomeLabel(bad[0], h, a)} » (${h} – ${a})`];
+    });
+  }
+
+  /**
+   * Modification d'un coupon généré, avant publication (super administrateur) : sélections
+   * remplacées, cotes et probabilités recalculées sur les données du moment.
+   */
+  async editCoupon(
+    couponId: string,
+    wanted: { match_id: number; key: string }[],
+    opts: { title?: string | null; note: string; force: boolean; actorId: string },
+  ): Promise<{ ok: true; id: string } | { ok: false; status: number; error: string; message: string; items?: string[] }> {
+    const { data: c } = await this.db.from("coupons")
+      .select("id, status, title, profile_id, publish_at, analysis, coupon_selections(match_id, selection_key)")
+      .eq("id", couponId).maybeSingle();
+    if (!c) return { ok: false, status: 404, error: "not_found", message: "Coupon introuvable." };
+    if (!["pending_review", "ready"].includes(c.status)) {
+      return { ok: false, status: 409, error: "not_editable", message: "Seul un coupon à valider ou programmé se modifie : un coupon publié est immuable." };
+    }
+    const r = await this.selectionsFor(wanted);
+    if (!r.ok) return { ok: false, status: 409, error: "invalid_selection", message: r.message };
+    const proposal = propose(r.selections);
+    const ai = await this.aiProblems(proposal.selections.map((s) => ({ match_id: s.matchId, selection_key: s.key })));
+    if (ai.length && !opts.force) {
+      return { ok: false, status: 409, error: "ai_contradiction", message: "Une sélection contredit l'analyse IA du match.", items: ai };
+    }
+    const saved = await this.writeSelections(c.id, proposal, {
+      title: opts.title?.trim() || c.title,
+      statusNote: `Modifié par l'équipe : ${opts.note}${ai.length ? " (malgré l'analyse IA)" : ""}`,
+      aiOverride: ai.length > 0,
+      publishAt: c.publish_at,
+      previousAnalysis: c.analysis as Record<string, unknown> | null,
+    });
+    if (!saved.ok) return { ok: false, status: 409, error: "save_failed", message: saved.message };
+    await this.db.from("audit_logs").insert({
+      actor_id: opts.actorId, action: "coupon.edit", target_type: "coupon", target_id: c.id,
+      details: {
+        note: opts.note,
+        forced_against_ai: ai.length > 0 ? ai : null,
+        before: (c.coupon_selections ?? []).map((x: { match_id: number; selection_key: string }) => `${x.match_id}:${x.selection_key}`),
+        after: proposal.selections.map((x) => `${x.matchId}:${x.key}`),
+      },
+    });
+    return { ok: true, id: c.id };
+  }
+
+  /** Copie d'un coupon retiré, à modifier puis à publier (correction). Matchs déjà commencés écartés. */
+  async duplicateCoupon(couponId: string, actorId: string): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+    const { data: c } = await this.db.from("coupons")
+      .select("id, status, title, description, category, profile_id, coupon_selections(match_id, selection_key)")
+      .eq("id", couponId).maybeSingle();
+    if (!c) return { ok: false, message: "Coupon introuvable." };
+    if (c.status !== "withdrawn") return { ok: false, message: "Retirez d'abord le coupon : seul un coupon retiré se duplique." };
+    const sels = (c.coupon_selections ?? []) as { match_id: number; selection_key: string }[];
+    const r = await this.selectionsFor(sels.map((s) => ({ match_id: s.match_id, key: s.selection_key })), true);
+    if (!r.ok) return { ok: false, message: r.message };
+    const proposal = propose(r.selections);
+    const { data: copy, error } = await this.db.from("coupons").insert({
+      profile_id: c.profile_id,
+      category: c.category,
+      title: c.title,
+      description: c.description ?? "",
+      risk_level: "equilibre",
+      total_odd: proposal.totalOdd,
+      combined_probability: proposal.combinedProbability,
+      implied_probability: proposal.impliedProbability,
+      status: "pending_review",
+      status_note: "Correction d'un coupon retiré, à modifier puis à valider",
+      publish_at: this.now.toISOString(),
+      first_kickoff_at: proposal.selections[0].kickoffAt,
+      last_kickoff_at: proposal.selections.at(-1)!.kickoffAt,
+      engine_version: ENGINE_VERSION,
+      analysis: {},
+      fingerprint: proposal.fingerprint,
+    }).select("id").single();
+    if (error) return { ok: false, message: error.code === "23505" ? "Un coupon identique est déjà en circulation." : error.message };
+    const saved = await this.writeSelections(copy.id, proposal, {
+      title: c.title, statusNote: "Correction d'un coupon retiré, à modifier puis à valider", aiOverride: false,
+      publishAt: this.now.toISOString(), previousAnalysis: null,
+    });
+    if (!saved.ok) {
+      await this.db.from("coupons").delete().eq("id", copy.id);
+      return { ok: false, message: saved.message };
+    }
+    await this.db.from("audit_logs").insert({
+      actor_id: actorId, action: "coupon.duplicate", target_type: "coupon", target_id: copy.id, details: { from: c.id },
+    });
+    return { ok: true, id: copy.id };
+  }
+
+  /** Sélections demandées, relues dans les données du moment (cote médiane, probabilité retenue). */
+  private async selectionsFor(
+    wanted: { match_id: number; key: string }[],
+    skipUnavailable = false,
+  ): Promise<{ ok: true; selections: Candidate[] } | { ok: false; message: string }> {
+    if (wanted.length < 1 || wanted.length > 10) return { ok: false, message: "Entre 1 et 10 sélections." };
+    if (new Set(wanted.map((w) => w.match_id)).size !== wanted.length) return { ok: false, message: "Un seul pari par match." };
+    const load = await this.candidates(96);
+    const limit = this.now.getTime() + 30 * 60_000;
+    const selections: Candidate[] = [];
+    const missing: string[] = [];
+    for (const w of wanted) {
+      const cand = load.candidates.find((c) => c.matchId === Number(w.match_id) && c.key === w.key);
+      if (!cand || Date.parse(cand.kickoffAt) <= limit) missing.push(`${w.match_id}:${w.key}`);
+      else selections.push(cand);
+    }
+    if (missing.length && !skipUnavailable) {
+      return { ok: false, message: `Cote indisponible ou match à moins de 30 minutes du coup d'envoi : ${missing.join(", ")}.` };
+    }
+    if (!selections.length) return { ok: false, message: "Aucune sélection encore jouable." };
+    return { ok: true, selections };
+  }
+
+  /** Enregistre les sélections d'un coupon et ses totaux (résumé recalculé). */
+  private async writeSelections(
+    couponId: string,
+    proposal: ProposedCoupon,
+    o: { title: string; statusNote: string; aiOverride: boolean; publishAt: string; previousAnalysis: Record<string, unknown> | null },
+  ): Promise<{ ok: true } | { ok: false; message: string }> {
+    await this.knownPositions([...new Set(proposal.selections.map((s) => s.matchId))]);
+    const p = this.withAiJustifications(proposal);
+    const thresholds = (this.settings["coupons.risk_thresholds"] ?? { prudent: 0.4, equilibre: 0.18 }) as RiskThresholds;
+    const risk = riskLevel(p.combinedProbability, thresholds);
+    const { summary: aiSummary } = await this.summarize(this.couponFiche(p, risk));
+    const summary = aiSummary ?? defaultSummary(p);
+    const latest = Date.parse(p.selections[0].kickoffAt) - 30 * 60_000;
+    const { error } = await this.db.from("coupons").update({
+      title: o.title,
+      risk_level: risk,
+      total_odd: p.totalOdd,
+      combined_probability: p.combinedProbability,
+      implied_probability: p.impliedProbability,
+      first_kickoff_at: p.selections[0].kickoffAt,
+      last_kickoff_at: p.selections.at(-1)!.kickoffAt,
+      publish_at: new Date(Math.max(this.now.getTime(), Math.min(Date.parse(o.publishAt), latest))).toISOString(),
+      fingerprint: p.fingerprint,
+      status_note: o.statusNote,
+      ai_override: o.aiOverride,
+      analysis: {
+        ...(o.previousAnalysis ?? {}),
+        ...summary,
+        source: aiSummary ? "ia" : "calcul",
+        market_note: p.impliedProbability !== null
+          ? `Probabilité combinée selon le marché (marges retirées) : ${pct(p.impliedProbability)}.`
+          : null,
+        edited: true,
+      },
+    }).eq("id", couponId);
+    if (error) return { ok: false, message: error.code === "23505" ? "Un coupon identique est déjà en circulation." : error.message };
+    await this.db.from("coupon_selections").delete().eq("coupon_id", couponId);
+    const { error: selError } = await this.db.from("coupon_selections").insert(p.selections.map((s, i) => ({
+      coupon_id: couponId,
+      position: i + 1,
+      match_id: s.matchId,
+      market_code: s.marketCode,
+      outcome_code: s.outcomeCode,
+      line: s.line,
+      selection_key: s.key,
+      odd: s.odd,
+      odd_best: s.oddBest,
+      bookmakers: s.bookmakers,
+      odds_captured_at: s.oddsCapturedAt,
+      model_probability: s.modelProbability,
+      implied_probability: s.impliedProbability,
+      edge: s.edge,
+      reliability: s.reliability,
+      justification: s.justification,
+    })));
+    if (selError) return { ok: false, message: `Sélections non enregistrées : ${selError.message}` };
+    return { ok: true };
+  }
+
   /** Publication immédiate d'un coupon prêt (programmé) ou à valider, avant son heure. */
-  async publishNow(couponId: string, actorId: string): Promise<{ ok: true } | { ok: false; reason: string }> {
+  async publishNow(couponId: string, actorId: string, force = false): Promise<{ ok: true } | { ok: false; reason: string; ai?: string[] }> {
     const { data: c } = await this.db.from("coupons")
       .select("id, status, coupon_selections(match_id, selection_key)").eq("id", couponId).maybeSingle();
     if (!c) return { ok: false, reason: "Coupon introuvable." };
@@ -500,6 +813,8 @@ class CouponEngine {
     }
     const problems = await this.liveProblems((c.coupon_selections ?? []) as { match_id: number; selection_key: string }[]);
     if (problems.length) return { ok: false, reason: `Publication impossible : ${[...new Set(problems)].join(", ")}.` };
+    const ai = await this.aiProblems((c.coupon_selections ?? []) as { match_id: number; selection_key: string }[]);
+    if (ai.length && !force) return { ok: false, reason: `${ai.join(" ; ")}.`, ai };
     const nowIso = this.now.toISOString();
     const { data: updated } = await this.db.from("coupons").update({
       status: "published",
@@ -508,6 +823,7 @@ class CouponEngine {
       status_note: c.status === "pending_review"
         ? "Validé et publié avant l'heure prévue par un administrateur"
         : "Publié avant l'heure prévue par un administrateur",
+      ai_override: ai.length > 0,
     }).eq("id", couponId).eq("status", c.status).select("id").maybeSingle();
     if (!updated) return { ok: false, reason: "Le coupon a changé entre-temps : actualisez." };
     await this.db.from("audit_logs").insert({
@@ -645,10 +961,32 @@ Deno.serve(async (req) => {
     if (job === "publish_now") {
       if (!caller || !caller.permissions.includes("coupons.publish")) return json({ error: "forbidden" }, 403);
       await engine.init();
-      const r = await engine.publishNow(String(body?.coupon_id ?? ""), caller.id);
-      return r.ok ? json({ ok: true }) : json({ error: "not_publishable", message: r.reason }, 409);
+      const r = await engine.publishNow(String(body?.coupon_id ?? ""), caller.id, body?.force === true);
+      return r.ok
+        ? json({ ok: true })
+        : json({ error: r.ai ? "ai_contradiction" : "not_publishable", message: r.reason, items: r.ai ?? null }, 409);
     }
-    return json({ error: "unknown_job", allowed: ["tick", "generate", "preview", "publish_now"] }, 400);
+    if (job === "edit_coupon" || job === "duplicate_coupon") {
+      if (!caller || !caller.permissions.includes("coupons.edit")) return json({ error: "forbidden" }, 403);
+      await engine.init();
+      if (job === "duplicate_coupon") {
+        const r = await engine.duplicateCoupon(String(body?.coupon_id ?? ""), caller.id);
+        return r.ok ? json({ ok: true, id: r.id }) : json({ error: "not_duplicable", message: r.message }, 409);
+      }
+      const note = String(body?.note ?? "").trim();
+      if (note.length < 3) return json({ error: "note_required", message: "Indiquez le motif de la modification." }, 400);
+      const wanted = Array.isArray(body?.selections)
+        ? (body.selections as { match_id: unknown; key: unknown }[]).map((x) => ({ match_id: Number(x.match_id), key: String(x.key) }))
+        : [];
+      const r = await engine.editCoupon(String(body?.coupon_id ?? ""), wanted, {
+        title: typeof body?.title === "string" ? body.title.slice(0, 120) : null,
+        note: note.slice(0, 200),
+        force: body?.force === true,
+        actorId: caller.id,
+      });
+      return r.ok ? json({ ok: true, id: r.id }) : json({ error: r.error, message: r.message, items: r.items ?? null }, r.status);
+    }
+    return json({ error: "unknown_job", allowed: ["tick", "generate", "preview", "publish_now", "edit_coupon", "duplicate_coupon"] }, 400);
   } catch (e) {
     console.error("coupon-engine", e);
     return json({ error: "internal_error", message: String((e as Error).message ?? e).slice(0, 200) }, 500);

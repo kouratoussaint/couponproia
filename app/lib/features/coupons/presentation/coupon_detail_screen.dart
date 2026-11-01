@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/errors/error_messages.dart';
 import '../../../core/widgets/super_admin_note.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/share_links.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../analysis/data/analysis_format.dart';
+import '../../analysis/data/analysis_repository.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
@@ -38,6 +41,15 @@ class CouponDetailScreen extends ConsumerWidget {
                   !c.locked &&
                   c.firstKickoffAt.isAfter(DateTime.now()))
             _WatchButton(couponId: c.id),
+          if (coupon.valueOrNull case final c?
+              when !c.locked && !c.isWithdrawn && c.selections.isNotEmpty)
+            IconButton(
+              tooltip: 'Partager',
+              icon: const Icon(Icons.share_outlined),
+              onPressed: () => SharePlus.instance.share(ShareParams(
+                  text: couponShareText(c,
+                      link: shareLink(ref, couponId: c.id)))),
+            ),
           if (coupon.valueOrNull case final c?
               when !c.locked && !c.isWithdrawn && c.selections.isNotEmpty)
             IconButton(
@@ -246,6 +258,39 @@ class _CouponBody extends ConsumerWidget {
                   ),
               ],
             ),
+          ),
+        ],
+        if (perms.contains('coupons.edit') &&
+            (c.status == 'pending_review' || c.status == 'ready')) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => context.push(AppRoutes.couponEditFor(c.id)),
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Modifier ce coupon (super administrateur)'),
+          ),
+        ],
+        if (perms.contains('coupons.edit') && c.isWithdrawn) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () async {
+              try {
+                final id = await ref
+                    .read(couponRepositoryProvider)
+                    .duplicateCoupon(c.id);
+                invalidateCouponAdminLists(ref);
+                if (context.mounted) {
+                  await context.push(AppRoutes.couponEditFor(id));
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  showMessage(context,
+                      e is AnalysisException ? e.message : userMessageFor(e),
+                      error: true);
+                }
+              }
+            },
+            icon: const Icon(Icons.copy_all_outlined),
+            label: const Text('Dupliquer et modifier (correction)'),
           ),
         ],
         if (canManage && c.status == 'published') ...[

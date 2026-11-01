@@ -268,3 +268,37 @@ final entitlementsProvider = FutureProvider.autoDispose<Entitlements>(
 
 final paymentsProvider = FutureProvider.autoDispose<List<PaymentRecord>>(
     (ref) => ref.watch(billingRepositoryProvider).payments());
+
+/// Forfait payant qui se termine (3 jours) ou vient de se terminer (7 jours) : « Renouveler ».
+class Renewal {
+  const Renewal(
+      {required this.planCode,
+      required this.annual,
+      required this.periodEnd,
+      required this.ended});
+
+  static Renewal? fromJson(Object? v) {
+    if (v is! Map) return null;
+    return Renewal(
+      planCode: v['plan_code'] as String,
+      annual: v['period'] == 'annual',
+      periodEnd: DateTime.parse(v['period_end'] as String).toLocal(),
+      ended: v['ended'] == true,
+    );
+  }
+
+  final String planCode;
+  final bool annual;
+  final DateTime periodEnd;
+  final bool ended;
+
+  /// Écran Abonnement avec la proposition de renouvellement.
+  String get route =>
+      '/abonnement?renouveler=$planCode&periode=${annual ? 'annual' : 'monthly'}';
+}
+
+final renewalProvider = FutureProvider.autoDispose<Renewal?>((ref) async {
+  final client = ref.watch(supabaseClientProvider);
+  if (client.auth.currentUser == null) return null;
+  return Renewal.fromJson(await client.rpc('my_renewal'));
+});
