@@ -62,7 +62,7 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub": "11111111-1111-1111-1111-111111111111", "role": "authenticated"}';
 -- 10-13 : utilisateur
 select is((select count(*)::int from public.coupons), 1, 'un utilisateur ne voit que les coupons publiés');
-select is((select count(*)::int from public.coupon_selections), 0, 'et aucune sélection avant la fin des matchs (forfait FREE)');
+select is((select count(*)::int from public.coupon_selections), 1, 'et seulement leurs sélections (coupon du jour gratuit)');
 select is((select count(*)::int from public.coupon_profiles), 0, 'profils réservés aux gestionnaires');
 select throws_ok($$ select public.admin_review_coupon('aaaaaaaa-0000-0000-0000-000000000003', true) $$,
                  '42501', null, 'un utilisateur ne valide pas de coupon');

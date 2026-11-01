@@ -312,7 +312,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
                       Text('• ${p.aiCredits} crédits IA par mois'),
                       Text(p.allCoupons
                           ? '• Tous les coupons et leurs résultats, à tout moment'
-                          : '• Coupons et résultats visibles après les matchs'),
+                          : '• Coupon du jour à tout moment ; autres coupons et résultats après les matchs'),
                       if (p.monthlyXof == 0)
                         Text(
                             '• Analyse IA d’un match : ${creditCost == 0 ? 'gratuite' : '$creditCost crédit${creditCost > 1 ? 's' : ''}'}')

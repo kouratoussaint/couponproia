@@ -39,8 +39,8 @@ select '22222222-2222-2222-2222-222222222222', id, 'plan' from public.matches wh
 set local role authenticated;
 -- FREE
 set local request.jwt.claims = '{"sub": "11111111-1111-1111-1111-111111111111", "role": "authenticated"}';
-select is((select count(*)::int from public.coupon_selections where coupon_id = 'aaaaaaaa-0000-0000-0000-000000000001'), 0,
-          '1. FREE : coupon du jour masqué avant les matchs');
+select is((select count(*)::int from public.coupon_selections where coupon_id = 'aaaaaaaa-0000-0000-0000-000000000001'), 1,
+          '1. FREE : coupon du jour gratuit, à tout moment');
 select is((select count(*)::int from public.coupon_selections where coupon_id = 'aaaaaaaa-0000-0000-0000-000000000003'), 0,
           '2. FREE : coupon en cours masqué');
 select is((select count(*)::int from public.coupon_selections where coupon_id = 'aaaaaaaa-0000-0000-0000-000000000002'), 1,

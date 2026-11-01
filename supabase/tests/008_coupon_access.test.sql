@@ -24,7 +24,7 @@ select throws_ok($$ select analysis from public.coupons limit 1 $$, '42501', nul
 select throws_ok($$ select fingerprint from public.coupons limit 1 $$, '42501', null, 'colonne fingerprint non lisible directement');
 select is((select count(*)::int from public.coupons), 3, 'les autres colonnes restent lisibles (coupons publiés)');
 select is((select analysis ->> 'analyse_generale' from public.coupon_analyses(array['aaaaaaaa-0000-0000-0000-000000000001'::uuid])),
-          null, 'FREE : analyse du coupon du jour masquée avant la fin des matchs');
+          'texte du jour', 'FREE : analyse du coupon du jour visible');
 select is((select analysis ->> 'analyse_generale' from public.coupon_analyses(array['aaaaaaaa-0000-0000-0000-000000000002'::uuid])),
           null, 'FREE : analyse d''un coupon réservé masquée avant le coup d''envoi');
 select is((select locked from public.coupon_analyses(array['aaaaaaaa-0000-0000-0000-000000000002'::uuid])), true, 'coupon signalé comme réservé');

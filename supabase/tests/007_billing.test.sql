@@ -39,8 +39,8 @@ set local request.jwt.claims = '{"sub": "11111111-1111-1111-1111-111111111111", 
 -- 1-5 : forfait FREE
 select is(public.my_entitlements() ->> 'plan', 'FREE', 'forfait par défaut : FREE');
 select is((public.my_entitlements() -> 'credits' ->> 'plan_credits')::int, 2, 'dotation FREE');
-select is((select count(*)::int from public.coupon_selections where coupon_id = 'aaaaaaaa-0000-0000-0000-000000000001'), 0,
-          'FREE : coupon du jour masqué avant la fin des matchs');
+select is((select count(*)::int from public.coupon_selections where coupon_id = 'aaaaaaaa-0000-0000-0000-000000000001'), 1,
+          'FREE : sélections du coupon du jour visibles');
 select is((select count(*)::int from public.coupon_selections where coupon_id = 'aaaaaaaa-0000-0000-0000-000000000002'), 0,
           'FREE : sélections d''un coupon prudent à venir réservées');
 select is((select count(*)::int from public.coupon_selections where coupon_id = 'aaaaaaaa-0000-0000-0000-000000000003'), 1,

@@ -362,7 +362,7 @@ class _CouponOfTheDay extends ConsumerWidget {
                         const SizedBox(height: 6),
                         Text(
                           c.locked || sels.isEmpty
-                              ? 'Sélections visibles avec un forfait, ou après les matchs'
+                              ? 'Sélections en préparation'
                               : '${sels.length} sélection${sels.length > 1 ? 's' : ''}'
                                   '${sels.isEmpty ? '' : timeLabel(first) == timeLabel(last) ? ' · ${timeLabel(first)}' : ' · de ${timeLabel(first)} à ${timeLabel(last)}'}',
                           style: muted,
