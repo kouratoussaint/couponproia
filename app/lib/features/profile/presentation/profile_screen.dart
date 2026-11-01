@@ -261,8 +261,18 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () => contactSupport(context, ref),
                   ),
                   ListTile(
+                    leading: const Icon(Icons.menu_book_outlined),
+                    title: const Text('Mon carnet de paris'),
+                    subtitle:
+                        const Text('Vos mises notées et votre bilan réel'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.journal),
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.health_and_safety_outlined),
                     title: const Text('Jeu responsable'),
+                    subtitle: const Text(
+                        'Budget mensuel, plafond par pari, conseils'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.responsibleGaming),
                   ),

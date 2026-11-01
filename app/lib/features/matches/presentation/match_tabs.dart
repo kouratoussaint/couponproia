@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../analysis/data/analysis_format.dart';
+import '../../analysis/data/analysis_models.dart';
 import '../../analysis/data/analysis_repository.dart';
 import '../../analysis/data/match_reading.dart';
 import '../../analysis/presentation/analysis_section.dart';
 import '../../lab/data/lab_repository.dart';
+import '../../simulator/presentation/sim_entries.dart';
+import '../../simulator/presentation/stake_simulator_sheet.dart';
 import '../../onboarding/data/preferences_repository.dart';
 import '../../system/system_providers.dart';
 import '../data/insights_models.dart';
@@ -341,7 +344,22 @@ class MarketsTab extends ConsumerWidget {
                 fiche: analysis.fiche,
                 home: match.home.name,
                 away: match.away.name,
-                highlightKey: pick?.fromAi == true ? pick!.key : null),
+                highlightKey: pick?.fromAi == true ? pick!.key : null,
+                onSimulate: (l) => showStakeSimulator(context, [
+                      singleSim(match,
+                          key: l.key,
+                          odd: l.oddMedian,
+                          probability: l.modelProbability)
+                    ])),
+          if (analysis.fiche.comparableLines.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+              child: Text('Touchez une ligne pour simuler une mise.',
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(color: Theme.of(context).colorScheme.primary)),
+            ),
           ScoresCard(fiche: analysis.fiche),
         ],
         const SectionTitle('Toutes les cotes'),
@@ -422,6 +440,16 @@ class OddsBoard extends ConsumerWidget {
                   ),
                 ],
                 const SizedBox(height: 12),
+                SimulateButton(choices: () {
+                  final analysis =
+                      ref.read(currentAnalysisProvider(match.id)).valueOrNull;
+                  return oddsBoardSims(match, list, probabilities: {
+                    for (final l in analysis?.fiche.comparableLines ??
+                        const <FicheOddsLine>[])
+                      if (l.modelProbability != null) l.key: l.modelProbability!
+                  });
+                }),
+                const SizedBox(height: 8),
                 if (canPick)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 6),

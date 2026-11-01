@@ -4,7 +4,7 @@
 // change et historise chaque règlement ; un résultat qui change ensuite est une correction.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { callerFrom, corsHeaders, env, json, serverContext } from "../_shared/http.ts";
-import { couponResult, type MatchState, selectionResult, type SelectionResult } from "../_shared/settlement/settle.ts";
+import { couponResult, journalOutcome, type MatchState, selectionResult, type SelectionResult } from "../_shared/settlement/settle.ts";
 import { safeEqual } from "../_shared/sports/normalize.ts";
 
 const RECHECK_DAYS = 3;
@@ -105,6 +105,43 @@ async function settleKind(db: SupabaseClient, kind: "platform" | "user", now: Da
   return { checked: coupons.length, settled, corrections, selectionUpdates };
 }
 
+interface JournalRow {
+  id: string;
+  total_odd: number;
+  result: string | null;
+  settled_odd: number | null;
+  legs: { match_id: number; key: string; odd: number }[];
+}
+
+/** Carnet de paris : règlement sur les mêmes règles, avec la cote obtenue par l'utilisateur. */
+async function settleJournal(db: SupabaseClient, now: Date) {
+  const since = new Date(now.getTime() - RECHECK_DAYS * 86400_000).toISOString();
+  const { data, error } = await db.from("bet_journal").select("id, total_odd, result, settled_odd, legs")
+    .lte("first_kickoff_at", now.toISOString()).or(`result.is.null,settled_at.gte.${since}`).limit(1000);
+  if (error) throw new Error(error.message);
+  const rows = (data ?? []) as unknown as JournalRow[];
+  const matches = await loadMatches(db, [...new Set(rows.flatMap((r) => r.legs.map((l) => Number(l.match_id))))]);
+  let settled = 0;
+  for (const r of rows) {
+    const legs = r.legs.map((l) => {
+      const m = matches.get(Number(l.match_id));
+      return { result: (m ? selectionResult(l.key, m, now) : "pending") as SelectionResult, odd: Number(l.odd) };
+    });
+    const out = journalOutcome(Number(r.total_odd), legs);
+    const newResult = out.result === "pending" ? null : out.result;
+    const newOdd = newResult === null ? null : out.settledOdd;
+    if (newResult === r.result && Number(newOdd ?? 0) === Number(r.settled_odd ?? 0)) continue;
+    const { error: e } = await db.from("bet_journal").update({
+      result: newResult,
+      settled_odd: newOdd,
+      settled_at: newResult === null ? null : now.toISOString(),
+    }).eq("id", r.id);
+    if (e) throw new Error(e.message);
+    settled++;
+  }
+  return { checked: rows.length, settled };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -122,7 +159,8 @@ Deno.serve(async (req) => {
     const now = new Date();
     const platform = await settleKind(ctx.db, "platform", now);
     const user = await settleKind(ctx.db, "user", now);
-    return json({ platform, user });
+    const journal = await settleJournal(ctx.db, now);
+    return json({ platform, user, journal });
   } catch (e) {
     console.error("settle-coupons", e);
     return json({ error: "internal_error", message: String((e as Error).message ?? e).slice(0, 200) }, 500);

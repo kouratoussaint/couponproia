@@ -44,6 +44,7 @@ abstract final class AppRoutes {
 
   static String studioFor(String kind, String id) => '/studio/$kind/$id';
   static const responsibleGaming = '/jeu-responsable';
+  static const journal = '/carnet';
   static const notifications = '/notifications';
   static const notificationSettings = '/notifications/reglages';
   static const community = '/communaute';

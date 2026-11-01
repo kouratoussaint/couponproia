@@ -6,6 +6,9 @@ import '../../core/providers.dart';
 import '../analysis/data/analysis_format.dart';
 import '../coupons/data/coupon_models.dart';
 import '../matches/presentation/sports_widgets.dart';
+import '../simulator/data/stake_math.dart';
+import '../simulator/presentation/stake_simulator_sheet.dart';
+import '../system/system_providers.dart';
 
 final platformPerformanceProvider = FutureProvider.autoDispose
     .family<Map<String, dynamic>, int?>((ref, days) async {
@@ -80,6 +83,7 @@ class _PlatformTabState extends ConsumerState<_PlatformTab> {
             children: [
               for (final (label, days) in [
                 ('Tout', null),
+                ('90 jours', 90),
                 ('30 jours', 30),
                 ('7 jours', 7)
               ])
@@ -113,14 +117,7 @@ class _PlatformTabState extends ConsumerState<_PlatformTab> {
                           'Les statistiques apparaîtront après les premiers matchs des coupons publiés.',
                     )
                   else ...[
-                    Card(
-                      child: ListTile(
-                        title: Text(
-                            'Rendement théorique : ${_signedPct(_dn(p['theoretical_return']))}'),
-                        subtitle: Text(
-                            '${p['stake_note']}. Calcul : (somme des cotes des coupons gagnants − nombre de coupons réglés) / nombre de coupons réglés.'),
-                      ),
-                    ),
+                    FixedStakeCard(p: p),
                     _Table(
                       title: 'Par catégorie',
                       rows: _rows(p['by_category']),
@@ -143,13 +140,7 @@ class _PlatformTabState extends ConsumerState<_PlatformTab> {
                           '${_i(r['won'])}/${_i(r['won']) + _i(r['lost'])} justes · ${_rate(r['hit_rate'])} (modèle moy. ${_rate(r['average_model_probability'])})',
                     ),
                     _WeeklyChart(rows: _rows(p['by_week'])),
-                    _Table(
-                      title: 'Calibration réelle (annoncé → constaté)',
-                      rows: _rows(p['calibration']),
-                      label: (r) => 'Annoncé ${_rate(r['predicted'])}',
-                      value: (r) =>
-                          'constaté ${_rate(r['observed'])} sur ${_i(r['selections'])} sélections',
-                    ),
+                    CalibrationChart(rows: _rows(p['calibration'])),
                   ],
                   const SizedBox(height: 12),
                   Text(
@@ -384,6 +375,222 @@ class _WeeklyChart extends StatelessWidget {
                 Text(
                     'Vert : gagnés · rouge : perdus · gris : annulés ou en cours (semaine de publication)',
                     style: theme.textTheme.labelSmall),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Résultat à mise fixe : ce qu'aurait donné la même mise sur chaque coupon réglé, au total et par
+/// catégorie. Calcul théorique sur les cotes publiées ; aucun pari réel.
+class FixedStakeCard extends ConsumerStatefulWidget {
+  const FixedStakeCard({super.key, required this.p});
+
+  final Map<String, dynamic> p;
+
+  @override
+  ConsumerState<FixedStakeCard> createState() => _FixedStakeCardState();
+}
+
+class _FixedStakeCardState extends ConsumerState<FixedStakeCard> {
+  int _stake = 1000;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final cur = currencyLabel(ref.watch(publicSettingsProvider).valueOrNull);
+    final p = widget.p;
+    final settled = _i(p['settled']);
+    final returned = _dn(p['returned']) ?? 0;
+    final staked = settled * _stake;
+    final back = (returned * _stake).round();
+    final net = back - staked;
+    Color tone(num v) => v >= 0 ? scheme.primary : scheme.error;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionTitle('Résultat à mise fixe'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  spacing: 6,
+                  children: [
+                    for (final s in const [500, 1000, 5000])
+                      ChoiceChip(
+                          label: Text(money(s, currency: cur)),
+                          selected: _stake == s,
+                          onSelected: (_) => setState(() => _stake = s)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                    'Avec ${money(_stake, currency: cur)} sur chacun des $settled coupons réglés :',
+                    style: theme.textTheme.bodyMedium),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    _cell(context, 'Misé', money(staked, currency: cur)),
+                    _cell(context, 'Retourné', money(back, currency: cur)),
+                    _cell(context, 'Net', signedMoney(net, currency: cur),
+                        color: tone(net)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text('Rendement : ${_signedPct(_dn(p['theoretical_return']))}',
+                    style:
+                        theme.textTheme.labelLarge?.copyWith(color: tone(net))),
+                const Divider(height: 24),
+                for (final r in _rows(p['by_category']))
+                  if (_i(r['settled']) > 0)
+                    Builder(builder: (context) {
+                      final n = _i(r['settled']);
+                      final b = ((_dn(r['returned']) ?? 0) * _stake).round();
+                      final rowNet = b - n * _stake;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                  '${categoryLabels[r['key']] ?? r['key']} · $n réglés'),
+                            ),
+                            Text(signedMoney(rowNet, currency: cur),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: tone(rowNet))),
+                          ],
+                        ),
+                      );
+                    }),
+                const SizedBox(height: 8),
+                Text(
+                    'Calcul théorique sur les cotes publiées : coupon gagnant = mise × cote réglée, perdant = mise perdue. '
+                    'Aucun pari réel. Les résultats passés ne préjugent pas des suivants.',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: scheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _cell(BuildContext context, String head, String value,
+      {Color? color}) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(head,
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value,
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w800, color: color)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Calibration : pour chaque tranche de probabilité annoncée par le modèle, la fréquence réelle
+/// constatée. Un modèle fiable donne deux barres proches.
+class CalibrationChart extends StatelessWidget {
+  const CalibrationChart({super.key, required this.rows});
+
+  final List<Map<String, dynamic>> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    if (rows.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    Widget bar(double v, Color color) => LayoutBuilder(
+          builder: (context, c) => Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              height: 10,
+              width: c.maxWidth * v.clamp(0, 1),
+              decoration: BoxDecoration(
+                  color: color, borderRadius: BorderRadius.circular(5)),
+            ),
+          ),
+        );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionTitle('Calibration : annoncé contre constaté'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(spacing: 14, runSpacing: 4, children: [
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    Container(width: 12, height: 12, color: scheme.outline),
+                    const SizedBox(width: 6),
+                    const Text('Annoncé par le modèle'),
+                  ]),
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    Container(width: 12, height: 12, color: scheme.primary),
+                    const SizedBox(width: 6),
+                    const Text('Constaté'),
+                  ]),
+                ]),
+                const SizedBox(height: 12),
+                for (final r in rows)
+                  Builder(builder: (context) {
+                    final low = ((_dn(r['bucket']) ?? 0) * 100).round();
+                    final n = _i(r['selections']);
+                    final predicted = _dn(r['predicted']) ?? 0;
+                    final observed = _dn(r['observed']) ?? 0;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Text('$low–${low + 10} %',
+                                  style: theme.textTheme.labelLarge),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                    textAlign: TextAlign.end,
+                                    '${_rate(predicted)} → ${_rate(observed)} · $n sél.${n < 20 ? ' (peu de données)' : ''}',
+                                    style: theme.textTheme.labelSmall),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          bar(predicted, scheme.outline),
+                          const SizedBox(height: 3),
+                          bar(observed, scheme.primary),
+                        ],
+                      ),
+                    );
+                  }),
+                Text(
+                    'Sélections des coupons publiés, réglées sur le score à 90 minutes. Quand les deux barres se '
+                    'ressemblent, les pourcentages annoncés sont fiables ; un écart signale une estimation trop '
+                    'optimiste ou trop prudente.',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: scheme.onSurfaceVariant)),
               ],
             ),
           ),

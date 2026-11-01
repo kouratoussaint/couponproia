@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../simulator/presentation/sim_entries.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../core/widgets/form_widgets.dart';
@@ -348,8 +349,21 @@ class MainPickCard extends ConsumerWidget {
                     ?.copyWith(color: scheme.onSurfaceVariant),
               ),
             ],
-            if (canPick) ...[
+            if (pick.oddMedian != null) ...[
               const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SimulateButton(
+                    choices: () => [
+                          singleSim(match,
+                              key: pick.key,
+                              odd: pick.oddMedian!,
+                              probability: pick.probability)
+                        ]),
+              ),
+            ],
+            if (canPick) ...[
+              const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
                 child: OutlinedButton.icon(
@@ -714,12 +728,16 @@ class MarketsComparison extends StatelessWidget {
       required this.fiche,
       required this.home,
       required this.away,
-      this.highlightKey});
+      this.highlightKey,
+      this.onSimulate});
 
   final AnalysisFiche fiche;
   final String home;
   final String away;
   final String? highlightKey;
+
+  /// Touché sur une ligne : ouvre le simulateur de mise pour cette issue.
+  final void Function(FicheOddsLine line)? onSimulate;
 
   @override
   Widget build(BuildContext context) {
@@ -756,7 +774,9 @@ class MarketsComparison extends StatelessWidget {
                       _MarketLine(
                           line: l,
                           label: outcomeKeyLabel(l.key, home, away),
-                          highlight: l.key == highlightKey),
+                          highlight: l.key == highlightKey,
+                          onTap:
+                              onSimulate == null ? null : () => onSimulate!(l)),
                   ],
                 ),
               ),
@@ -778,11 +798,15 @@ class MarketsComparison extends StatelessWidget {
 
 class _MarketLine extends StatelessWidget {
   const _MarketLine(
-      {required this.line, required this.label, this.highlight = false});
+      {required this.line,
+      required this.label,
+      this.highlight = false,
+      this.onTap});
 
   final FicheOddsLine line;
   final String label;
   final bool highlight;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -802,7 +826,7 @@ class _MarketLine extends StatelessWidget {
             ],
           ),
         );
-    return Container(
+    final box = Container(
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -844,11 +868,25 @@ class _MarketLine extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text(frequencyLabel(p),
-              style: theme.textTheme.labelSmall
-                  ?.copyWith(color: scheme.onSurfaceVariant)),
+          Row(
+            children: [
+              Expanded(
+                child: Text(frequencyLabel(p),
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: scheme.onSurfaceVariant)),
+              ),
+              if (onTap != null)
+                Icon(Icons.calculate_outlined, size: 16, color: scheme.primary),
+            ],
+          ),
         ],
       ),
+    );
+    if (onTap == null) return box;
+    return Semantics(
+      button: true,
+      label: 'Simuler une mise sur $label',
+      child: GestureDetector(onTap: onTap, child: box),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../simulator/presentation/sim_entries.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/widgets/form_widgets.dart';
@@ -157,6 +158,11 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                         'Le serveur relit les cotes, vérifie chaque match et recalcule tout à l’enregistrement.',
                         style: muted),
                     const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: SimulateButton(choices: () => [manualSim(picks)]),
+                    ),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
                         TextButton(

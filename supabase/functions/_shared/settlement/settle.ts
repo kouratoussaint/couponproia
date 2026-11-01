@@ -70,3 +70,14 @@ export function couponResult(selections: { result: SelectionResult; odd: number 
   const odd = selections.reduce((p, s) => p * (s.result === "void" ? 1 : s.odd), 1);
   return { result: "won", settledOdd: Math.round(odd * 100) / 100 };
 }
+
+/**
+ * Pari du carnet : même règle que les coupons, appliquée à la cote obtenue par l'utilisateur.
+ * Une sélection annulée compte pour 1,00 : sa cote relevée est retirée de la cote obtenue.
+ */
+export function journalOutcome(totalOdd: number, legs: { result: SelectionResult; odd: number }[]): { result: CouponResult; settledOdd: number | null } {
+  const base = couponResult(legs);
+  if (base.result !== "won") return base;
+  const voided = legs.filter((l) => l.result === "void").reduce((p, l) => p * l.odd, 1);
+  return { result: "won", settledOdd: Math.max(1, Math.round((totalOdd / voided) * 100) / 100) };
+}

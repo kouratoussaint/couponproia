@@ -17,6 +17,8 @@ const _kindIcons = {
   'match': Icons.sports_soccer_outlined,
   'morning': Icons.wb_sunny_outlined,
   'credits': Icons.bolt,
+  'odds': Icons.trending_down,
+  'budget': Icons.shield_outlined,
   'system': Icons.info_outline,
 };
 

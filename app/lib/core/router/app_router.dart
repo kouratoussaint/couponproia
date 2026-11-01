@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/journal/presentation/journal_screen.dart';
 import '../../features/admin/presentation/ai_providers_screen.dart';
 import '../../features/admin/presentation/featured_admin_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
@@ -220,6 +221,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.adminAudit,
         builder: (context, state) => const AuditAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.journal,
+        builder: (context, state) => const JournalScreen(),
       ),
       GoRoute(
         path: AppRoutes.responsibleGaming,

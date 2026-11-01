@@ -11,6 +11,8 @@ import '../../analysis/data/analysis_format.dart';
 import '../../system/system_providers.dart';
 import '../data/coupon_models.dart';
 import '../data/coupon_repository.dart';
+import '../../simulator/presentation/sim_entries.dart';
+import '../../simulator/presentation/stake_simulator_sheet.dart';
 import 'bookmaker_actions.dart';
 
 /// Texte d'un coupon pour le partage ou le presse-papiers (jamais pour un coupon réservé :
@@ -51,6 +53,12 @@ Future<void> showCouponActions(
             onTap: () => Navigator.pop(sheet, 'open'),
           ),
           if (readable) ...[
+            if (!c.isWithdrawn)
+              ListTile(
+                leading: const Icon(Icons.calculate_outlined),
+                title: const Text('Simuler une mise'),
+                onTap: () => Navigator.pop(sheet, 'simulate'),
+              ),
             ListTile(
               leading: const Icon(Icons.share_outlined),
               title: const Text('Partager en texte'),
@@ -104,6 +112,8 @@ Future<void> showCouponActions(
     case 'copy':
       await Clipboard.setData(ClipboardData(text: couponShareText(c)));
       if (context.mounted) showMessage(context, 'Sélections copiées.');
+    case 'simulate':
+      await showStakeSimulator(context, [couponSim(c)]);
     case 'bookmaker':
       await copyForBookmaker(context, ref, c.title, c.totalOdd, c.selections);
     case 'studio':

@@ -136,6 +136,12 @@ class AppDrawer extends ConsumerWidget {
         ),
         ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+          leading: const Icon(Icons.menu_book_outlined),
+          title: const Text('Mon carnet de paris'),
+          onTap: () => open(AppRoutes.journal),
+        ),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
           leading: const Icon(Icons.workspace_premium_outlined),
           title: const Text('Abonnement et crédits'),
           onTap: () => open(AppRoutes.billing),

@@ -6,6 +6,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/text_scale_controller.dart';
 import 'core/theme/theme_mode_controller.dart';
+import 'core/widgets/root_messenger.dart';
 
 class CouponProApp extends ConsumerWidget {
   const CouponProApp({super.key});
@@ -15,6 +16,7 @@ class CouponProApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Coupon Pro IA',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: rootMessengerKey,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ref.watch(themeModeProvider),

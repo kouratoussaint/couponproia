@@ -5,12 +5,16 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/widgets/super_admin_note.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/brand_colors.dart';
+import '../../../core/widgets/form_widgets.dart';
 import '../../analysis/data/analysis_format.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/coupon_models.dart';
 import '../data/coupon_repository.dart';
+import '../../simulator/presentation/sim_entries.dart';
+import '../data/coupon_watch.dart';
 import 'bookmaker_actions.dart';
 import 'coupon_actions.dart';
 import 'coupon_widgets.dart';
@@ -29,6 +33,11 @@ class CouponDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(categoryLabels[coupon.valueOrNull?.category] ?? 'Coupon'),
         actions: [
+          if (coupon.valueOrNull case final c?
+              when c.status == 'published' &&
+                  !c.locked &&
+                  c.firstKickoffAt.isAfter(DateTime.now()))
+            _WatchButton(couponId: c.id),
           if (coupon.valueOrNull case final c?
               when !c.locked && !c.isWithdrawn && c.selections.isNotEmpty)
             IconButton(
@@ -173,10 +182,14 @@ class _CouponBody extends ConsumerWidget {
         ),
         const SectionTitle('Sélections'),
         if (c.locked) LockedCouponNotice(firstKickoffAt: c.firstKickoffAt),
+        if (!c.locked && c.result == null)
+          _OddsMoveBanner(coupon: c, current: current),
         for (final s in c.selections)
           SelectionCard(
               selection: s, currentOdd: current['${s.match.id}:${s.key}']),
         if (!c.locked && !c.isWithdrawn && c.selections.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          SimulateButton(choices: () => [couponSim(c, current)], filled: true),
           const SizedBox(height: 8),
           BookmakerButtons(
               title: c.title, totalOdd: c.totalOdd, selections: c.selections),
@@ -316,6 +329,76 @@ class _HistoryIcon extends StatelessWidget {
           color: c.withValues(alpha: latest ? 0.16 : 0.08),
           shape: BoxShape.circle),
       child: Icon(icon, size: 18, color: c),
+    );
+  }
+}
+
+/// Cloche « Suivre la cote » : alerte si une cote bouge fortement avant le match.
+class _WatchButton extends ConsumerWidget {
+  const _WatchButton({required this.couponId});
+
+  final String couponId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final watched = ref.watch(couponWatchedProvider(couponId)).valueOrNull;
+    if (watched == null) return const SizedBox.shrink();
+    return IconButton(
+      tooltip: watched ? 'Ne plus suivre la cote' : 'Suivre la cote',
+      icon: Icon(watched
+          ? Icons.notifications_active
+          : Icons.notifications_none_outlined),
+      onPressed: () async {
+        try {
+          final on = await setCouponWatch(ref, couponId, !watched);
+          if (context.mounted) {
+            showMessage(
+                context,
+                on
+                    ? 'Vous serez prévenu si une cote bouge fortement avant le match.'
+                    : 'Vous ne suivez plus la cote de ce coupon.');
+          }
+        } catch (e) {
+          if (context.mounted) {
+            showMessage(context, userMessageFor(e), error: true);
+          }
+        }
+      },
+    );
+  }
+}
+
+/// Bandeau quand la cote totale a bougé d'au moins le seuil réglé depuis la publication.
+class _OddsMoveBanner extends ConsumerWidget {
+  const _OddsMoveBanner({required this.coupon, required this.current});
+
+  final Coupon coupon;
+  final Map<String, double> current;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final move = totalOddsMove([
+      for (final s in coupon.selections)
+        (published: s.odd, current: current['${s.match.id}:${s.key}'])
+    ]);
+    final threshold =
+        oddsMoveThreshold(ref.watch(publicSettingsProvider).valueOrNull);
+    if (move == null || move.abs() < threshold) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    final down = move < 0;
+    final color = down ? scheme.error : BrandColors.orange;
+    final now = coupon.totalOdd * (1 + move);
+    return Card(
+      color: color.withValues(alpha: 0.1),
+      child: ListTile(
+        leading:
+            Icon(down ? Icons.trending_down : Icons.trending_up, color: color),
+        title: Text(
+            'Cote totale actuelle ${decimal(now)} (${down ? '−' : '+'}${(move.abs() * 100).round()} %)'),
+        subtitle: Text(down
+            ? 'Le marché y croit davantage depuis la publication : le retour potentiel diminue.'
+            : 'Le marché y croit moins depuis la publication (absence, composition ?) : vérifiez avant de jouer.'),
+      ),
     );
   }
 }

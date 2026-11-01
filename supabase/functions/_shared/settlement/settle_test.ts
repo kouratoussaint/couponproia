@@ -1,6 +1,6 @@
 // Tests des règles de règlement : `deno test supabase/functions/_shared`
 import { assertEquals } from "jsr:@std/assert@1";
-import { couponResult, type MatchState, outcomeWins, selectionResult } from "./settle.ts";
+import { couponResult, journalOutcome, type MatchState, outcomeWins, selectionResult } from "./settle.ts";
 
 const NOW = new Date("2026-11-02T12:00:00Z");
 const m = (p: Partial<MatchState>): MatchState => ({
@@ -52,4 +52,12 @@ Deno.test("coupon : perdu dès une sélection perdue, void à 1,00, tout annulé
   assertEquals(couponResult([{ result: "won", odd: 1.8 }, { result: "void", odd: 2 }, { result: "won", odd: 1.5 }]),
     { result: "won", settledOdd: 2.7 });
   assertEquals(couponResult([{ result: "void", odd: 1.8 }, { result: "void", odd: 2 }]), { result: "void", settledOdd: 1 });
+});
+
+Deno.test("carnet : cote obtenue conservée, sélection annulée retirée", () => {
+  assertEquals(journalOutcome(2.1, [{ result: "won", odd: 2 }]), { result: "won", settledOdd: 2.1 });
+  assertEquals(journalOutcome(3.3, [{ result: "won", odd: 1.5 }, { result: "void", odd: 2 }]), { result: "won", settledOdd: 1.65 });
+  assertEquals(journalOutcome(3.3, [{ result: "lost", odd: 1.5 }, { result: "won", odd: 2 }]).result, "lost");
+  assertEquals(journalOutcome(3.3, [{ result: "void", odd: 1.5 }, { result: "void", odd: 2 }]), { result: "void", settledOdd: 1 });
+  assertEquals(journalOutcome(3.3, [{ result: "pending", odd: 1.5 }]).result, "pending");
 });
