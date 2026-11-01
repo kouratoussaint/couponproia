@@ -22,11 +22,14 @@ Credits _credits(String plan, int total, {bool unlimited = false}) =>
       'unlimited': unlimited,
     });
 
-Widget _button(Credits credits, {int? featured}) => ProviderScope(
+Widget _button(Credits credits, {int? featured, bool analyzed = false}) =>
+    ProviderScope(
       overrides: [
         myCreditsProvider.overrideWith((ref) async => credits),
         myPermissionsProvider.overrideWith((ref) async => <String>{}),
         featuredMatchProvider.overrideWith((ref) async => featured),
+        analyzedOfDayProvider.overrideWith(
+            (ref, day) async => analyzed ? {lilleLens().id} : <int>{}),
       ],
       child: MaterialApp(
           home: Scaffold(
@@ -65,6 +68,14 @@ void main() {
         .pumpWidget(_button(_credits('FREE', 0), featured: lilleLens().id));
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
+  });
+
+  testWidgets('match déjà analysé : « Voir l’analyse », même sans crédit',
+      (tester) async {
+    await tester.pumpWidget(_button(_credits('FREE', 0), analyzed: true));
+    await tester.pumpAndSettle();
+    expect(find.text('Voir l’analyse'), findsOneWidget);
+    expect(find.byIcon(Icons.lock_outline), findsNothing);
   });
 
   testWidgets('profil : toutes les informations modifiables', (tester) async {

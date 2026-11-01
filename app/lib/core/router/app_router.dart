@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/presentation/ai_providers_screen.dart';
+import '../../features/admin/presentation/featured_admin_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/analysis/presentation/engine_admin_screen.dart';
 import '../../features/assistant/presentation/assistant_screen.dart';
@@ -203,6 +204,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.adminCosts,
         builder: (context, state) => const CostsAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminFeatured,
+        builder: (context, state) => const FeaturedAdminScreen(),
       ),
       GoRoute(
         path: AppRoutes.adminAi,

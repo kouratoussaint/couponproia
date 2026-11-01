@@ -20,6 +20,7 @@ import {
   parseIntent,
 } from "../_shared/assistant/intent.ts";
 import { insertUserCoupon, loadUserCoupon, type StoredLine } from "../_shared/assistant/store.ts";
+import { describeRequest, extractConstraints, reconcileIntent } from "../_shared/assistant/keywords.ts";
 import { loadCandidates, loadLiveChecks } from "../_shared/coupons/data.ts";
 import {
   buildCoupons,
@@ -127,7 +128,38 @@ class Assistant {
       return bad ? { ok: false, errors: [`Mot interdit dans « reponse » : « ${bad[0]} ».`] } : { ok: true, value: v.value };
     }, pricing);
     await logAi(this.db, this.userId, "assistant_intent", res.logs);
-    return res.status === "ok" ? res.value : null;
+    if (res.status !== "ok") return this.fallbackIntent(message);
+    // Les chiffres et mots-clés écrits par l'utilisateur priment sur la compréhension de l'IA.
+    return reconcileIntent(res.value, message, this.now, this.timeZone).intent;
+  }
+
+  /** IA indisponible : une demande de coupon reste comprise grâce aux mots-clés et aux chiffres. */
+  fallbackIntent(message: string): Intent | null {
+    const x = extractConstraints(message, this.now, this.timeZone);
+    const wantsCoupon = /\b(coupons?|tickets?|combines?|composer?|propose|fais|cree|creer|genere)\b/
+      .test(message.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase());
+    if (!wantsCoupon) return null;
+    return {
+      intent: (x.nombre_coupons ?? 1) > 1 ? "variantes" : "creer_coupon",
+      jour: x.jour,
+      competitions: [],
+      equipes: [],
+      exclure_equipes: [],
+      nombre_selections: x.nombre_selections,
+      cote_totale_cible: x.cote_totale_cible,
+      cote_totale_min: x.cote_totale_min,
+      cote_totale_max: x.cote_totale_max,
+      cote_selection_min: x.cote_selection_min,
+      cote_selection_max: x.cote_selection_max,
+      marches: x.marches,
+      issues: x.issues,
+      risque: x.risque,
+      nombre_coupons: x.nombre_coupons,
+      retirer_positions: [],
+      remplacer_plus_fragiles: 0,
+      ajouter: 0,
+      reponse: "",
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -166,7 +198,7 @@ class Assistant {
     return fixed;
   }
 
-  private build(cands: Candidate[], criteria: Criteria, fixed: Candidate[]) {
+  private build(cands: Candidate[], criteria: Criteria, fixed: Candidate[], keepTotals = false) {
     const { kept, excluded } = filterCandidates(
       cands,
       criteria,
@@ -176,17 +208,22 @@ class Assistant {
     );
     let coupons = buildCoupons(kept, criteria, new Set(), 200_000, fixed);
     if (coupons.length === 0) {
-      // Une seule tentative assouplie, signalée à l'utilisateur.
+      // Une seule tentative assouplie, signalée à l'utilisateur. Les cotes et le nombre de
+      // sélections demandés explicitement ne sont jamais assouplis.
       const relaxed = parseCriteria({
         ...criteria,
         min_model_probability: Math.max(0.25, criteria.min_model_probability - 0.1),
-        min_total_odd: criteria.min_total_odd * 0.9,
-        max_total_odd: criteria.max_total_odd * 1.15,
+        min_total_odd: keepTotals ? criteria.min_total_odd : criteria.min_total_odd * 0.9,
+        max_total_odd: keepTotals ? criteria.max_total_odd : criteria.max_total_odd * 1.15,
         min_edge: Math.min(criteria.min_edge, -0.08),
       });
       const again = filterCandidates(cands, relaxed, this.now, this.quality?.beatsBaseline ?? null, this.quality?.competitions ?? {});
       coupons = buildCoupons(again.kept, relaxed, new Set(), 200_000, fixed);
-      if (coupons.length) this.warnings.push("Critères légèrement assouplis pour trouver une combinaison.");
+      if (coupons.length) {
+        this.warnings.push(keepTotals
+          ? "Seuil de probabilité légèrement assoupli pour respecter vos cotes."
+          : "Critères légèrement assouplis pour trouver une combinaison.");
+      }
     }
     return { coupons, excluded, kept };
   }
@@ -216,10 +253,12 @@ class Assistant {
     this.warnings.push(...warnings);
     const { kept: preKept } = filterCandidates(cands, criteria, this.now, this.quality?.beatsBaseline ?? null, this.quality?.competitions ?? {});
     const fixed = this.fixedForTeams(i, cands, preKept);
-    const { coupons, excluded } = this.build(cands, criteria, fixed);
+    const explicitTotals = Boolean(i.cote_totale_cible || i.cote_totale_min || i.cote_totale_max);
+    const { coupons, excluded } = this.build(cands, criteria, fixed, explicitTotals);
+    const asked = describeRequest(i, range.label);
     if (coupons.length === 0) {
       return this.noResult(
-        `Je n'ai pas trouvé de combinaison de ${criteria.min_selections === criteria.max_selections ? criteria.min_selections : `${criteria.min_selections} à ${criteria.max_selections}`} sélections ${range.label} avec une cote totale entre ${dec(criteria.min_total_odd)} et ${dec(criteria.max_total_odd)}.`,
+        `${asked} Je n'ai pas trouvé de combinaison de ${criteria.min_selections === criteria.max_selections ? criteria.min_selections : `${criteria.min_selections} à ${criteria.max_selections}`} sélections ${range.label} avec une cote totale entre ${dec(criteria.min_total_odd)} et ${dec(criteria.max_total_odd)}.`,
         excluded,
       );
     }
@@ -227,7 +266,7 @@ class Assistant {
     const content = coupons.length > 1
       ? `Voici ${coupons.length} versions ${range.label}, cotes totales ${coupons.map((c) => dec(c.totalOdd)).join(", ")}. Comparez les probabilités estimées avant de choisir.`
       : `Voici un coupon de ${first.selections.length} sélections ${range.label} : cote totale ${dec(first.totalOdd)}, probabilité estimée par le modèle ${pct(first.combinedProbability)}${first.impliedProbability !== null ? ` (marché : ${pct(first.impliedProbability)})` : ""}.`;
-    return { content, intent: i.intent, coupons, criteria, payload: {}, paid: true };
+    return { content: `${asked} ${content}`, intent: i.intent, coupons, criteria, payload: {}, paid: true };
   }
 
   async modify(i: Intent, current: StoredLine[] | null, currentCriteria: unknown): Promise<Result> {

@@ -10,6 +10,7 @@ import '../../../core/widgets/history_filter.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../analysis/data/analysis_format.dart';
 import '../../coupons/data/coupon_models.dart';
+import '../../coupons/presentation/bookmaker_actions.dart';
 import '../../coupons/presentation/coupon_widgets.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
@@ -222,6 +223,12 @@ class MyCouponDetailScreen extends ConsumerWidget {
                         },
                         icon: const Icon(Icons.copy),
                         label: const Text('Copier pour partager'),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: () => copyForBookmaker(
+                            context, ref, c.title, c.totalOdd, c.selections),
+                        icon: const Icon(Icons.content_paste_go_outlined),
+                        label: const Text('Copier pour mon bookmaker'),
                       ),
                       if (!c.isPublished)
                         TextButton.icon(

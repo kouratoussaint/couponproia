@@ -88,6 +88,13 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
                 ConsoleColors.coupons,
                 AppRoutes.generationsAdmin,
                 badge: asInt(coupons['pending_review'])),
+          if (perms.contains('featured.manage'))
+            const ConsoleEntry(
+                'Analyse offerte',
+                'Choisir le match du jour',
+                Icons.card_giftcard,
+                ConsoleColors.money,
+                AppRoutes.adminFeatured),
           if (perms.contains('moderation.manage'))
             ConsoleEntry(
                 'Modération',

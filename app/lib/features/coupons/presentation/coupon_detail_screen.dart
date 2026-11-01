@@ -11,6 +11,7 @@ import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/coupon_models.dart';
 import '../data/coupon_repository.dart';
+import 'bookmaker_actions.dart';
 import 'coupon_actions.dart';
 import 'coupon_widgets.dart';
 
@@ -175,6 +176,11 @@ class _CouponBody extends ConsumerWidget {
         for (final s in c.selections)
           SelectionCard(
               selection: s, currentOdd: current['${s.match.id}:${s.key}']),
+        if (!c.locked && !c.isWithdrawn && c.selections.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          BookmakerButtons(
+              title: c.title, totalOdd: c.totalOdd, selections: c.selections),
+        ],
         if (c.summary.isNotEmpty) ...[
           const SectionTitle('Analyse générale'),
           Card(

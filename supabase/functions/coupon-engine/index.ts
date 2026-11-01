@@ -85,6 +85,7 @@ class CouponEngine {
       "ai.coupon_summary",
       "ai.analysis_ttl_hours",
       "featured.prepare_from_hour",
+      "featured.auto_pick_hour",
       "coupons.market_weight",
       "coupons.max_match_uses",
     ]);
@@ -456,14 +457,7 @@ class CouponEngine {
     if (error) throw new Error(error.message);
     for (const c of due ?? []) {
       const sels = (c.coupon_selections ?? []) as { match_id: number; selection_key: string }[];
-      const live = await loadLiveChecks(this.db, sels.map((s) => ({ matchId: s.match_id, key: s.selection_key })));
-      const problems = sels.flatMap((s) => {
-        const l = live.get(`${s.match_id}:${s.selection_key}`);
-        if (!l?.matchExists) return ["match introuvable"];
-        if (l.status !== "scheduled") return [`match ${l.status}`];
-        if (!l.kickoffAt || Date.parse(l.kickoffAt) <= this.now.getTime()) return ["match déjà commencé"];
-        return [];
-      });
+      const problems = await this.liveProblems(sels);
       if (problems.length) {
         await this.db.from("coupons").update({ status: "expired", status_note: `Non publié : ${problems.join(", ")}` }).eq("id", c.id);
         expired++;
@@ -482,6 +476,45 @@ class CouponEngine {
     }).eq("status", "pending_review").lte("first_kickoff_at", nowIso).select("id");
     expired += stale?.length ?? 0;
     return { published, expired };
+  }
+
+  /** Dernier contrôle avant publication : chaque match existe, n'a pas commencé et reste programmé. */
+  private async liveProblems(sels: { match_id: number; selection_key: string }[]): Promise<string[]> {
+    const live = await loadLiveChecks(this.db, sels.map((s) => ({ matchId: s.match_id, key: s.selection_key })));
+    return sels.flatMap((s) => {
+      const l = live.get(`${s.match_id}:${s.selection_key}`);
+      if (!l?.matchExists) return ["match introuvable"];
+      if (l.status !== "scheduled") return [`match ${l.status}`];
+      if (!l.kickoffAt || Date.parse(l.kickoffAt) <= this.now.getTime()) return ["match déjà commencé"];
+      return [];
+    });
+  }
+
+  /** Publication immédiate d'un coupon prêt (programmé) ou à valider, avant son heure. */
+  async publishNow(couponId: string, actorId: string): Promise<{ ok: true } | { ok: false; reason: string }> {
+    const { data: c } = await this.db.from("coupons")
+      .select("id, status, coupon_selections(match_id, selection_key)").eq("id", couponId).maybeSingle();
+    if (!c) return { ok: false, reason: "Coupon introuvable." };
+    if (!["ready", "pending_review"].includes(c.status)) {
+      return { ok: false, reason: `Ce coupon n'est ni programmé ni à valider (${c.status}).` };
+    }
+    const problems = await this.liveProblems((c.coupon_selections ?? []) as { match_id: number; selection_key: string }[]);
+    if (problems.length) return { ok: false, reason: `Publication impossible : ${[...new Set(problems)].join(", ")}.` };
+    const nowIso = this.now.toISOString();
+    const { data: updated } = await this.db.from("coupons").update({
+      status: "published",
+      published_at: nowIso,
+      publish_at: nowIso,
+      status_note: c.status === "pending_review"
+        ? "Validé et publié avant l'heure prévue par un administrateur"
+        : "Publié avant l'heure prévue par un administrateur",
+    }).eq("id", couponId).eq("status", c.status).select("id").maybeSingle();
+    if (!updated) return { ok: false, reason: "Le coupon a changé entre-temps : actualisez." };
+    await this.db.from("audit_logs").insert({
+      actor_id: actorId, action: "coupon.publish_now", target_type: "coupon", target_id: couponId,
+      details: { previous_status: c.status },
+    });
+    return { ok: true };
   }
 
   async profiles(): Promise<Profile[]> {
@@ -531,8 +564,17 @@ class CouponEngine {
     if (localHour < fromHour) return { skipped: "too_early" };
     const { data: flag } = await this.db.from("feature_flags").select("enabled").eq("key", "match_analysis").maybeSingle();
     if (!flag?.enabled) return { skipped: "analysis_disabled" };
-    const { data: matchId, error } = await this.db.rpc("svc_pick_featured_match");
-    if (error) throw new Error(error.message);
+    // Choix du super administrateur s'il existe ; sinon choix automatique à partir de l'heure réglée.
+    const today = localDate(this.now, this.timeZone);
+    const { data: chosen } = await this.db.from("featured_matches").select("match_id").eq("day", today).maybeSingle();
+    let matchId: number | null = chosen?.match_id ?? null;
+    if (!matchId) {
+      const autoHour = Number(this.settings["featured.auto_pick_hour"] ?? 9);
+      if (localHour < autoHour) return { skipped: "waiting_for_choice", auto_pick_hour: autoHour };
+      const { data: picked, error } = await this.db.rpc("svc_pick_featured_match");
+      if (error) throw new Error(error.message);
+      matchId = picked;
+    }
     if (!matchId) return { skipped: "no_match" };
     const { data: row } = await this.db.from("matches").select(MATCH_COLUMNS).eq("id", matchId).maybeSingle();
     const m = row as unknown as MatchRow | null;
@@ -600,7 +642,13 @@ Deno.serve(async (req) => {
       await engine.init();
       return json(await engine.preview(profile as Profile));
     }
-    return json({ error: "unknown_job", allowed: ["tick", "generate", "preview"] }, 400);
+    if (job === "publish_now") {
+      if (!caller || !caller.permissions.includes("coupons.publish")) return json({ error: "forbidden" }, 403);
+      await engine.init();
+      const r = await engine.publishNow(String(body?.coupon_id ?? ""), caller.id);
+      return r.ok ? json({ ok: true }) : json({ error: "not_publishable", message: r.reason }, 409);
+    }
+    return json({ error: "unknown_job", allowed: ["tick", "generate", "preview", "publish_now"] }, 400);
   } catch (e) {
     console.error("coupon-engine", e);
     return json({ error: "internal_error", message: String((e as Error).message ?? e).slice(0, 200) }, 500);

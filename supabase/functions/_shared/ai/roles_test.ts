@@ -16,8 +16,9 @@ Deno.test("rôles : principale et secours avec clé, sans doublon", () => {
   assert(!twice.ok);
   const badModel = validateRoles({ primary: "gemini", fallbacks: [], models: { gemini: "x; drop" } }, configured, known);
   assert(!badModel.ok);
-  const fallbackNoKey = validateRoles({ primary: "gemini", fallbacks: ["anthropic"], models: {} }, configured, known);
-  assert(!fallbackNoKey.ok);
+  const fallbackNoKey = validateRoles({ primary: "gemini", fallbacks: ["anthropic", "groq"], models: {} }, configured, known);
+  assert(fallbackNoKey.ok, "une IA de secours sans clé ne bloque pas l'enregistrement");
+  assertEquals(fallbackNoKey.ok && fallbackNoKey.fallbacks, ["groq"]);
 });
 
 Deno.test("consommation : périodes, rejets, limites atteintes, dernier quota", () => {

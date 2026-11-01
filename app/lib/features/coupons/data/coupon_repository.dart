@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/providers.dart';
 import '../../analysis/data/analysis_repository.dart';
 import 'coupon_models.dart';
+import 'coupon_phase.dart';
 
 const _selectionColumns =
     'position, selection_key, odd, odd_best, bookmakers, odds_captured_at, '
@@ -149,6 +150,33 @@ class CouponRepository {
     return await _coupons(rows);
   }
 
+  /// Historique des coupons de la plateforme (équipe) : tous statuts, avec leurs changements.
+  Future<List<Coupon>> history({int limit = 60}) async {
+    final rows = await _client
+        .from('coupons')
+        .select(
+            '$_couponColumns, coupon_status_history(from_status, to_status, reason, created_at)')
+        .order('updated_at', ascending: false)
+        .limit(limit);
+    return sortByLastAction(await _coupons(rows));
+  }
+
+  /// Publication immédiate (coupon programmé ou à valider), après un dernier contrôle serveur.
+  Future<void> publishNow(String couponId) async {
+    try {
+      await _client.functions.invoke('coupon-engine',
+          body: {'job': 'publish_now', 'coupon_id': couponId});
+    } on FunctionException catch (e) {
+      final d = e.details is Map
+          ? Map<String, dynamic>.from(e.details as Map)
+          : const {};
+      throw AnalysisException(d['message'] as String? ??
+          (e.status == 403
+              ? 'Action réservée aux administrateurs.'
+              : 'Publication impossible pour le moment.'));
+    }
+  }
+
   Future<Map<String, dynamic>> generateNow(int profileId) async {
     try {
       final res = await _client.functions.invoke('coupon-engine',
@@ -237,4 +265,8 @@ final generationRunsProvider = FutureProvider.autoDispose<List<GenerationRun>>(
 
 final unpublishedCouponsProvider = FutureProvider.autoDispose<List<Coupon>>(
   (ref) => ref.watch(couponRepositoryProvider).upcomingUnpublished(),
+);
+
+final couponHistoryProvider = FutureProvider.autoDispose<List<Coupon>>(
+  (ref) => ref.watch(couponRepositoryProvider).history(),
 );

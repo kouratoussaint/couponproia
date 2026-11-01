@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/providers.dart';
 import '../../../core/router/app_routes.dart';
 import '../../assistant/data/assistant_models.dart';
 import '../../assistant/data/assistant_repository.dart';
+import '../../matches/data/sports_format.dart';
 import '../../matches/data/sports_models.dart';
 import '../../matches/data/sports_repository.dart';
 import '../../system/system_providers.dart';
+import '../data/analysis_repository.dart';
 
 /// Forfait payant, crédits disponibles ou compte de l'équipe : même règle que le serveur.
 bool canAnalyzeWith(Credits? c) =>
@@ -21,6 +24,31 @@ final analysisAllowedProvider =
   if (perms.contains('ai.configure')) return true;
   if (ref.watch(featuredMatchProvider).valueOrNull == matchId) return true;
   return canAnalyzeWith(ref.watch(myCreditsProvider).valueOrNull);
+});
+
+/// Matchs d'un jour qui ont déjà une analyse (une seule requête par jour affiché).
+final analyzedOfDayProvider =
+    FutureProvider.autoDispose.family<Set<int>, DateTime>((ref, day) async {
+  final matches = await ref.watch(matchesOfDayProvider(day).future);
+  final ids = [for (final m in matches) m.id];
+  if (ids.isEmpty) return const <int>{};
+  final rows = await ref
+      .watch(supabaseClientProvider)
+      .from('match_analyses')
+      .select('match_id')
+      .inFilter('match_id', ids);
+  return {for (final r in rows) (r['match_id'] as num).toInt()};
+});
+
+/// Ce match a-t-il déjà une analyse (enregistrée, ou obtenue pendant la session) ?
+final matchAnalyzedProvider =
+    Provider.autoDispose.family<bool, MatchSummary>((ref, match) {
+  if (ref.watch(freshAnalysisProvider(match.id)) != null) return true;
+  return ref
+          .watch(analyzedOfDayProvider(dateOnly(match.kickoffAt)))
+          .valueOrNull
+          ?.contains(match.id) ??
+      false;
 });
 
 /// Match dont l'analyse doit démarrer à l'ouverture de sa fiche (bouton des listes).
@@ -69,9 +97,31 @@ class AnalyzeMatchButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    // Déjà analysé : consultation libre, quel que soit le forfait.
+    if (ref.watch(matchAnalyzedProvider(match))) {
+      void open() => context.push(AppRoutes.matchDetailFor(match.id));
+      if (compact) {
+        return IconButton(
+          tooltip: 'Voir l’analyse',
+          visualDensity: VisualDensity.compact,
+          onPressed: open,
+          icon:
+              Icon(Icons.visibility_outlined, size: 20, color: scheme.primary),
+        );
+      }
+      return FilledButton.tonalIcon(
+        style: FilledButton.styleFrom(
+          visualDensity: VisualDensity.compact,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+        ),
+        onPressed: open,
+        icon: const Icon(Icons.visibility_outlined, size: 16),
+        label: const Text('Voir l’analyse'),
+      );
+    }
     if (match.status != MatchStatus.scheduled) return const SizedBox.shrink();
     final allowed = ref.watch(analysisAllowedProvider(match.id));
-    final scheme = Theme.of(context).colorScheme;
     void go() {
       if (!allowed) {
         showAnalysisLocked(context);

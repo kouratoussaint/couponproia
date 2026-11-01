@@ -52,7 +52,10 @@ class _AiProvidersScreenState extends ConsumerState<AiProvidersScreen> {
   final Set<String> _testing = {};
 
   void _reset(List<AiProviderInfo> list) {
-    _roles = {for (final p in list) p.name: p.role};
+    // Une IA sans clé est toujours désactivée (même si un ancien réglage la plaçait en secours).
+    _roles = {
+      for (final p in list) p.name: p.configured ? p.role : AiRole.disabled
+    };
     _models = {
       for (final p in list)
         if (p.model != null) p.name: p.model!

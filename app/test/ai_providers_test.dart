@@ -89,7 +89,8 @@ void main() {
       (tester) async {
     await tester.pumpWidget(_screen({'ai.providers'}));
     await tester.pumpAndSettle();
-    expect(find.text('Ordre d’appel : Gemini → Claude → Groq'), findsOneWidget);
+    // Claude n'a pas de clé : il est désactivé d'office, l'enregistrement reste possible.
+    expect(find.text('Ordre d’appel : Gemini → Groq'), findsOneWidget);
     expect(find.text('68'), findsOneWidget);
     expect(find.text('2,4 s'), findsOneWidget);
     expect(find.text('0,12 \$'), findsOneWidget);
@@ -101,14 +102,14 @@ void main() {
         scrollable: find.byType(Scrollable).first);
     expect(find.textContaining('Clé absente : ajoutez ANTHROPIC_API_KEY'),
         findsOneWidget);
-    // Rien à enregistrer tant que rien n'a changé.
+    // Claude (sans clé) passe en « Désactivée » : le changement est enregistrable.
     await tester.scrollUntilVisible(
         find.text('Enregistrer les changements'), 300,
         scrollable: find.byType(Scrollable).first);
     final button = tester.widget<FilledButton>(find.ancestor(
         of: find.text('Enregistrer les changements'),
         matching: find.byWidgetPredicate((w) => w is FilledButton)));
-    expect(button.onPressed, isNull);
+    expect(button.onPressed, isNotNull);
   });
 
   testWidgets('écran réservé au super administrateur', (tester) async {

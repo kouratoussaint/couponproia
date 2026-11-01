@@ -11,6 +11,7 @@ import '../../analysis/data/analysis_format.dart';
 import '../../system/system_providers.dart';
 import '../data/coupon_models.dart';
 import '../data/coupon_repository.dart';
+import 'bookmaker_actions.dart';
 
 /// Texte d'un coupon pour le partage ou le presse-papiers (jamais pour un coupon réservé :
 /// son contenu est masqué par le serveur).
@@ -62,6 +63,13 @@ Future<void> showCouponActions(
             ),
             if (!c.isWithdrawn)
               ListTile(
+                leading: const Icon(Icons.content_paste_go_outlined),
+                title: const Text('Copier pour mon bookmaker'),
+                subtitle: const Text('Codes 1 / X / 2, 1X, Plus de 2,5…'),
+                onTap: () => Navigator.pop(sheet, 'bookmaker'),
+              ),
+            if (!c.isWithdrawn)
+              ListTile(
                 leading: const Icon(Icons.palette_outlined),
                 title: const Text('Créer un visuel'),
                 onTap: () => Navigator.pop(sheet, 'studio'),
@@ -96,6 +104,8 @@ Future<void> showCouponActions(
     case 'copy':
       await Clipboard.setData(ClipboardData(text: couponShareText(c)));
       if (context.mounted) showMessage(context, 'Sélections copiées.');
+    case 'bookmaker':
+      await copyForBookmaker(context, ref, c.title, c.totalOdd, c.selections);
     case 'studio':
       await context.push(AppRoutes.studioFor('platform', c.id));
     case 'withdraw':

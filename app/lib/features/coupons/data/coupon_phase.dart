@@ -151,3 +151,32 @@ List<Coupon> filterDecided(List<Coupon> decided, DateTime now,
                     dateOnly(now).subtract(Duration(days: days - 1)))))
           c
     ];
+
+/// Dernière action d'un coupon de la plateforme (historique de l'équipe).
+({String label, DateTime at}) lastAction(Coupon c) {
+  StatusChange? last;
+  for (final h in c.history) {
+    if (last == null || h.at.isAfter(last.at)) last = h;
+  }
+  if (last == null) {
+    return c.publishedAt != null
+        ? (label: 'Publié', at: c.publishedAt!)
+        : (label: 'Créé', at: c.createdAt);
+  }
+  final label = switch (last.toStatus) {
+    'published' => 'Publié',
+    'ready' => last.fromStatus == 'pending_review'
+        ? 'Validé · publication programmée'
+        : 'Prêt · publication programmée',
+    'pending_review' => 'Créé · à valider',
+    'rejected' => 'Rejeté',
+    'expired' => 'Expiré',
+    'withdrawn' => 'Retiré',
+    _ => last.toStatus,
+  };
+  return (label: label, at: last.at);
+}
+
+/// Du plus récent au plus ancien selon la dernière action (publié, programmé, créé, validé…).
+List<Coupon> sortByLastAction(List<Coupon> list) =>
+    [...list]..sort((a, b) => lastAction(b).at.compareTo(lastAction(a).at));

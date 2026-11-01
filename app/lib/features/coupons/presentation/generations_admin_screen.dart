@@ -12,6 +12,7 @@ import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/coupon_models.dart';
+import '../data/coupon_phase.dart';
 import '../data/coupon_repository.dart';
 import 'coupon_widgets.dart';
 
@@ -41,11 +42,14 @@ class GenerationsAdminScreen extends ConsumerStatefulWidget {
 class _GenerationsAdminScreenState
     extends ConsumerState<GenerationsAdminScreen> {
   int? _generating;
+  String _historyFilter = 'all';
+  String? _publishing;
 
   void _refresh() {
     ref.invalidate(couponProfilesProvider);
     ref.invalidate(generationRunsProvider);
     ref.invalidate(unpublishedCouponsProvider);
+    ref.invalidate(couponHistoryProvider);
     invalidateCouponLists(ref);
   }
 
@@ -103,6 +107,42 @@ class _GenerationsAdminScreenState
     }
   }
 
+  Future<void> _publishNow(Coupon c) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: const Text('Publier maintenant ?'),
+        content: Text(
+            '« ${c.title} » sera visible tout de suite${c.status == 'pending_review' ? ' (il est aussi validé)' : ''}. '
+            'Un dernier contrôle vérifie que chaque match est toujours programmé. Une fois publié, '
+            'le coupon ne peut plus être modifié.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(d, false),
+              child: const Text('Annuler')),
+          FilledButton(
+              onPressed: () => Navigator.pop(d, true),
+              child: const Text('Publier')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _publishing = c.id);
+    try {
+      await ref.read(couponRepositoryProvider).publishNow(c.id);
+      _refresh();
+      if (mounted) showMessage(context, 'Coupon publié.');
+    } catch (e) {
+      if (mounted) {
+        showMessage(
+            context, e is AnalysisException ? e.message : userMessageFor(e),
+            error: true);
+      }
+    } finally {
+      if (mounted) setState(() => _publishing = null);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -117,7 +157,14 @@ class _GenerationsAdminScreenState
       );
     }
     final profiles = ref.watch(couponProfilesProvider);
-    final pending = ref.watch(unpublishedCouponsProvider);
+    final history = ref.watch(couponHistoryProvider);
+    final canPublish = permissions.contains('coupons.publish');
+    const filters = {
+      'all': 'Tous',
+      'pending_review': 'À valider',
+      'ready': 'Programmés',
+      'published': 'Publiés',
+    };
     final runs = ref.watch(generationRunsProvider);
     final flags =
         ref.watch(featureFlagsProvider).valueOrNull ?? const <String, bool>{};
@@ -172,43 +219,94 @@ class _GenerationsAdminScreenState
                 ],
               ),
             ),
-            const SectionTitle('À valider et programmés'),
-            pending.when(
+            const SectionTitle('Historique des coupons'),
+            Text('Du plus récent au plus ancien selon la dernière action.',
+                style: theme.textTheme.bodySmall),
+            const SizedBox(height: 6),
+            Wrap(spacing: 8, children: [
+              for (final f in filters.entries)
+                ChoiceChip(
+                  label: Text(f.value),
+                  selected: _historyFilter == f.key,
+                  onSelected: (_) => setState(() => _historyFilter = f.key),
+                ),
+            ]),
+            const SizedBox(height: 6),
+            history.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text(userMessageFor(e)),
-              data: (list) => list.isEmpty
-                  ? Text('Aucun coupon en attente.',
-                      style: theme.textTheme.bodyMedium)
-                  : Column(
-                      children: [
-                        for (final c in list)
+              data: (all) {
+                final list = [
+                  for (final c in all)
+                    if (_historyFilter == 'all' || c.status == _historyFilter) c
+                ];
+                if (list.isEmpty) {
+                  return Text('Aucun coupon.',
+                      style: theme.textTheme.bodyMedium);
+                }
+                final now = DateTime.now();
+                return Column(
+                  children: [
+                    for (final c in list)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
                           CouponCard(
                             coupon: c,
                             onTap: () =>
                                 context.push(AppRoutes.couponDetailFor(c.id)),
-                            trailing: c.status == 'pending_review'
-                                ? Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        tooltip: 'Rejeter',
-                                        icon: Icon(Icons.close,
-                                            color: theme.colorScheme.error),
-                                        onPressed: () => _review(c, false),
-                                      ),
-                                      IconButton.filledTonal(
-                                        tooltip: 'Valider',
-                                        icon: const Icon(Icons.check),
-                                        onPressed: () => _review(c, true),
-                                      ),
-                                    ],
-                                  )
-                                : Text(
-                                    'Publication ${couponDateLabel(c.publishAt, DateTime.now())}',
-                                    style: theme.textTheme.labelSmall),
+                            trailing: Text(
+                              '${lastAction(c).label} · ${couponDateLabel(lastAction(c).at, now)}',
+                              style: theme.textTheme.labelSmall,
+                            ),
                           ),
-                      ],
-                    ),
+                          if (c.status == 'pending_review' ||
+                              c.status == 'ready')
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                              child: Wrap(
+                                alignment: WrapAlignment.end,
+                                spacing: 8,
+                                children: [
+                                  if (c.status == 'ready')
+                                    Text(
+                                        'Publication prévue ${couponDateLabel(c.publishAt, now)}',
+                                        style: theme.textTheme.labelSmall),
+                                  if (c.status == 'pending_review') ...[
+                                    TextButton.icon(
+                                      onPressed: () => _review(c, false),
+                                      icon: Icon(Icons.close,
+                                          color: theme.colorScheme.error),
+                                      label: const Text('Rejeter'),
+                                    ),
+                                    OutlinedButton.icon(
+                                      onPressed: () => _review(c, true),
+                                      icon: const Icon(Icons.check),
+                                      label: const Text('Valider'),
+                                    ),
+                                  ],
+                                  if (canPublish)
+                                    FilledButton.icon(
+                                      onPressed: _publishing == null
+                                          ? () => _publishNow(c)
+                                          : null,
+                                      icon: _publishing == c.id
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                  strokeWidth: 2))
+                                          : const Icon(Icons.send_outlined),
+                                      label: const Text('Publier maintenant'),
+                                    ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                  ],
+                );
+              },
             ),
             const SectionTitle('Journal des générations'),
             runs.when(

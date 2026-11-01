@@ -21,6 +21,7 @@ import '../matches/data/insights_models.dart';
 import '../matches/data/sports_format.dart';
 import '../matches/data/sports_models.dart';
 import '../matches/data/sports_repository.dart';
+import '../matches/presentation/sports_widgets.dart';
 import '../community/data/community_repository.dart';
 import '../notifications/data/notifications_repository.dart';
 import '../notifications/presentation/notifications_screens.dart';
@@ -569,11 +570,25 @@ class _FeaturedMatch extends ConsumerWidget {
                             style: theme.textTheme.bodyMedium,
                           )
                         else ...[
-                          Text('${match.home.name} – ${match.away.name}',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 2),
+                          for (final team in [match.home, match.away])
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Row(
+                                children: [
+                                  SportsLogo(url: team.logoUrl, size: 22),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(team.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.titleSmall
+                                            ?.copyWith(
+                                                fontWeight: FontWeight.w800)),
+                                  ),
+                                ],
+                              ),
+                            ),
                           Text(
                               '${match.competition.name} · ${timeLabel(match.kickoffAt)} · gratuite, sans crédit',
                               maxLines: 2,
@@ -788,14 +803,31 @@ class _MatchRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                        m.isLive && m.hasScore
-                            ? '${m.home.name} ${m.homeGoals}-${m.awayGoals} ${m.away.name}'
-                            : '${m.home.name} – ${m.away.name}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium
-                            ?.copyWith(fontWeight: FontWeight.w600)),
+                    for (final (team, goals) in [
+                      (m.home, m.homeGoals),
+                      (m.away, m.awayGoals)
+                    ])
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 3),
+                        child: Row(
+                          children: [
+                            SportsLogo(url: team.logoUrl, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(team.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyMedium
+                                      ?.copyWith(fontWeight: FontWeight.w600)),
+                            ),
+                            if (m.isLive && goals != null)
+                              Text('$goals',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      color: BrandColors.rouge)),
+                          ],
+                        ),
+                      ),
                     Text(m.competition.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

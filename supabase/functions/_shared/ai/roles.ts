@@ -118,11 +118,13 @@ export function validateRoles(
   if (!configured(wanted.primary)) return { ok: false, message: `Clé absente pour ${wanted.primary} : elle ne peut pas être principale.` };
   if (wanted.fallbacks.length > 2) return { ok: false, message: "Deux IA de secours au plus." };
   const seen = new Set([wanted.primary]);
+  const fallbacks: string[] = [];
   for (const f of wanted.fallbacks) {
     if (!known.includes(f)) return { ok: false, message: `IA de secours inconnue : ${label(f)}.` };
     if (seen.has(f)) return { ok: false, message: `${f} est choisie deux fois.` };
-    if (!configured(f)) return { ok: false, message: `Clé absente pour ${f} : elle ne peut pas servir de secours.` };
     seen.add(f);
+    // Une IA sans clé ne bloque pas l'enregistrement : elle est simplement retirée des secours.
+    if (configured(f)) fallbacks.push(f);
   }
   const models: Record<string, string> = {};
   for (const [name, value] of Object.entries(wanted.models)) {
@@ -130,5 +132,5 @@ export function validateRoles(
     if (typeof value !== "string" || !MODEL_NAME.test(value)) return { ok: false, message: `Nom de modèle invalide pour ${name}.` };
     models[name] = value;
   }
-  return { ok: true, primary: wanted.primary, fallbacks: wanted.fallbacks, models };
+  return { ok: true, primary: wanted.primary, fallbacks, models };
 }

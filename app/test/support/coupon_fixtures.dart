@@ -21,6 +21,8 @@ Coupon fixtureCoupon(
   Duration publishedAgo = const Duration(hours: 1),
   Duration? settledAgo,
   List<Sel> sels = const [pendingSel, pendingSel],
+  List<StatusChange> history = const [],
+  List<String> keys = const [],
 }) {
   final kickoff = fixtureNow.add(kickoffIn);
   return Coupon(
@@ -42,13 +44,14 @@ Coupon fixtureCoupon(
     vigilance: const [],
     createdAt: fixtureNow.subtract(publishedAgo),
     result: result,
+    history: history,
     settledOdd: result == 'won' ? odd : null,
     settledAt: settledAgo == null ? null : fixtureNow.subtract(settledAgo),
     selections: [
       for (var i = 0; i < sels.length; i++)
         CouponSelection.fromJson({
           'position': i + 1,
-          'selection_key': '1X2.HOME',
+          'selection_key': i < keys.length ? keys[i] : '1X2.HOME',
           'odd': 1.5,
           'odds_captured_at': fixtureNow.toUtc().toIso8601String(),
           'model_probability': 0.6,
