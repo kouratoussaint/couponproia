@@ -363,7 +363,7 @@ class LockedCouponNotice extends StatelessWidget {
             Text(
               'Les sélections et l’analyse de ce coupon sont accessibles à tout moment avec un forfait payant. '
               'Avec le forfait FREE, elles deviennent visibles après les matchs '
-              '(vers ${shortDate(openAt)} à ${timeLabel(openAt)}). Le coupon du jour reste gratuit pour tous.',
+              '(vers ${shortDate(openAt)} à ${timeLabel(openAt)}).',
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 12),

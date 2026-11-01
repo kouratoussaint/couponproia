@@ -292,7 +292,7 @@ class SettingsAdminScreen extends ConsumerWidget {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Coupons visibles à tout moment'),
                 subtitle: const Text(
-                    'Sinon : coupon du jour à tout moment (gratuit pour tous), autres coupons après les matchs'),
+                    'Sinon : coupons et résultats visibles après les matchs'),
                 value: allCoupons,
                 onChanged: (v) => setState(() => allCoupons = v),
               ),
@@ -332,7 +332,7 @@ class SettingsAdminScreen extends ConsumerWidget {
                 ...features,
                 if (int.tryParse(analyses.text) != null)
                   'match_analyses_per_day': int.parse(analyses.text),
-                'coupon_categories': allCoupons ? 'all' : ['du_jour'],
+                'coupon_categories': allCoupons ? 'all' : <String>[],
                 'tipster_publish': tipster,
               },
             },
