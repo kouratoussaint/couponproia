@@ -2,13 +2,17 @@
 //
 // Tous les calculs sont faits ici, côté serveur : cote totale, probabilités du modèle,
 // contrôles des sélections. Actions : build (coupon manuel), analyze, optimize, compare,
-// simulate (étiquetée comme simulation). Aucune action n'appelle l'IA : aucun crédit débité.
+// simulate (étiquetée comme simulation). Aucune action n'appelle l'IA. La composition manuelle
+// est gratuite ; avec le forfait FREE, chaque calcul coûte `lab.credit_cost` crédits (débités
+// seulement quand le calcul aboutit) ; forfaits payants et équipe : gratuit.
 import { diagnoseCoupon } from "../_shared/assistant/actions.ts";
 import { insertUserCoupon, loadUserCoupon, replaceUserCoupon, type StoredLine } from "../_shared/assistant/store.ts";
 import { loadCandidates, loadLiveChecks } from "../_shared/coupons/data.ts";
 import { type Candidate, defaultSummary, riskLevel, type RiskThresholds } from "../_shared/coupons/generator.ts";
 import { loadEngineQuality } from "../_shared/engine/quality.ts";
 import { alternativesFor, compareCoupons, simulate } from "../_shared/lab/lab.ts";
+import { labDecision } from "../_shared/lab/pricing.ts";
+import { planFeatures } from "../_shared/billing.ts";
 import { callerFrom, corsHeaders, json, readSettings, serverContext } from "../_shared/http.ts";
 
 const MAX_SELECTIONS = 12;
@@ -43,8 +47,31 @@ Deno.serve(async (req) => {
     const { data: flag } = await db.from("feature_flags").select("enabled").eq("key", "ai_lab").maybeSingle();
     if (!flag?.enabled) return json({ error: "feature_disabled" }, 403);
     const quality = await loadEngineQuality(db);
-    const settings = await readSettings(db, ["coupons.risk_thresholds"]);
+    const settings = await readSettings(db, ["coupons.risk_thresholds", "lab.credit_cost"]);
     const thresholds = (settings["coupons.risk_thresholds"] ?? { prudent: 0.4, equilibre: 0.18 }) as RiskThresholds;
+
+    // Prix du calcul (forfait FREE) : refusé d'avance sans assez de crédits.
+    let charge = 0;
+    if (action !== "build") {
+      const { plan } = await planFeatures(db, caller.id);
+      const { data: summary } = await db.rpc("svc_credit_summary", { p_user: caller.id });
+      const d = labDecision(action, summary, plan, Number(settings["lab.credit_cost"] ?? 1));
+      if (!d.ok) return json({ error: "credits_required", cost: d.cost }, 402);
+      charge = d.cost;
+    }
+    // Résultat d'un calcul : débit des crédits, puis réponse (rien n'est rendu sans débit).
+    const paid = async (payload: Record<string, unknown>) => {
+      if (charge > 0) {
+        const { error } = await db.rpc("svc_consume_credits", {
+          p_user: caller.id,
+          p_operation: crypto.randomUUID(),
+          p_amount: charge,
+          p_kind: `lab:${action}`,
+        });
+        if (error) return json({ error: "credits_required", cost: charge }, 402);
+      }
+      return json({ ...payload, credits_used: charge });
+    };
 
     const own = async (id: unknown) => {
       if (typeof id !== "string") return null;
@@ -117,18 +144,18 @@ Deno.serve(async (req) => {
       const coupon = await own(body?.coupon_id);
       if (!coupon || coupon.lines.length === 0) return json({ error: "coupon_not_found" }, 404);
       if (action === "analyze") {
-        return json({ diagnosis: diagnoseCoupon(await withLive(coupon.lines), quality?.beatsBaseline ?? null, now) });
+        return await paid({ diagnosis: diagnoseCoupon(await withLive(coupon.lines), quality?.beatsBaseline ?? null, now) });
       }
       if (action === "simulate") {
         const runs = Math.min(10000, Math.max(100, Number(body?.runs) || 1000));
         const total = coupon.lines.reduce((x, l) => x * l.odd, 1);
-        return json({ simulation: simulate(coupon.lines.map((l) => l.modelProbability), total, runs) });
+        return await paid({ simulation: simulate(coupon.lines.map((l) => l.modelProbability), total, runs) });
       }
       const lastKickoff = Math.max(...coupon.lines.map((l) => Date.parse(l.kickoffAt)));
       const hours = Math.max(24, (lastKickoff - now.getTime()) / 3600_000 + 12);
       const load = await loadCandidates(db, now, hours, quality);
       const fresh = load.candidates.filter((c) => Date.parse(c.kickoffAt) - now.getTime() > 15 * 60_000);
-      return json({
+      return await paid({
         alternatives: alternativesFor(coupon.lines, fresh),
         note: "Alternatives plus probables selon le modèle ; la cote du coupon change en conséquence. Vous choisissez.",
       });
@@ -144,7 +171,7 @@ Deno.serve(async (req) => {
         const { data: head } = await db.from("user_coupons").select("title").eq("id", c.id).single();
         coupons.push({ id: c.id, title: head?.title ?? "", lines: c.lines });
       }
-      return json({
+      return await paid({
         comparison: compareCoupons(coupons, quality?.beatsBaseline ?? null),
         note: "Probabilités du modèle, sélections supposées indépendantes ; les paires d'une même compétition le même jour peuvent être liées.",
       });

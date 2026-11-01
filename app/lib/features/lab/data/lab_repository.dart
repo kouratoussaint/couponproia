@@ -61,10 +61,13 @@ double indicativeOdd(List<ManualPick> picks) =>
     picks.fold(1.0, (p, x) => p * x.odd);
 
 class LabException implements Exception {
-  const LabException(this.message, [this.details = const []]);
+  const LabException(this.message, [this.details = const [], this.code]);
 
   final String message;
   final List<String> details;
+
+  /// Code d'erreur du serveur (« credits_required »…).
+  final String? code;
 
   @override
   String toString() =>
@@ -214,9 +217,13 @@ class LabRepository {
             'coupon_not_found' => 'Coupon introuvable.',
             'need_two_coupons' =>
               'Choisissez au moins deux coupons à comparer.',
+            'credits_required' =>
+              'Crédits insuffisants : ce calcul coûte ${(d['cost'] as num?)?.toInt() ?? 1} crédit${((d['cost'] as num?)?.toInt() ?? 1) > 1 ? 's' : ''} '
+                  'avec le forfait FREE. Achetez des crédits ou passez à un forfait payant.',
             _ => 'Le calcul a échoué. Réessayez dans un instant.',
           },
-          errors);
+          errors,
+          d['error']?.toString());
     }
   }
 

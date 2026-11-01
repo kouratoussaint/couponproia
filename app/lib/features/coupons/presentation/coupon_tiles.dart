@@ -277,6 +277,7 @@ class FeaturedCouponCard extends StatelessWidget {
                         Text(
                             '${c.selections.isEmpty ? '' : '${c.selections.length} sélections · '}1er match ${kickoffShort(c.firstKickoffAt, now)}',
                             style: muted),
+                        Text(publishedLine(c), style: muted),
                       ],
                     ),
                   ),
@@ -378,6 +379,11 @@ class CompactCouponTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(meta,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
+                      Text(publishedLine(c),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
@@ -488,9 +494,7 @@ class LiveCouponCard extends StatelessWidget {
                               RiskTag(c.riskLevel),
                             ]),
                         const SizedBox(height: 4),
-                        Text(
-                            'Publié ${kickoffShort(c.publishedAt ?? c.publishAt, now)}',
-                            style: muted),
+                        Text(publishedLine(c), style: muted),
                       ],
                     ),
                   ),
@@ -645,6 +649,7 @@ class ResultCouponTile extends StatelessWidget {
       _ => (Icons.remove, scheme.outline, 'Annulé'),
     };
     final detail = resultDetail(c);
+    final settled = settledLine(c);
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -693,6 +698,15 @@ class ResultCouponTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodySmall
                                 ?.copyWith(color: scheme.onSurfaceVariant)),
+                      if (settled.isNotEmpty)
+                        Text(settled,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                                color: c.result == 'won'
+                                    ? scheme.primary
+                                    : scheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),

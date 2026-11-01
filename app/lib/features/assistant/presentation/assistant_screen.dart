@@ -6,6 +6,7 @@ import '../../../core/errors/error_messages.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../analysis/data/analysis_format.dart';
+import '../../billing/credit_costs.dart';
 import '../../coupons/presentation/coupon_widgets.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
@@ -14,19 +15,27 @@ import '../../system/system_providers.dart';
 import '../data/assistant_models.dart';
 import '../data/assistant_repository.dart';
 
+/// Suggestions de départ ; `paid` : action payante (proposition, analyse), sinon question gratuite.
 const _suggestions = [
-  'Faites-moi un coupon de 3 matchs avec une cote totale proche de 4',
-  'Je veux un coupon prudent pour demain',
-  'Analyse les matchs de ce week-end',
-  'Construis un coupon uniquement avec la Premier League',
-  'Propose-moi trois versions d’un coupon équilibré',
-  'C’est quoi la double chance ?',
+  (
+    text: 'Faites-moi un coupon de 3 matchs avec une cote totale proche de 4',
+    paid: true
+  ),
+  (text: 'Je veux un coupon prudent pour demain', paid: true),
+  (text: 'Analyse les matchs de ce week-end', paid: true),
+  (text: 'Construis un coupon uniquement avec la Premier League', paid: true),
+  (text: 'Propose-moi trois versions d’un coupon équilibré', paid: true),
+  (text: 'C’est quoi la double chance ?', paid: false),
 ];
 
 /// Mon Assistant IA : conversation en langage naturel. L'IA comprend la demande, le moteur
 /// statistique compose et vérifie ; l'utilisateur garde la main (enregistrer, modifier, analyser).
 class AssistantScreen extends ConsumerStatefulWidget {
-  const AssistantScreen({super.key});
+  const AssistantScreen({super.key, this.embedded = false});
+
+  /// Dans l'onglet « Assistant » de l'Assistant IA : barre d'actions compacte
+  /// à la place de la barre de titre.
+  final bool embedded;
 
   @override
   ConsumerState<AssistantScreen> createState() => _AssistantScreenState();
@@ -134,49 +143,70 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen>
     final flags =
         ref.watch(featureFlagsProvider).valueOrNull ?? const <String, bool>{};
     final credits = ref.watch(myCreditsProvider).valueOrNull;
+    final cost = ref.watch(assistantCostProvider);
+    final pays = paysCredits(credits);
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: const DrawerMenuButton(),
-        title: const Text('Mon Assistant IA'),
-        actions: [
-          if (credits != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: ActionChip(
-                avatar: const Icon(Icons.bolt, size: 18),
-                label: Text(credits.unlimited ? '∞' : '${credits.total}'),
-                tooltip: 'Crédits IA : ${credits.label}',
-                onPressed: () => showMessage(
-                  context,
-                  credits.unlimited
-                      ? 'Compte équipe : actions illimitées (journalisées).'
-                      : 'Forfait ${credits.plan} : ${credits.planCredits} crédit(s) du mois + ${credits.extraCredits} supplémentaire(s). '
-                          'Une proposition, une modification ou une analyse réussie coûte 1 crédit ; les questions sont gratuites.',
-                ),
-              ),
+    final actions = <Widget>[
+      if (credits != null)
+        Padding(
+          padding: const EdgeInsets.only(right: 4),
+          child: ActionChip(
+            avatar: const Icon(Icons.bolt, size: 18),
+            label: Text(credits.unlimited ? '∞' : '${credits.total}'),
+            tooltip: 'Crédits IA : ${credits.label}',
+            onPressed: () => showMessage(
+              context,
+              credits.unlimited
+                  ? 'Compte équipe : actions illimitées (journalisées).'
+                  : 'Forfait ${credits.plan} : ${credits.planCredits} crédit(s) du mois + ${credits.extraCredits} supplémentaire(s). '
+                      'Une proposition, une modification ou une analyse réussie coûte ${creditsLabel(cost)} ; les questions sont gratuites.',
             ),
-          IconButton(
-            tooltip: 'Mes coupons',
-            icon: const Icon(Icons.bookmarks_outlined),
-            onPressed: () => context.push(AppRoutes.myCoupons),
           ),
-          IconButton(
-              tooltip: 'Historique',
-              icon: const Icon(Icons.history),
-              onPressed: _showHistory),
-          IconButton(
-              tooltip: 'Nouvelle conversation',
-              icon: const Icon(Icons.add_comment_outlined),
-              onPressed: _newConversation),
-        ],
-      ),
-      body: flags['assistant_ia'] == false
+        ),
+      if (!widget.embedded)
+        IconButton(
+          tooltip: 'Mes coupons',
+          icon: const Icon(Icons.bookmarks_outlined),
+          onPressed: () => context.push(AppRoutes.myCoupons),
+        ),
+      IconButton(
+          tooltip: 'Historique',
+          icon: const Icon(Icons.history),
+          onPressed: _showHistory),
+      IconButton(
+          tooltip: 'Nouvelle conversation',
+          icon: const Icon(Icons.add_comment_outlined),
+          onPressed: _newConversation),
+    ];
+    final unavailable = flags['assistant_ia'] == false;
+    return Scaffold(
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              leading: const DrawerMenuButton(),
+              title: const Text('Mon Assistant IA'),
+              actions: actions,
+            ),
+      body: unavailable
           ? const InfoMessage(
               icon: Icons.pause_circle_outline,
               title: 'Assistant momentanément indisponible')
           : Column(
               children: [
+                if (widget.embedded)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 2, 4, 0),
+                    child: Row(children: [
+                      Expanded(
+                        child: Text(
+                            _conversationId == null
+                                ? 'Nouvelle conversation'
+                                : 'Conversation en cours',
+                            style: theme.textTheme.labelLarge),
+                      ),
+                      ...actions,
+                    ]),
+                  ),
                 Expanded(
                   child: _messages.isEmpty
                       ? ListView(
@@ -203,8 +233,13 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen>
                               children: [
                                 for (final s in _suggestions)
                                   ActionChip(
-                                      label: Text(s),
-                                      onPressed: () => _send(s)),
+                                      avatar: s.paid && pays
+                                          ? const Icon(Icons.bolt, size: 16)
+                                          : null,
+                                      label: Text(s.paid && pays
+                                          ? '${s.text} · ${creditsLabel(cost)}'
+                                          : s.text),
+                                      onPressed: () => _send(s.text)),
                               ],
                             ),
                           ],
@@ -229,6 +264,15 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen>
                           },
                         ),
                 ),
+                if (pays)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                    child: Text(
+                      'Questions gratuites · proposition, modification ou analyse : ${creditsLabel(cost)}',
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                  ),
                 SafeArea(
                   top: false,
                   child: Padding(
@@ -348,8 +392,9 @@ class _AssistantBubble extends StatelessWidget {
                 if (m.creditsCharged > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child:
-                        Text('${m.creditsCharged} crédit débité', style: muted),
+                    child: Text(
+                        '${creditsLabel(m.creditsCharged)} débité${m.creditsCharged > 1 ? 's' : ''}',
+                        style: muted),
                   ),
               ],
             ),
@@ -451,6 +496,11 @@ class _ProposalCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final coupon = ref.watch(userCouponProvider(couponId));
+    final cost = paysCredits(ref.watch(myCreditsProvider).valueOrNull)
+        ? ref.watch(assistantCostProvider)
+        : 0;
+    String withCost(String label) =>
+        cost > 0 ? '$label · ${creditsLabel(cost)}' : label;
     return coupon.when(
       loading: () => const Padding(
           padding: EdgeInsets.all(12), child: LinearProgressIndicator()),
@@ -542,14 +592,14 @@ class _ProposalCard extends ConsumerWidget {
                                       c.selections.length >= 4 ? 2 : 1
                                 },
                               }),
-                      child: const Text('Remplacer les plus fragiles'),
+                      child: Text(withCost('Remplacer les plus fragiles')),
                     ),
                     OutlinedButton(
                       onPressed: busy
                           ? null
                           : () => onAction('Analyse ce coupon', c.id,
                               {'intent': 'analyser_coupon'}),
-                      child: const Text('Analyser'),
+                      child: Text(withCost('Analyser')),
                     ),
                     TextButton(
                       onPressed: () =>

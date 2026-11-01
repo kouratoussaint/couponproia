@@ -9,6 +9,7 @@ import '../../../core/widgets/form_widgets.dart';
 import '../../analysis/data/analysis_format.dart';
 import '../../assistant/data/assistant_models.dart';
 import '../../assistant/data/assistant_repository.dart';
+import '../../billing/credit_costs.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/lab_repository.dart';
@@ -16,9 +17,12 @@ import '../data/lab_repository.dart';
 /// Laboratoire IA : générateur manuel, puis analyse, optimisation, simulation et comparaison
 /// de vos coupons. Tout est recalculé par le serveur ; les simulations sont signalées comme telles.
 class LabScreen extends ConsumerStatefulWidget {
-  const LabScreen({super.key, this.initialCouponId});
+  const LabScreen({super.key, this.initialCouponId, this.embedded = false});
 
   final String? initialCouponId;
+
+  /// Dans l'onglet « Laboratoire » de l'Assistant IA : sans barre de titre.
+  final bool embedded;
 
   @override
   ConsumerState<LabScreen> createState() => _LabScreenState();
@@ -45,15 +49,19 @@ class _LabScreenState extends ConsumerState<LabScreen> {
     _simulation = null;
   }
 
-  Future<void> _run(Future<void> Function() task) async {
+  Future<void> _run(Future<void> Function() task, {bool priced = false}) async {
     setState(() => _busy = true);
     try {
       await task();
+      if (priced) ref.invalidate(myCreditsProvider);
     } catch (e) {
       if (mounted) {
         showMessage(
             context, e is LabException ? e.toString() : userMessageFor(e),
             error: true);
+        if (e is LabException && e.code == 'credits_required') {
+          context.push(AppRoutes.billing);
+        }
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -100,7 +108,9 @@ class _LabScreenState extends ConsumerState<LabScreen> {
         ref.watch(featureFlagsProvider).valueOrNull ?? const <String, bool>{};
     if (flags['ai_lab'] == false) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Laboratoire IA')),
+        appBar: widget.embedded
+            ? null
+            : AppBar(title: const Text('Laboratoire IA')),
         body: const InfoMessage(
             icon: Icons.pause_circle_outline,
             title: 'Laboratoire momentanément indisponible'),
@@ -110,9 +120,15 @@ class _LabScreenState extends ConsumerState<LabScreen> {
     final saved = ref.watch(savedCouponsProvider);
     final muted = theme.textTheme.bodySmall
         ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final cost = paysCreditsAsFree(ref.watch(myCreditsProvider).valueOrNull)
+        ? ref.watch(labCostProvider)
+        : 0;
+    String withCost(String label) =>
+        cost > 0 ? '$label · ${creditsLabel(cost)}' : label;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Laboratoire IA')),
+      appBar:
+          widget.embedded ? null : AppBar(title: const Text('Laboratoire IA')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
@@ -183,6 +199,15 @@ class _LabScreenState extends ConsumerState<LabScreen> {
             ),
           ),
           const SectionTitle('Analyser un de mes coupons'),
+          if (cost > 0)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                  'Composition manuelle gratuite. Avec le forfait FREE, chaque calcul '
+                  '(analyser, optimiser, simuler, comparer) coûte ${creditsLabel(cost)} ; '
+                  'gratuit avec un forfait payant.',
+                  style: muted),
+            ),
           saved.when(
             loading: () => const LinearProgressIndicator(),
             error: (e, _) => Text(userMessageFor(e)),
@@ -230,9 +255,9 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                                         .read(labRepositoryProvider)
                                         .analyze(current.id);
                                     if (mounted) setState(() => _diagnosis = d);
-                                  }),
+                                  }, priced: true),
                           icon: const Icon(Icons.manage_search),
-                          label: const Text('Analyser'),
+                          label: Text(withCost('Analyser')),
                         ),
                         OutlinedButton.icon(
                           onPressed: _busy
@@ -244,9 +269,9 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                                     if (mounted) {
                                       setState(() => _alternatives = a);
                                     }
-                                  }),
+                                  }, priced: true),
                           icon: const Icon(Icons.tune),
-                          label: const Text('Optimiser'),
+                          label: Text(withCost('Optimiser')),
                         ),
                         OutlinedButton.icon(
                           onPressed: _busy
@@ -258,9 +283,9 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                                     if (mounted) {
                                       setState(() => _simulation = s);
                                     }
-                                  }),
+                                  }, priced: true),
                           icon: const Icon(Icons.casino_outlined),
-                          label: const Text('Simuler'),
+                          label: Text(withCost('Simuler')),
                         ),
                         TextButton(
                             onPressed: () =>
@@ -312,8 +337,9 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                                       .read(labRepositoryProvider)
                                       .compare(_compareIds.toList());
                                   if (mounted) setState(() => _comparison = r);
-                                }),
-                        child: Text('Comparer (${_compareIds.length}/3)'),
+                                }, priced: true),
+                        child: Text(
+                            withCost('Comparer (${_compareIds.length}/3)')),
                       ),
                       if (_comparison != null)
                         _ComparisonView(rows: _comparison!),

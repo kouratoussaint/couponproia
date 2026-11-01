@@ -18,6 +18,10 @@ String timeLabel(DateTime local) => '${two(local.hour)}:${two(local.minute)}';
 
 String shortDate(DateTime local) => '${two(local.day)}/${two(local.month)}';
 
+/// « 31/10/2026 à 18:05 » : date complète avec l'année et l'heure.
+String dateTimeLabel(DateTime local) =>
+    '${shortDate(local)}/${local.year} à ${timeLabel(local)}';
+
 String dayLabel(DateTime day, DateTime today) {
   final diff = dateOnly(day).difference(dateOnly(today)).inDays;
   if (diff == 0) return 'Aujourd’hui';

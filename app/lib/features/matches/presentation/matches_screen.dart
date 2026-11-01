@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
-import '../../../core/router/app_routes.dart';
 import '../../shell/app_drawer.dart';
 import '../../system/system_providers.dart';
 import '../data/sports_format.dart';
 import '../data/sports_repository.dart';
 import '../../analysis/presentation/analyze_access.dart';
+import 'competitions_screen.dart';
 import 'sports_widgets.dart';
 
-/// Calendrier des matchs : un jour à la fois (hier à J+6), recherche et filtre par compétition.
+/// Matchs : onglet Calendrier (un jour à la fois, hier à J+6, recherche et filtre par
+/// compétition) et onglet Compétitions et classements.
 class MatchesScreen extends ConsumerStatefulWidget {
   const MatchesScreen({super.key});
 
@@ -61,17 +61,19 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
             }
           },
         ),
-        IconButton(
-          tooltip: 'Compétitions et classements',
-          icon: const Icon(Icons.emoji_events_outlined),
-          onPressed: () => context.push(AppRoutes.competitions),
-        ),
       ],
+      bottom: const TabBar(
+        tabs: [
+          Tab(text: 'Calendrier'),
+          Tab(text: 'Compétitions et classements'),
+        ],
+      ),
     );
 
     if (flags != null && flags['matches'] == false) {
       return Scaffold(
-        appBar: appBar,
+        appBar: AppBar(
+            leading: const DrawerMenuButton(), title: const Text('Matchs')),
         body: const InfoMessage(
           icon: Icons.sports_soccer,
           title: 'Matchs momentanément indisponibles',
@@ -88,174 +90,181 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
     final markets =
         ref.watch(market1x2OfDayProvider(day)).valueOrNull ?? const {};
 
-    return Scaffold(
-      appBar: appBar,
-      body: Column(
-        children: [
-          if (archive != null)
-            MaterialBanner(
-              padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-              leading: const Icon(Icons.history_edu_outlined),
-              content: Text(
-                'Données d’archive : saison ${seasonLabel(archive)}. Ce sont de vrais matchs, déjà joués ; '
-                'la saison en cours sera disponible avec l’offre Pro du fournisseur.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => setState(() {
-                    _day = null;
-                    _competitionId = null;
-                  }),
-                  child: const Text('Revenir au jour'),
-                ),
-              ],
+    final calendar = Column(
+      children: [
+        if (archive != null)
+          MaterialBanner(
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+            leading: const Icon(Icons.history_edu_outlined),
+            content: Text(
+              'Données d’archive : saison ${seasonLabel(archive)}. Ce sont de vrais matchs, déjà joués ; '
+              'la saison en cours sera disponible avec l’offre Pro du fournisseur.',
             ),
-          SizedBox(
-            height: 48,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: days.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, i) => ChoiceChip(
-                label: Text(dayLabel(days[i], today)),
-                selected: days[i] == day,
-                onSelected: (_) => setState(() {
-                  _day = days[i];
+            actions: [
+              TextButton(
+                onPressed: () => setState(() {
+                  _day = null;
                   _competitionId = null;
                 }),
+                child: const Text('Revenir au jour'),
               ),
+            ],
+          ),
+        SizedBox(
+          height: 48,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: days.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, i) => ChoiceChip(
+              label: Text(dayLabel(days[i], today)),
+              selected: days[i] == day,
+              onSelected: (_) => setState(() {
+                _day = days[i];
+                _competitionId = null;
+              }),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: TextField(
-              controller: _search,
-              onChanged: (_) => setState(() {}),
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: 'Rechercher une équipe ou une compétition',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _search.text.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: 'Effacer',
-                        icon: const Icon(Icons.close),
-                        onPressed: () => setState(_search.clear),
-                      ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(matchesOfDayProvider(day));
-                ref.invalidate(market1x2OfDayProvider(day));
-                await ref.read(matchesOfDayProvider(day).future);
-              },
-              child: matches.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => ListView(
-                  children: [
-                    InfoMessage(
-                      icon: Icons.cloud_off_outlined,
-                      title: 'Impossible de charger les matchs',
-                      body: userMessageFor(e),
-                      action: OutlinedButton(
-                        onPressed: () =>
-                            ref.invalidate(matchesOfDayProvider(day)),
-                        child: const Text('Réessayer'),
-                      ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: TextField(
+            controller: _search,
+            onChanged: (_) => setState(() {}),
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              isDense: true,
+              hintText: 'Rechercher une équipe ou une compétition',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _search.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Effacer',
+                      icon: const Icon(Icons.close),
+                      onPressed: () => setState(_search.clear),
                     ),
-                  ],
-                ),
-                data: (all) {
-                  final groups = groupByCompetition(all);
-                  final filtered = all
-                      .where((m) =>
-                          _competitionId == null ||
-                          m.competition.id == _competitionId)
-                      .where((m) => matchesQuery(m, _search.text))
-                      .toList();
-                  final shown = groupByCompetition(filtered);
-                  return ListView(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    children: [
-                      if (groups.length > 1)
-                        SizedBox(
-                          height: 44,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            children: [
+            ),
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(matchesOfDayProvider(day));
+              ref.invalidate(market1x2OfDayProvider(day));
+              await ref.read(matchesOfDayProvider(day).future);
+            },
+            child: matches.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => ListView(
+                children: [
+                  InfoMessage(
+                    icon: Icons.cloud_off_outlined,
+                    title: 'Impossible de charger les matchs',
+                    body: userMessageFor(e),
+                    action: OutlinedButton(
+                      onPressed: () =>
+                          ref.invalidate(matchesOfDayProvider(day)),
+                      child: const Text('Réessayer'),
+                    ),
+                  ),
+                ],
+              ),
+              data: (all) {
+                final groups = groupByCompetition(all);
+                final filtered = all
+                    .where((m) =>
+                        _competitionId == null ||
+                        m.competition.id == _competitionId)
+                    .where((m) => matchesQuery(m, _search.text))
+                    .toList();
+                final shown = groupByCompetition(filtered);
+                return ListView(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  children: [
+                    if (groups.length > 1)
+                      SizedBox(
+                        height: 44,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: FilterChip(
+                                label: const Text('Toutes'),
+                                selected: _competitionId == null,
+                                onSelected: (_) =>
+                                    setState(() => _competitionId = null),
+                              ),
+                            ),
+                            for (final (competition, list) in groups)
                               Padding(
                                 padding: const EdgeInsets.only(right: 8),
                                 child: FilterChip(
-                                  label: const Text('Toutes'),
-                                  selected: _competitionId == null,
-                                  onSelected: (_) =>
-                                      setState(() => _competitionId = null),
+                                  avatar: SportsLogo(
+                                      url: competition.logoUrl, size: 18),
+                                  label: Text(
+                                      '${competition.name} (${list.length})'),
+                                  selected: _competitionId == competition.id,
+                                  onSelected: (_) => setState(
+                                      () => _competitionId = competition.id),
                                 ),
                               ),
-                              for (final (competition, list) in groups)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: FilterChip(
-                                    avatar: SportsLogo(
-                                        url: competition.logoUrl, size: 18),
-                                    label: Text(
-                                        '${competition.name} (${list.length})'),
-                                    selected: _competitionId == competition.id,
-                                    onSelected: (_) => setState(
-                                        () => _competitionId = competition.id),
-                                  ),
-                                ),
+                          ],
+                        ),
+                      ),
+                    if (markets.isNotEmpty) const OneXTwoLegend(),
+                    if (all.isEmpty)
+                      const InfoMessage(
+                        icon: Icons.event_busy_outlined,
+                        title: 'Aucun match pour ce jour',
+                        body:
+                            'Aucune des compétitions suivies ne joue ce jour-là, ou le calendrier n’est pas encore '
+                            'synchronisé (mise à jour chaque matin à 4 h). Essayez un autre jour.',
+                      )
+                    else if (filtered.isEmpty)
+                      const InfoMessage(
+                        icon: Icons.search_off,
+                        title: 'Aucun match ne correspond à votre recherche',
+                      ),
+                    for (final (competition, list) in shown) ...[
+                      _CompetitionHeader(
+                          name: competition.name,
+                          country: competition.country,
+                          logoUrl: competition.logoUrl),
+                      Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          children: [
+                            for (var i = 0; i < list.length; i++) ...[
+                              if (i > 0) const Divider(height: 1),
+                              MatchCard(
+                                  match: list[i],
+                                  market: markets[list[i].id],
+                                  action: AnalyzeMatchButton(match: list[i])),
                             ],
-                          ),
+                          ],
                         ),
-                      if (markets.isNotEmpty) const OneXTwoLegend(),
-                      if (all.isEmpty)
-                        const InfoMessage(
-                          icon: Icons.event_busy_outlined,
-                          title: 'Aucun match pour ce jour',
-                          body:
-                              'Aucune des compétitions suivies ne joue ce jour-là, ou le calendrier n’est pas encore '
-                              'synchronisé (mise à jour chaque matin à 4 h). Essayez un autre jour.',
-                        )
-                      else if (filtered.isEmpty)
-                        const InfoMessage(
-                          icon: Icons.search_off,
-                          title: 'Aucun match ne correspond à votre recherche',
-                        ),
-                      for (final (competition, list) in shown) ...[
-                        _CompetitionHeader(
-                            name: competition.name,
-                            country: competition.country,
-                            logoUrl: competition.logoUrl),
-                        Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 12),
-                          clipBehavior: Clip.antiAlias,
-                          child: Column(
-                            children: [
-                              for (var i = 0; i < list.length; i++) ...[
-                                if (i > 0) const Divider(height: 1),
-                                MatchCard(
-                                    match: list[i],
-                                    market: markets[list[i].id],
-                                    action: AnalyzeMatchButton(match: list[i])),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ],
-                  );
-                },
-              ),
+                  ],
+                );
+              },
             ),
           ),
-        ],
+        ),
+      ],
+    );
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: appBar,
+        body: TabBarView(
+          children: [calendar, const CompetitionsList()],
+        ),
       ),
     );
   }

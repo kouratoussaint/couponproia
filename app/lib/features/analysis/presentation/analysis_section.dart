@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../simulator/presentation/sim_entries.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/theme/brand_colors.dart';
+import '../../../core/theme/solid_buttons.dart';
+import '../../billing/credit_costs.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../../core/widgets/super_admin_note.dart';
 import '../../lab/data/lab_repository.dart';
@@ -106,20 +108,24 @@ class _AnalyzeButtonState extends ConsumerState<AnalyzeButton> {
       );
     }
     final allowed = ref.watch(analysisAllowedProvider(match.id));
-    if (!allowed) {
-      return FilledButton.tonalIcon(
+    // Analyse déjà visible : l'accès est acquis, la mise à jour reste gratuite.
+    if (analysis == null && !allowed) {
+      return FilledButton.icon(
+        style: solidButtonStyle(context, SolidTone.red),
         onPressed: () => showAnalysisLocked(context),
         icon: const Icon(Icons.lock_outline),
-        label: Text(analysis == null
-            ? 'Analyse réservée aux abonnés'
-            : 'Mise à jour réservée aux abonnés'),
+        label: const Text('Analyse réservée : forfait payant ou crédits'),
       );
     }
     if (analysis == null) {
+      final cost = ref.watch(analysisChargeProvider(match.id));
       return FilledButton.icon(
+        style: solidButtonStyle(context, SolidTone.green),
         onPressed: _run,
         icon: const Icon(Icons.auto_awesome),
-        label: const Text('Analyser avec l’IA'),
+        label: Text(cost > 0
+            ? 'Analyser avec l’IA · ${creditsLabel(cost)}'
+            : 'Analyser avec l’IA'),
       );
     }
     return Row(

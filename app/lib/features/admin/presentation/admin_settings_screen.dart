@@ -104,6 +104,16 @@ class SettingsAdminScreen extends ConsumerWidget {
             body: adminErrorMessage(e)),
         data: (list) {
           final plans = list.where((s) => s.key == 'pricing.plans').firstOrNull;
+          const costs = {
+            'analysis.credit_cost': 'Analyse de match (forfait FREE)',
+            'lab.credit_cost': 'Calcul du laboratoire (forfait FREE)',
+            'assistant.cost_per_action':
+                'Action de l’assistant (tous forfaits)',
+          };
+          final costSettings = [
+            for (final k in costs.keys)
+              if (list.where((s) => s.key == k).firstOrNull case final s?) s
+          ];
           return ListView(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
             children: [
@@ -121,6 +131,21 @@ class SettingsAdminScreen extends ConsumerWidget {
                       trailing: const Icon(Icons.edit_outlined),
                       onTap: () =>
                           _editPlan(context, ref, plans.value as List, i),
+                    ),
+                  ),
+              ],
+              if (costSettings.isNotEmpty) ...[
+                const SectionTitle('Coûts en crédits'),
+                for (final c in costSettings)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.bolt),
+                      title: Text(costs[c.key]!),
+                      subtitle: Text(c.key),
+                      trailing: Text(
+                          '${c.value} crédit${(c.value is num && (c.value as num) > 1) ? 's' : ''}',
+                          style: Theme.of(context).textTheme.titleSmall),
+                      onTap: () => _editSetting(context, ref, c),
                     ),
                   ),
               ],

@@ -6,6 +6,7 @@ import '../../../core/monitoring/error_reporter.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/solid_buttons.dart';
 import '../../../core/theme/text_scale_controller.dart';
 import '../../../core/theme/theme_mode_controller.dart';
 import '../../../core/widgets/form_widgets.dart';
@@ -96,10 +97,24 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const _GroupTitle('Mon jeu'),
             Card(
               child: Column(
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.menu_book_outlined),
+                    title: const Text('Mon carnet de paris'),
+                    subtitle:
+                        const Text('Vos mises notées et votre bilan réel'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.journal),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.star_outline),
+                    title: const Text('Équipes suivies'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.favoriteTeams),
+                  ),
                   ListTile(
                     leading: const Icon(Icons.tune),
                     title: const Text('Mes préférences'),
@@ -118,30 +133,20 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () => showOnboarding(context, fromProfile: true),
                   ),
                   ListTile(
-                    leading: const Icon(Icons.notifications_none),
-                    title: const Text('Notifications'),
-                    subtitle: const Text('Ce que je reçois, heures calmes'),
+                    leading: const Icon(Icons.health_and_safety_outlined),
+                    title: const Text('Jeu responsable'),
+                    subtitle: const Text(
+                        'Budget mensuel, plafond par pari, conseils'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(AppRoutes.notificationSettings),
+                    onTap: () => context.push(AppRoutes.responsibleGaming),
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.star_outline),
-                    title: const Text('Équipes suivies'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(AppRoutes.favoriteTeams),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.forum_outlined),
-                    title: const Text('Mon profil Tipster'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(AppRoutes.myTipsterProfile),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.block),
-                    title: const Text('Utilisateurs bloqués'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(AppRoutes.blockedUsers),
-                  ),
+                ],
+              ),
+            ),
+            const _GroupTitle('Mon compte'),
+            Card(
+              child: Column(
+                children: [
                   ListTile(
                     leading: const Icon(Icons.workspace_premium_outlined),
                     title: const Text('Abonnement'),
@@ -170,6 +175,13 @@ class ProfileScreen extends ConsumerWidget {
                           ),
                     ),
                   ),
+                  ListTile(
+                    leading: const Icon(Icons.notifications_none),
+                    title: const Text('Notifications'),
+                    subtitle: const Text('Ce que je reçois, heures calmes'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.notificationSettings),
+                  ),
                   if (permissions.contains('admin.access'))
                     ListTile(
                       leading: const Icon(Icons.admin_panel_settings_outlined),
@@ -182,7 +194,7 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -251,7 +263,26 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const _GroupTitle('Communauté'),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.forum_outlined),
+                    title: const Text('Mon profil Tipster'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.myTipsterProfile),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.block),
+                    title: const Text('Utilisateurs bloqués'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.blockedUsers),
+                  ),
+                ],
+              ),
+            ),
+            const _GroupTitle('Aide'),
             Card(
               child: Column(
                 children: [
@@ -264,22 +295,6 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () => contactSupport(context, ref),
                   ),
                   ListTile(
-                    leading: const Icon(Icons.menu_book_outlined),
-                    title: const Text('Mon carnet de paris'),
-                    subtitle:
-                        const Text('Vos mises notées et votre bilan réel'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(AppRoutes.journal),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.health_and_safety_outlined),
-                    title: const Text('Jeu responsable'),
-                    subtitle: const Text(
-                        'Budget mensuel, plafond par pari, conseils'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(AppRoutes.responsibleGaming),
-                  ),
-                  ListTile(
                     leading: const Icon(Icons.gavel_outlined),
                     title: const Text('Conditions et mentions'),
                     subtitle: const Text(
@@ -287,23 +302,29 @@ class ProfileScreen extends ConsumerWidget {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.legal),
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.logout),
-                    title: const Text('Se déconnecter'),
-                    onTap: () async {
-                      await ref.read(pushServiceProvider).stop();
-                      await ref.read(authRepositoryProvider).signOut();
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.delete_forever_outlined,
-                        color: theme.colorScheme.error),
-                    title: Text('Supprimer mon compte',
-                        style: TextStyle(color: theme.colorScheme.error)),
-                    onTap: () => _confirmDeletion(context, ref),
-                  ),
                 ],
               ),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              style: solidButtonStyle(context, SolidTone.orange).copyWith(
+                  minimumSize:
+                      const WidgetStatePropertyAll(Size.fromHeight(48))),
+              onPressed: () => _confirmDeletion(context, ref),
+              icon: const Icon(Icons.delete_forever_outlined),
+              label: const Text('Supprimer mon compte'),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              style: solidButtonStyle(context, SolidTone.red).copyWith(
+                  minimumSize:
+                      const WidgetStatePropertyAll(Size.fromHeight(48))),
+              onPressed: () async {
+                await ref.read(pushServiceProvider).stop();
+                await ref.read(authRepositoryProvider).signOut();
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text('Se déconnecter'),
             ),
             const SizedBox(height: 24),
             Center(
@@ -333,6 +354,24 @@ class ProfileScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) showMessage(context, userMessageFor(e), error: true);
     }
+  }
+}
+
+/// Titre d'un groupe du profil (Mon jeu, Mon compte, Communauté, Aide).
+class _GroupTitle extends StatelessWidget {
+  const _GroupTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 20, 4, 8),
+      child: Text(text,
+          style: theme.textTheme.titleSmall?.copyWith(
+              color: theme.colorScheme.primary, fontWeight: FontWeight.w800)),
+    );
   }
 }
 

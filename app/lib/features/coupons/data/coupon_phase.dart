@@ -33,6 +33,20 @@ String scoreLine(SelectionMatch m) => m.homeGoals != null && m.awayGoals != null
     ? '${m.home} ${m.homeGoals}–${m.awayGoals} ${m.away}'
     : '${m.home} – ${m.away}';
 
+/// « Publié le 31/10/2026 à 09:00 » (vide si la date est inconnue).
+String publishedLine(Coupon c) {
+  final t = c.publishedAt ?? c.publishAt;
+  return 'Publié le ${dateTimeLabel(t.toLocal())}';
+}
+
+/// « Payé le … » (gagné) ou « Terminé le … » (perdu, annulé) ; vide sans date.
+String settledLine(Coupon c) {
+  final t = c.settledAt;
+  if (t == null || c.result == null) return '';
+  final word = c.result == 'won' ? 'Payé' : 'Terminé';
+  return '$word le ${dateTimeLabel(t.toLocal())}';
+}
+
 /// « Raté : Chelsea 2–0 Manchester United · +1 », « Toutes validées », « Annulé ».
 String resultDetail(Coupon c) {
   if (c.locked || c.selections.isEmpty) return '';

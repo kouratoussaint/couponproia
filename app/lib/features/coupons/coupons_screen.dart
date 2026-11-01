@@ -300,7 +300,21 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
         if (_category == null || c.category == _category) c
     ];
     final mayHaveMore = (decided.valueOrNull?.length ?? 0) >= _limit;
+    final theme = Theme.of(context);
     return [
+      Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          leading:
+              Icon(Icons.insights_outlined, color: theme.colorScheme.primary),
+          title: const Text('Performances'),
+          subtitle:
+              const Text('Bilan détaillé : réussite, cotes, pertes comprises'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(AppRoutes.performance),
+        ),
+      ),
       SizedBox(
         height: 44,
         child: ListView(
@@ -401,7 +415,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
       if (decided.hasValue)
         _footer(
             'Tous les coupons publiés restent consultables, gagnés comme perdus. Bilan détaillé : '
-            'menu → Performances.'),
+            'Performances, en haut de cet onglet.'),
     ];
   }
 

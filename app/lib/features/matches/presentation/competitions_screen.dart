@@ -9,50 +9,58 @@ import '../data/sports_models.dart';
 import '../data/sports_repository.dart';
 import 'sports_widgets.dart';
 
-/// Liste des compétitions suivies.
-class CompetitionsScreen extends ConsumerWidget {
+/// Liste des compétitions suivies (écran autonome, pour les liens directs).
+class CompetitionsScreen extends StatelessWidget {
   const CompetitionsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Compétitions et classements')),
+        body: const CompetitionsList(),
+      );
+}
+
+/// Compétitions suivies ; un toucher ouvre le classement. Utilisé dans l'onglet
+/// « Compétitions et classements » de Matchs.
+class CompetitionsList extends ConsumerWidget {
+  const CompetitionsList({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final competitions = ref.watch(competitionsProvider);
-    return Scaffold(
-      appBar: AppBar(title: const Text('Compétitions')),
-      body: competitions.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => InfoMessage(
-            icon: Icons.cloud_off_outlined,
-            title: 'Indisponible',
-            body: userMessageFor(e)),
-        data: (list) => list.isEmpty
-            ? const InfoMessage(
-                icon: Icons.emoji_events_outlined,
-                title: 'Aucune compétition suivie')
-            : ListView.separated(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: list.length,
-                separatorBuilder: (_, __) =>
-                    const Divider(height: 1, indent: 72),
-                itemBuilder: (context, i) {
-                  final c = list[i];
-                  return ListTile(
-                    leading: SportsLogo(
-                        url: c.logoUrl,
-                        size: 36,
-                        fallback: Icons.emoji_events_outlined),
-                    title: Text(c.name),
-                    subtitle: Text([
-                      if (c.country != null) c.country!,
-                      c.currentSeason == null
-                          ? 'saison non synchronisée'
-                          : 'saison ${seasonLabel(c.currentSeason!)}',
-                    ].join(' · ')),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(AppRoutes.standingsFor(c.id)),
-                  );
-                },
-              ),
-      ),
+    return competitions.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => InfoMessage(
+          icon: Icons.cloud_off_outlined,
+          title: 'Indisponible',
+          body: userMessageFor(e)),
+      data: (list) => list.isEmpty
+          ? const InfoMessage(
+              icon: Icons.emoji_events_outlined,
+              title: 'Aucune compétition suivie')
+          : ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: list.length,
+              separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+              itemBuilder: (context, i) {
+                final c = list[i];
+                return ListTile(
+                  leading: SportsLogo(
+                      url: c.logoUrl,
+                      size: 36,
+                      fallback: Icons.emoji_events_outlined),
+                  title: Text(c.name),
+                  subtitle: Text([
+                    if (c.country != null) c.country!,
+                    c.currentSeason == null
+                        ? 'saison non synchronisée'
+                        : 'saison ${seasonLabel(c.currentSeason!)}',
+                  ].join(' · ')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push(AppRoutes.standingsFor(c.id)),
+                );
+              },
+            ),
     );
   }
 }

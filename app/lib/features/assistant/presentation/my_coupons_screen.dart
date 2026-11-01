@@ -24,7 +24,10 @@ import '../data/assistant_repository.dart';
 
 /// Mes coupons : coupons enregistrés depuis l'assistant ou le laboratoire.
 class MyCouponsScreen extends ConsumerStatefulWidget {
-  const MyCouponsScreen({super.key});
+  const MyCouponsScreen({super.key, this.embedded = false});
+
+  /// Dans l'onglet « Mes coupons » de l'Assistant IA : sans barre de titre.
+  final bool embedded;
 
   @override
   ConsumerState<MyCouponsScreen> createState() => _MyCouponsScreenState();
@@ -38,7 +41,7 @@ class _MyCouponsScreenState extends ConsumerState<MyCouponsScreen> {
     final theme = Theme.of(context);
     final coupons = ref.watch(savedCouponsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Mes coupons')),
+      appBar: widget.embedded ? null : AppBar(title: const Text('Mes coupons')),
       body: coupons.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(

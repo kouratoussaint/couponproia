@@ -246,7 +246,8 @@ class _EntryTile extends ConsumerWidget {
         ),
         title: Text(e.title, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text(
-            'Mise ${money(e.stake, currency: currency)} · cote ${decimal(e.totalOdd)} · ${shortDate(e.placedAt)}'),
+            'Mise ${money(e.stake, currency: currency)} · cote ${decimal(e.totalOdd)}\n${dateTimeLabel(e.placedAt)}'),
+        isThreeLine: true,
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,

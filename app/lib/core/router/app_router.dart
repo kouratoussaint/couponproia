@@ -13,7 +13,7 @@ import '../../features/admin/presentation/growth_admin_screen.dart';
 import '../../features/admin/presentation/health_admin_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/analysis/presentation/engine_admin_screen.dart';
-import '../../features/assistant/presentation/assistant_screen.dart';
+import '../../features/assistant/presentation/assistant_hub_screen.dart';
 import '../../features/assistant/presentation/my_coupons_screen.dart';
 import '../../features/auth/presentation/password_reset_screens.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
@@ -348,7 +348,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [
             GoRoute(
                 path: AppRoutes.assistant,
-                builder: (context, state) => const AssistantScreen()),
+                builder: (context, state) => AssistantHubScreen(
+                    key: ValueKey(state.uri.queryParameters['onglet']),
+                    initialTab:
+                        assistantTabFrom(state.uri.queryParameters['onglet']))),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
