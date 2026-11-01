@@ -44,7 +44,7 @@ select is((select count(*)::int from public.notifications where kind = 'match'),
 
 -- Heures calmes : envoi différé, notification bien présente
 update public.user_preferences set quiet_start = 0, quiet_end = 23 where user_id = '11111111-1111-1111-1111-111111111111';
-select app_private.notify('11111111-1111-1111-1111-111111111111', 'system', 'Test', 'Corps', null, 'calme');
+select app_private.notify('11111111-1111-1111-1111-111111111111', 'result', 'Test', 'Corps', null, 'calme');
 select ok((select send_after > now() from public.notifications where dedupe_key = 'calme')
           or extract(hour from now() at time zone 'Africa/Ouagadougou') = 23, '8. heures calmes : envoi différé');
 

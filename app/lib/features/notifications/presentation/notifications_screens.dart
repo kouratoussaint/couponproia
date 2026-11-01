@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../coupons/data/coupon_models.dart';
+import '../../coupons/presentation/coupon_tiles.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/widgets/form_widgets.dart';
@@ -220,19 +222,57 @@ class NotificationSettingsScreen extends ConsumerWidget {
                     SwitchListTile(
                       title: Text(title),
                       subtitle: Text(desc),
-                      value: switch (column) {
-                        'notify_coupons' => p.coupons,
-                        'notify_results' => p.results,
-                        'notify_tipsters' => p.tipsters,
-                        'notify_matches' => p.matches,
-                        'notify_morning' => p.morning,
-                        _ => p.credits,
-                      },
+                      value: prefValue(p, column),
                       onChanged: (v) => set({column: v}),
                     ),
                 ],
               ),
             ),
+            if (p.coupons) ...[
+              const SectionTitle('Types de coupons notifiés'),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                          p.couponCategories.isEmpty
+                              ? 'Tous les types que votre forfait permet de lire.'
+                              : 'Seulement les types choisis.',
+                          style: theme.textTheme.bodySmall),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          FilterChip(
+                            label: const Text('Tous'),
+                            selected: p.couponCategories.isEmpty,
+                            onSelected: (_) =>
+                                set({'coupon_categories': <String>[]}),
+                          ),
+                          for (final MapEntry(key: code, value: label)
+                              in categoryLabels.entries)
+                            FilterChip(
+                              avatar: Icon(categoryIcon(code), size: 16),
+                              label: Text(label),
+                              selected: p.couponCategories.contains(code),
+                              onSelected: (on) {
+                                final next = {...p.couponCategories};
+                                on ? next.add(code) : next.remove(code);
+                                set({
+                                  'coupon_categories': next.toList()..sort()
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SectionTitle('Heures calmes'),
             Card(
               child: Padding(
@@ -241,7 +281,8 @@ class NotificationSettingsScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                        'Aucune notification sur le téléphone pendant cette plage : elles arrivent à la fin.'),
+                        'Aucune notification sur le téléphone pendant cette plage : elles arrivent à la fin. '
+                        'Exceptions : scores en direct, rappels de vos paris et alertes de budget, utiles sur le moment.'),
                     const SizedBox(height: 12),
                     Wrap(
                       crossAxisAlignment: WrapCrossAlignment.center,

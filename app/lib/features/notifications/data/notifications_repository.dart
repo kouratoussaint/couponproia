@@ -49,6 +49,10 @@ class NotificationPrefs {
     this.matches = true,
     this.morning = false,
     this.credits = true,
+    this.analyses = true,
+    this.betReminders = true,
+    this.live = true,
+    this.couponCategories = const {},
     this.quietStart = 23,
     this.quietEnd = 7,
   });
@@ -62,6 +66,12 @@ class NotificationPrefs {
         matches: j['notify_matches'] != false,
         morning: j['notify_morning'] == true,
         credits: j['notify_credits'] != false,
+        analyses: j['notify_analyses'] != false,
+        betReminders: j['notify_bet_reminders'] != false,
+        live: j['notify_live'] != false,
+        couponCategories: {
+          for (final c in (j['coupon_categories'] as List? ?? const [])) '$c'
+        },
         quietStart: (j['quiet_start'] as num?)?.toInt() ?? 23,
         quietEnd: (j['quiet_end'] as num?)?.toInt() ?? 7,
       );
@@ -73,12 +83,19 @@ class NotificationPrefs {
   final bool matches;
   final bool morning;
   final bool credits;
+  final bool analyses;
+  final bool betReminders;
+  final bool live;
+
+  /// Types de coupons notifiés ; vide = tous.
+  final Set<String> couponCategories;
   final int quietStart;
   final int quietEnd;
 
   static const columns =
       'notifications_enabled, notify_coupons, notify_results, notify_tipsters, '
-      'notify_matches, notify_morning, notify_credits, quiet_start, quiet_end';
+      'notify_matches, notify_morning, notify_credits, notify_analyses, notify_bet_reminders, '
+      'notify_live, coupon_categories, quiet_start, quiet_end';
 
   bool get hasQuietHours => quietStart != quietEnd;
 }
@@ -110,8 +127,35 @@ const notificationKinds = [
     'Rendez-vous du matin',
     'Vers 7 h 30 : matchs du jour et analyse offerte'
   ),
+  (
+    'notify_analyses',
+    'Analyses de mes équipes',
+    'Quand le match d’une équipe que vous suivez vient d’être analysé'
+  ),
+  (
+    'notify_bet_reminders',
+    'Rappel avant mes paris',
+    '15 minutes avant le premier match d’un pari noté dans votre carnet'
+  ),
+  (
+    'notify_live',
+    'Scores en direct de mes paris',
+    'À chaque but sur un match de votre carnet ou d’un coupon dont vous suivez la cote'
+  ),
   ('notify_credits', 'Crédits IA', 'Quand vos crédits sont presque épuisés'),
 ];
+
+bool prefValue(NotificationPrefs p, String column) => switch (column) {
+      'notify_coupons' => p.coupons,
+      'notify_results' => p.results,
+      'notify_tipsters' => p.tipsters,
+      'notify_matches' => p.matches,
+      'notify_morning' => p.morning,
+      'notify_analyses' => p.analyses,
+      'notify_bet_reminders' => p.betReminders,
+      'notify_live' => p.live,
+      _ => p.credits,
+    };
 
 class NotificationsRepository {
   NotificationsRepository(this._client);

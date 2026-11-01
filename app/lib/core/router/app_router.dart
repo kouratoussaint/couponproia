@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/journal/presentation/journal_screen.dart';
 import '../../features/admin/presentation/ai_providers_screen.dart';
 import '../../features/admin/presentation/featured_admin_screen.dart';
+import '../../features/admin/presentation/health_admin_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/analysis/presentation/engine_admin_screen.dart';
 import '../../features/assistant/presentation/assistant_screen.dart';
@@ -48,6 +49,7 @@ import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/shell/home_shell.dart';
 import '../../features/shell/swipe_branch_container.dart';
 import '../../features/system/missing_config_screen.dart';
+import '../monitoring/error_reporter.dart';
 import '../providers.dart';
 import 'app_routes.dart';
 
@@ -88,7 +90,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     refresh.dispose();
   });
 
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: AppRoutes.home,
     refreshListenable: refresh,
     redirect: (context, state) => resolveRedirect(
@@ -223,6 +225,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AuditAdminScreen(),
       ),
       GoRoute(
+        path: AppRoutes.adminHealth,
+        builder: (context, state) => const HealthAdminScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.journal,
         builder: (context, state) => const JournalScreen(),
       ),
@@ -340,4 +346,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  // Écran courant, joint aux rapports de plantage.
+  router.routerDelegate.addListener(() {
+    ErrorReporter.currentRoute =
+        router.routerDelegate.currentConfiguration.uri.path;
+  });
+  return router;
 });

@@ -8,6 +8,7 @@ import '../../billing/billing_screen.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/admin_repository.dart';
+import 'health_admin_screen.dart';
 
 /// Console d'administration : chaque section n'apparaît qu'avec la permission correspondante,
 /// et chaque action est de toute façon vérifiée par le serveur.
@@ -163,6 +164,14 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
       (
         'Plateforme',
         [
+          if (perms.contains('ops.monitor'))
+            ConsoleEntry(
+                'Santé de l’application',
+                'Alertes, plantages et lenteurs',
+                Icons.monitor_heart_outlined,
+                ConsoleColors.errors,
+                AppRoutes.adminHealth,
+                badge: ref.watch(openOpsAlertsProvider).valueOrNull ?? 0),
           if (perms.contains('settings.manage'))
             const ConsoleEntry('Réglages et forfaits', 'Prix, crédits, limites',
                 Icons.tune, ConsoleColors.settings, AppRoutes.adminSettings),

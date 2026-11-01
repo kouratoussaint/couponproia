@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/monitoring/error_reporter.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/app_routes.dart';
@@ -244,6 +245,8 @@ class ProfileScreen extends ConsumerWidget {
                       '${ref.watch(textSizeProvider).label} : voici à quoi ressemble le texte de l’app.',
                       style: theme.textTheme.bodyMedium,
                     ),
+                    const SizedBox(height: 8),
+                    const ErrorReportsSwitch(),
                   ],
                 ),
               ),
@@ -386,6 +389,37 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           child: const Text('Supprimer'),
         ),
       ],
+    );
+  }
+}
+
+/// Rapports d'erreurs : plantages et lenteurs envoyés sans contenu personnel (activé par défaut).
+class ErrorReportsSwitch extends ConsumerStatefulWidget {
+  const ErrorReportsSwitch({super.key});
+
+  @override
+  ConsumerState<ErrorReportsSwitch> createState() => _ErrorReportsSwitchState();
+}
+
+class _ErrorReportsSwitchState extends ConsumerState<ErrorReportsSwitch> {
+  @override
+  Widget build(BuildContext context) {
+    final ErrorReporter reporter;
+    try {
+      reporter = ref.watch(errorReporterProvider);
+    } catch (_) {
+      return const SizedBox.shrink();
+    }
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: const Text('Rapports d’erreurs'),
+      subtitle: const Text(
+          'Envoyer les plantages et lenteurs pour nous aider à corriger l’app. Aucun contenu personnel.'),
+      value: reporter.enabled,
+      onChanged: (v) async {
+        await reporter.setEnabled(v);
+        setState(() {});
+      },
     );
   }
 }

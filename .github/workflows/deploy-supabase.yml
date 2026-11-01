@@ -89,6 +89,10 @@ jobs:
           CINETPAY_SITE_ID: ${{ secrets.CINETPAY_SITE_ID }}
           CINETPAY_SECRET_KEY: ${{ secrets.CINETPAY_SECRET_KEY }}
           FCM_SERVICE_ACCOUNT: ${{ secrets.FCM_SERVICE_ACCOUNT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_SENDER_EMAIL: ${{ secrets.SMTP_SENDER_EMAIL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
           REF: ${{ steps.project.outputs.ref }}
         run: |
           export CRON_SECRET="$(openssl rand -hex 32)"
@@ -107,6 +111,15 @@ jobs:
           for k in LIGDICASH_API_KEY LIGDICASH_API_TOKEN CINETPAY_API_KEY CINETPAY_SITE_ID CINETPAY_SECRET_KEY; do
             if [ -n "${!k}" ]; then args+=("$k=${!k}"); fi
           done
+          # SMTP (alertes d'exploitation par e-mail ; port 465 côté fonctions)
+          for k in SMTP_USER SMTP_PASS SMTP_SENDER_EMAIL SMTP_HOST; do
+            if [ -n "${!k}" ]; then args+=("$k=${!k}"); fi
+          done
+          if [ -n "$SMTP_USER" ] && [ -n "$SMTP_PASS" ] && [ -n "$SMTP_SENDER_EMAIL" ]; then
+            echo "::notice::Alertes d'exploitation : envoi par e-mail activé"
+          else
+            echo "::warning::SMTP absent : alertes d'exploitation par notification seulement"
+          fi
           aggregators=""
           if [ -n "$LIGDICASH_API_KEY" ] && [ -n "$LIGDICASH_API_TOKEN" ]; then aggregators="$aggregators LigdiCash"; fi
           if [ -n "$CINETPAY_API_KEY" ] && [ -n "$CINETPAY_SITE_ID" ]; then aggregators="$aggregators CinetPay"; fi
