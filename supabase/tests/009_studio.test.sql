@@ -10,8 +10,9 @@ insert into auth.users (id, email, raw_user_meta_data) values
 insert into public.coupons (id, category, title, description, risk_level, total_odd, combined_probability,
   status, publish_at, published_at, first_kickoff_at, last_kickoff_at, engine_version, fingerprint)
 values
+  -- Matchs terminés : visible par tous, y compris le forfait FREE (règle du 01/11)
   ('aaaaaaaa-0000-0000-0000-000000000001', 'du_jour', 'Du jour', 'd', 'equilibre', 3, 0.3, 'published', now(), now(),
-   now() + interval '1 day', now() + interval '1 day', 'v', 'f1'),
+   now() - interval '4 hours', now() - interval '3 hours', 'v', 'f1'),
   ('aaaaaaaa-0000-0000-0000-000000000002', 'prudent', 'Prudent à venir', 'd', 'prudent', 2, 0.5, 'published', now(), now(),
    now() + interval '1 day', now() + interval '1 day', 'v', 'f2');
 insert into public.user_coupons (id, user_id, status, title, total_odd, combined_probability, risk_level, engine_version, fingerprint)

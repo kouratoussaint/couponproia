@@ -204,6 +204,26 @@ class UserAdminDetailScreen extends ConsumerWidget {
                             }
                           },
                         ),
+                        if (u['plan'] != 'FREE') ...[
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: Icon(Icons.cancel_outlined,
+                                color: theme.colorScheme.error),
+                            title: const Text('Mettre fin au forfait'),
+                            subtitle: const Text(
+                                'Retour immédiat au forfait FREE ; crédits achetés conservés'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () async {
+                              final reason = await _endSubscriptionDialog(
+                                  context, '${u['plan']}');
+                              if (reason != null) {
+                                await run(
+                                    () => repo.endSubscription(userId, reason),
+                                    'Forfait arrêté : l’utilisateur est au forfait FREE.');
+                              }
+                            },
+                          ),
+                        ],
                         const Divider(height: 1),
                         ListTile(
                           leading: Icon(Icons.card_giftcard,
@@ -543,3 +563,46 @@ void openAdminUser(BuildContext context, String id) =>
 
 /// Message générique en cas d'erreur de chargement.
 String adminLoadError(Object e) => userMessageFor(e);
+
+/// Confirmation de la fin du forfait, avec motif obligatoire (journal d'audit).
+Future<String?> _endSubscriptionDialog(
+    BuildContext context, String plan) async {
+  final controller = TextEditingController();
+  final reason = await showDialog<String>(
+    context: context,
+    builder: (d) => AlertDialog(
+      title: Text('Mettre fin au forfait ${plan.replaceAll('_', ' ')} ?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+              'L’utilisateur repasse tout de suite au forfait FREE, prolongations comprises. Les crédits du '
+              'forfait sont remplacés par ceux du forfait FREE ; ses crédits achetés sont conservés. '
+              'Aucun remboursement n’est fait automatiquement.'),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            decoration:
+                const InputDecoration(labelText: 'Motif (journal d’audit)'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(d), child: const Text('Annuler')),
+        FilledButton(
+          style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(d).colorScheme.error),
+          onPressed: () {
+            final r = controller.text.trim();
+            if (r.isNotEmpty) Navigator.pop(d, r);
+          },
+          child: const Text('Mettre fin'),
+        ),
+      ],
+    ),
+  );
+  controller.dispose();
+  return reason;
+}

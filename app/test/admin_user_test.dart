@@ -8,7 +8,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _id = '780bf455-0d35-45cb-9aae-62d0805966a4';
 
-Widget _screen(Set<String> perms, {double scale = 1}) => ProviderScope(
+Widget _screen(Set<String> perms, {double scale = 1, String plan = 'FREE'}) =>
+    ProviderScope(
       overrides: [
         // Aucun appel réseau dans ces tests : client factice.
         adminRepositoryProvider.overrideWithValue(AdminRepository(
@@ -29,7 +30,7 @@ Widget _screen(Set<String> perms, {double scale = 1}) => ProviderScope(
               'id': _id,
               'email': 'bob@test.local',
               'display_name': 'Bob',
-              'plan': 'FREE',
+              'plan': plan,
               'roles': ['user'],
               'credits': {'total': 2, 'unlimited': false},
               'activity': <String, dynamic>{},
@@ -81,5 +82,22 @@ void main() {
         scale: 1.6));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('« Mettre fin au forfait » : seulement pour un forfait payant',
+      (tester) async {
+    tester.view.physicalSize = const Size(400 * 3, 1600 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_screen(
+        {'admin.access', 'users.manage', 'billing.manage'},
+        plan: 'STARTER'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mettre fin au forfait'), findsOneWidget);
+    await tester.tap(find.text('Mettre fin au forfait'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mettre fin au forfait STARTER ?'), findsOneWidget);
+    expect(
+        find.textContaining('crédits achetés sont conservés'), findsOneWidget);
   });
 }

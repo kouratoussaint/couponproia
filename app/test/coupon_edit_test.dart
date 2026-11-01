@@ -65,7 +65,9 @@ void main() {
     expect(
         find.textContaining('Pronostic IA : Victoire Alpha'), findsOneWidget);
     expect(find.text('Pas encore d’analyse IA pour ce match'), findsOneWidget);
-    expect(find.textContaining('Contraire au pronostic de l’IA (Victoire Alpha)'), findsOneWidget);
+    expect(
+        find.textContaining('Contraire au pronostic de l’IA (Victoire Alpha)'),
+        findsOneWidget);
     expect(find.textContaining('cote indicative 3,57'), findsOneWidget);
     await tester.tap(find.text('Enregistrer'));
     await tester.pumpAndSettle();

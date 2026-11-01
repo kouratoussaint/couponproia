@@ -209,6 +209,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
     final pack = settings['pricing.credit_pack'] is Map
         ? Map<String, dynamic>.from(settings['pricing.credit_pack'] as Map)
         : null;
+    final creditCost = (settings['analysis.credit_cost'] as num?)?.toInt() ?? 1;
     final maxPacks =
         (settings['pricing.credit_pack_max_quantity'] as num?)?.toInt() ?? 5;
     final current = ent.valueOrNull;
@@ -308,13 +309,16 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text('• ${p.aiCredits} crédits IA par mois (assistant)'),
+                      Text('• ${p.aiCredits} crédits IA par mois'),
                       Text(p.allCoupons
-                          ? '• Tous les coupons de la plateforme avant le coup d’envoi'
-                          : '• Le coupon du jour avant le coup d’envoi'),
-                      if (p.analysesPerDay != null)
+                          ? '• Tous les coupons et leurs résultats, à tout moment'
+                          : '• Coupons et résultats visibles après les matchs'),
+                      if (p.monthlyXof == 0)
                         Text(
-                            '• ${p.analysesPerDay} analyses IA de match par jour'),
+                            '• Analyse IA d’un match : ${creditCost == 0 ? 'gratuite' : '$creditCost crédit${creditCost > 1 ? 's' : ''}'}')
+                      else if (p.analysesPerDay != null)
+                        Text(
+                            '• ${p.analysesPerDay} analyses IA de match par jour, sans crédit'),
                       if (p.monthlyXof > 0) ...[
                         const SizedBox(height: 8),
                         Align(

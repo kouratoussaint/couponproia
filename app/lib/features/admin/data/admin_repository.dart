@@ -92,6 +92,11 @@ class AdminRepository {
         'p_reason': reason
       });
 
+  /// Fin immédiate du forfait : retour au forfait FREE (prolongations comprises), audité.
+  Future<void> endSubscription(String user, String reason) =>
+      _client.rpc('admin_end_subscription',
+          params: {'p_user': user, 'p_reason': reason});
+
   /// Pack(s) de crédits offerts : le serveur lit le contenu du pack dans ses réglages.
   Future<int> grantCreditPack(String user, int quantity, String reason) async {
     final r = asMap(await _client.rpc('admin_grant_credit_pack',

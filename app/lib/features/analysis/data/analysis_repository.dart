@@ -25,7 +25,7 @@ String analysisErrorMessage(int status, Object? details) {
   switch (body['error']) {
     case 'daily_limit':
       return 'Limite atteinte : ${body['limit'] ?? 20} nouvelles analyses par jour. '
-          'Les analyses déjà réalisées restent consultables.';
+          'Vos analyses déjà obtenues restent consultables.';
     case 'feature_disabled':
       return 'L’analyse IA est momentanément désactivée.';
     case 'match_not_analyzable':
@@ -36,6 +36,9 @@ String analysisErrorMessage(int status, Object? details) {
       return 'Action réservée aux administrateurs.';
     case 'unauthorized':
       return 'Session expirée : reconnectez-vous.';
+    case 'credits_required':
+      return 'Il vous faut ${body['cost'] ?? 1} crédit IA pour cette analyse. Achetez un pack de crédits '
+          '(sans abonnement) ou choisissez un forfait dans Abonnement et crédits.';
     case 'subscription_required':
       return 'Analyse réservée aux comptes avec un forfait payant ou des crédits IA. '
           'L’analyse offerte du jour reste gratuite.';

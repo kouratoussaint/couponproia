@@ -32,7 +32,7 @@ select throws_ok($$ insert into public.match_analyses (match_id, engine_version,
 set local role authenticated;
 set local request.jwt.claims = '{"sub": "11111111-1111-1111-1111-111111111111", "role": "authenticated"}';
 -- 4-8
-select is((select count(*)::int from public.match_analyses), 1, 'les analyses sont partagées');
+select is((select count(*)::int from public.match_analyses), 0, 'une analyse n''est lisible que par son auteur (règle du 01/11)');
 select is((select count(*)::int from public.ai_requests), 1, 'on ne voit que ses propres requêtes IA');
 select is((select count(*)::int from public.ai_prompts), 0, 'les prompts sont réservés aux gestionnaires');
 select throws_ok($$ insert into public.match_analyses (match_id, engine_version, status, stats, source_updated_at)

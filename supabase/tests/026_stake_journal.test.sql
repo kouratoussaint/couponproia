@@ -7,6 +7,8 @@ insert into auth.users (id, email, raw_user_meta_data) values
   ('22222222-2222-2222-2222-222222222222', 'bob@test.local', '{}'),
   ('33333333-3333-3333-3333-333333333333', 'super@test.local', '{}');
 insert into public.user_roles (user_id, role_id) values ('33333333-3333-3333-3333-333333333333', 'super_admin');
+insert into public.subscriptions (user_id, plan_code, period_start, period_end, source, note)
+values ('22222222-2222-2222-2222-222222222222', 'STARTER', now() - interval '1 day', now() + interval '29 days', 'admin', 'test');
 
 insert into public.teams (provider_id, provider_ref, name) values ('api_football', 't-a', 'Marseille'), ('api_football', 't-b', 'Toulouse');
 insert into public.matches (provider_id, provider_ref, competition_id, season, kickoff_at, status, home_team_id, away_team_id)

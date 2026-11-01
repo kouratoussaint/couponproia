@@ -166,7 +166,7 @@ class CouponCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                          'Réservé aux forfaits payants jusqu’au coup d’envoi',
+                          'Réservé aux forfaits payants jusqu’à la fin des matchs',
                           style: theme.textTheme.bodySmall),
                     ),
                   ],
@@ -330,11 +330,15 @@ class SelectionCard extends StatelessWidget {
   }
 }
 
-/// Contenu d'un coupon réservé : visible avec un forfait payant, ou par tous au coup d'envoi.
+/// Contenu d'un coupon réservé : visible avec un forfait payant, ou au forfait FREE après les matchs.
 class LockedCouponNotice extends StatelessWidget {
-  const LockedCouponNotice({super.key, required this.firstKickoffAt});
+  const LockedCouponNotice({super.key, required this.lastKickoffAt});
 
-  final DateTime firstKickoffAt;
+  /// Coup d'envoi du dernier match : le coupon s'ouvre au forfait FREE 2 h 15 plus tard.
+  final DateTime lastKickoffAt;
+
+  DateTime get openAt =>
+      lastKickoffAt.add(const Duration(hours: 2, minutes: 15));
 
   @override
   Widget build(BuildContext context) {
@@ -357,9 +361,9 @@ class LockedCouponNotice extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Les sélections et l’analyse de ce coupon sont accessibles avec un forfait STARTER ou supérieur. '
-              'Elles deviennent visibles par tous au premier coup d’envoi '
-              '(${shortDate(firstKickoffAt)} à ${timeLabel(firstKickoffAt)}). Le coupon du jour reste gratuit.',
+              'Les sélections et l’analyse de ce coupon sont accessibles à tout moment avec un forfait payant. '
+              'Avec le forfait FREE, elles deviennent visibles après les matchs '
+              '(vers ${shortDate(openAt)} à ${timeLabel(openAt)}).',
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 12),

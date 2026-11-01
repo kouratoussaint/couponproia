@@ -215,7 +215,7 @@ class _LockedLine extends StatelessWidget {
           size: 16, color: theme.colorScheme.onSurfaceVariant),
       const SizedBox(width: 6),
       Expanded(
-        child: Text('Réservé aux forfaits payants jusqu’au coup d’envoi',
+        child: Text('Réservé aux forfaits payants jusqu’à la fin des matchs',
             style: theme.textTheme.bodySmall),
       ),
     ]);

@@ -18,6 +18,11 @@ from public.competitions c, public.teams h, public.teams a
 where c.provider_ref = '39' and h.provider_ref = 't-a' and a.provider_ref = 't-b';
 insert into public.match_analyses (match_id, engine_version, provider, model, status, stats, source_updated_at)
 select id, 'poisson-1.1', 'gemini', 'gemini-test', 'stats_only', '{}', now() from public.matches where provider_ref = 'm1';
+-- Bob : forfait payant et analyse réalisée par lui (règles d'accès du 01/11)
+insert into public.subscriptions (user_id, plan_code, period_start, period_end, source, note)
+values ('22222222-2222-2222-2222-222222222222', 'STARTER', now() - interval '1 day', now() + interval '29 days', 'admin', 'test');
+insert into public.analysis_access (user_id, match_id, source)
+select '22222222-2222-2222-2222-222222222222', id, 'plan' from public.matches where provider_ref = 'm1';
 insert into public.coupons (id, category, title, description, risk_level, total_odd, combined_probability,
   status, publish_at, published_at, first_kickoff_at, last_kickoff_at, engine_version, fingerprint, analysis)
 values ('aaaaaaaa-0000-0000-0000-000000000001', 'du_jour', 'Coupon du jour', 'd', 'equilibre', 2, 0.5, 'published',

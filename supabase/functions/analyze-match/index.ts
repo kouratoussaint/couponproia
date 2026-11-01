@@ -3,11 +3,12 @@
 // 1. Fiche statistique calculée par le moteur (données réelles antérieures au match).
 // 2. Interprétation par l'IA, validée par des garde-fous (aucun chiffre inventé,
 //    aucun mot de certitude) ; à défaut, la fiche seule est renvoyée (« stats_only »).
-// Une analyse est partagée entre utilisateurs et mise en cache : un match = un coût.
-// Le match offert du jour ne compte pas dans le quota quotidien.
+// L'analyse est mise en cache (un match = un coût d'IA) mais son accès est personnel (01/11) :
+// chacun ne lit que les analyses qu'il a demandées (forfait payant : quota par jour ; FREE :
+// crédits), sauf l'analyse offerte du jour (ouverte à tous) et le super administrateur.
 import { ANALYSIS_COLUMNS, generateMatchAnalysis, isFresh, MATCH_COLUMNS, type MatchRow, PLAYED } from "../_shared/analysis/generate.ts";
 import { planFeatures } from "../_shared/billing.ts";
-import { analysisAllowed } from "../_shared/analysis/access.ts";
+import { analysisDecision } from "../_shared/analysis/access.ts";
 import { callerFrom, corsHeaders, json, readSettings, serverContext } from "../_shared/http.ts";
 
 Deno.serve(async (req) => {
@@ -54,45 +55,70 @@ Deno.serve(async (req) => {
     const settings = await readSettings(db, [
       "ai.max_new_analyses_per_user_day",
       "ai.analysis_ttl_hours",
+      "analysis.credit_cost",
     ]);
     const ttlHours = Number(settings["ai.analysis_ttl_hours"] ?? 12);
 
     const { data: prompt } = await db.from("ai_prompts").select("key, version, system_prompt")
       .eq("key", "match_analysis").eq("is_active", true).maybeSingle();
 
+    // Accès déjà acquis : son analyse, l'analyse offerte, l'équipe.
+    const { data: featured } = await db.from("featured_matches").select("match_id").eq("match_id", m.id)
+      .gte("day", new Date(Date.now() - 36 * 3600_000).toISOString().slice(0, 10)).limit(1).maybeSingle();
+    const { data: access } = await db.from("analysis_access").select("match_id").eq("user_id", caller.id)
+      .eq("match_id", m.id).maybeSingle();
+    const unlocked = Boolean(access || featured || canManage || caller.permissions.includes("analyses.read_all"));
+
+    // Nouvel accès : quota du forfait payant, ou crédits avec le forfait FREE.
+    let decision: { source: "plan" | "credit"; cost: number } | null = null;
+    if (!unlocked) {
+      const { plan, features } = await planFeatures(db, caller.id);
+      const { data: summary } = await db.rpc("svc_credit_summary", { p_user: caller.id });
+      const dayStart = new Date();
+      dayStart.setUTCHours(0, 0, 0, 0);
+      const { count } = await db.from("analysis_access").select("match_id", { count: "exact", head: true })
+        .eq("user_id", caller.id).eq("source", "plan").gte("created_at", dayStart.toISOString());
+      const limit = Number(features.match_analyses_per_day ?? settings["ai.max_new_analyses_per_user_day"] ?? 20);
+      const d = analysisDecision(summary, plan, count ?? 0, limit, Number(settings["analysis.credit_cost"] ?? 1));
+      if (!d.ok) {
+        return d.error === "daily_limit"
+          ? json({ error: "daily_limit", limit: d.limit }, 429)
+          : json({ error: "credits_required", cost: d.cost }, 402);
+      }
+      decision = d;
+    }
+
+    let result: Record<string, unknown> | null = null;
+    let fromCache = false;
     if (!force) {
       const { data: cached } = await db.from("match_analyses").select(ANALYSIS_COLUMNS).eq("match_id", matchId)
         .order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (cached && isFresh(cached, played, ttlHours, prompt?.version ?? null)) return json({ ...forCaller(cached), cached: true });
+      if (cached && isFresh(cached, played, ttlHours, prompt?.version ?? null)) {
+        result = cached;
+        fromCache = true;
+      }
     }
+    if (!result) result = await generateMatchAnalysis(db, m, prompt, caller.id);
 
-    // Quota : nouvelles analyses déclenchées par l'utilisateur aujourd'hui (UTC = heure de Ouagadougou).
-    // Limite selon le forfait (réglage pricing.plans), à défaut le réglage général.
-    const { features } = await planFeatures(db, caller.id);
-    const limit = Number(features.match_analyses_per_day ?? settings["ai.max_new_analyses_per_user_day"] ?? 20);
-    const { data: featured } = await db.from("featured_matches").select("match_id").eq("match_id", m.id)
-      .gte("day", new Date(Date.now() - 36 * 3600_000).toISOString().slice(0, 10)).limit(1).maybeSingle();
-    // Nouvelle analyse : réservée aux comptes avec un forfait payant ou des crédits (l'analyse
-    // offerte du jour reste ouverte à tous). Les analyses déjà réalisées restent consultables.
-    if (!canManage && !featured) {
-      const { data: summary } = await db.rpc("svc_credit_summary", { p_user: caller.id });
-      if (!analysisAllowed(summary)) return json({ error: "subscription_required" }, 402);
+    if (decision) {
+      // Accès personnel, puis débit des crédits (FREE) ; sans crédit au moment du débit, rien n'est ouvert.
+      const { data: granted } = await db.from("analysis_access")
+        .upsert({ user_id: caller.id, match_id: m.id, source: decision.source }, { onConflict: "user_id,match_id", ignoreDuplicates: true })
+        .select("match_id");
+      if ((granted ?? []).length && decision.cost > 0) {
+        const { error: chargeError } = await db.rpc("svc_consume_credits", {
+          p_user: caller.id,
+          p_operation: crypto.randomUUID(),
+          p_amount: decision.cost,
+          p_kind: `analysis:${m.id}`,
+        });
+        if (chargeError) {
+          await db.from("analysis_access").delete().eq("user_id", caller.id).eq("match_id", m.id);
+          return json({ error: "credits_required", cost: decision.cost }, 402);
+        }
+      }
     }
-    if (!canManage && !featured) {
-      const dayStart = new Date();
-      dayStart.setUTCHours(0, 0, 0, 0);
-      const { data: today } = await db.from("ai_requests").select("match_id").eq("user_id", caller.id)
-        .eq("kind", "match_analysis").gte("created_at", dayStart.toISOString()).limit(500);
-      // Les analyses offertes ne comptent pas.
-      const { data: offered } = await db.from("featured_matches").select("match_id")
-        .in("match_id", [...new Set((today ?? []).map((r) => r.match_id))].filter((x) => x !== null));
-      const free = new Set((offered ?? []).map((r) => r.match_id));
-      const used = new Set((today ?? []).map((r) => r.match_id).filter((x) => !free.has(x))).size;
-      if (used >= limit) return json({ error: "daily_limit", limit }, 429);
-    }
-
-    const saved = await generateMatchAnalysis(db, m, prompt, caller.id);
-    return json({ ...forCaller(saved), cached: false });
+    return json({ ...forCaller(result), cached: fromCache, credits_used: decision?.cost ?? 0 });
   } catch (e) {
     console.error("analyze-match", e);
     return json({ error: "internal_error", message: String((e as Error).message ?? e).slice(0, 200) }, 500);

@@ -5,7 +5,11 @@ select plan(13);
 insert into auth.users (id, email, raw_user_meta_data) values
   ('11111111-1111-1111-1111-111111111111', 'alice@test.local', '{}'),
   ('22222222-2222-2222-2222-222222222222', 'bob@test.local', '{}');
-update public.user_preferences set quiet_start = 0, quiet_end = 0;  -- pas d'heures calmes par défaut ici
+update public.user_preferences set quiet_start = 0, quiet_end = 0;
+-- Configuration de test : le forfait FREE voit le coupon du jour avant les matchs (réglable par forfait).
+update public.app_settings set value = (select jsonb_agg(case when p ->> 'code' = 'FREE'
+  then jsonb_set(p, '{features,coupon_categories}', '["du_jour"]'::jsonb) else p end) from jsonb_array_elements(value) p)
+where key = 'pricing.plans';  -- pas d'heures calmes par défaut ici
 update public.user_preferences set notify_coupons = false where user_id = '22222222-2222-2222-2222-222222222222';
 
 insert into public.teams (provider_id, provider_ref, name) values ('api_football', 't-a', 'A'), ('api_football', 't-b', 'B');

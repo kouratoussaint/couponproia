@@ -290,8 +290,9 @@ class SettingsAdminScreen extends ConsumerWidget {
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Tous les coupons avant le coup d’envoi'),
-                subtitle: const Text('Sinon : le coupon du jour seulement'),
+                title: const Text('Coupons visibles à tout moment'),
+                subtitle: const Text(
+                    'Sinon : coupons et résultats visibles après les matchs'),
                 value: allCoupons,
                 onChanged: (v) => setState(() => allCoupons = v),
               ),
@@ -331,7 +332,7 @@ class SettingsAdminScreen extends ConsumerWidget {
                 ...features,
                 if (int.tryParse(analyses.text) != null)
                   'match_analyses_per_day': int.parse(analyses.text),
-                'coupon_categories': allCoupons ? 'all' : ['du_jour'],
+                'coupon_categories': allCoupons ? 'all' : <String>[],
                 'tipster_publish': tipster,
               },
             },

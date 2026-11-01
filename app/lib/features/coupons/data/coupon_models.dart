@@ -248,7 +248,7 @@ class Coupon {
   final List<CouponSelection> selections;
   final List<StatusChange> history;
 
-  /// Coupon réservé aux forfaits payants : contenu masqué par le serveur jusqu'au coup d'envoi.
+  /// Coupon réservé aux forfaits payants : contenu masqué par le serveur jusqu'après les matchs (FREE).
   final bool locked;
 
   bool get isWithdrawn => status == 'withdrawn';

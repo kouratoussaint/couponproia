@@ -69,9 +69,9 @@ Future<void> showAnalysisLocked(BuildContext context) =>
               Text('Analyse réservée', style: Theme.of(c).textTheme.titleLarge),
               const SizedBox(height: 8),
               const Text(
-                  'Lancer une analyse demande un forfait payant ou des crédits IA. '
-                  'L’analyse offerte du jour reste gratuite pour tous, et les analyses déjà '
-                  'réalisées restent consultables.'),
+                  'Une analyse s’obtient avec un forfait payant, ou avec 1 crédit IA au forfait FREE : '
+                  'un pack de crédits suffit, sans abonnement. Une fois obtenue, l’analyse reste '
+                  'consultable par vous seul ; l’analyse offerte du jour reste gratuite pour tous.'),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () {

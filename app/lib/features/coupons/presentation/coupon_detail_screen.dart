@@ -193,7 +193,7 @@ class _CouponBody extends ConsumerWidget {
           ),
         ),
         const SectionTitle('Sélections'),
-        if (c.locked) LockedCouponNotice(firstKickoffAt: c.firstKickoffAt),
+        if (c.locked) LockedCouponNotice(lastKickoffAt: c.lastKickoffAt),
         if (!c.locked && c.result == null)
           _OddsMoveBanner(coupon: c, current: current),
         for (final s in c.selections)
