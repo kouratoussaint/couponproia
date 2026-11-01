@@ -2,6 +2,9 @@
 import 'package:coupon_pro_ia/features/coupons/data/bookmaker_format.dart';
 import 'package:coupon_pro_ia/features/coupons/data/coupon_models.dart';
 import 'package:coupon_pro_ia/features/coupons/data/coupon_phase.dart';
+import 'package:coupon_pro_ia/features/coupons/data/coupon_repository.dart';
+import 'package:coupon_pro_ia/features/coupons/presentation/coupon_detail_screen.dart';
+import 'package:coupon_pro_ia/features/coupons/presentation/coupon_tiles.dart';
 import 'package:coupon_pro_ia/features/admin/presentation/featured_admin_screen.dart';
 import 'package:coupon_pro_ia/features/matches/data/sports_repository.dart';
 import 'package:coupon_pro_ia/features/system/system_providers.dart';
@@ -133,6 +136,49 @@ void main() {
       expect(find.textContaining('Lille – Lens'), findsWidgets);
       expect(find.textContaining('Choisi par l’équipe'), findsOneWidget);
       expect(find.text('Choisir'), findsNothing);
+    });
+  });
+
+  group('liste et fiche coupon', () {
+    testWidgets('risque toujours affiché et icône du type', (tester) async {
+      final c = fixtureCoupon('p', title: 'Coupon prudent · samedi');
+      await tester.pumpWidget(MaterialApp(
+          home: Scaffold(body: CompactCouponTile(coupon: c, onTap: () {}))));
+      expect(find.text('Coupon prudent'), findsOneWidget);
+      expect(find.text('Prudent'), findsOneWidget); // étiquette de risque
+      expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
+      expect(categoryIcon('strategie'), Icons.bolt);
+      expect(categoryIcon('inconnu'), Icons.receipt_long_outlined);
+    });
+
+    testWidgets('historique : action la plus récente en premier',
+        (tester) async {
+      final now = DateTime.now();
+      final c = fixtureCoupon('h', history: [
+        StatusChange(
+            fromStatus: 'draft',
+            toStatus: 'ready',
+            at: now.subtract(const Duration(hours: 2))),
+        StatusChange(
+            fromStatus: 'ready',
+            toStatus: 'published',
+            at: now.subtract(const Duration(hours: 1))),
+      ]);
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          couponProvider.overrideWith((ref, id) async => c),
+          currentOddsProvider.overrideWith((ref, id) async => {}),
+          myPermissionsProvider.overrideWith((ref) async => <String>{}),
+        ],
+        child: const MaterialApp(home: CouponDetailScreen(couponId: 'h')),
+      ));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Historique'), 300,
+          scrollable: find.byType(Scrollable).first);
+      await tester.pumpAndSettle();
+      final published = tester.getTopLeft(find.text('Publié').last).dy;
+      final ready = tester.getTopLeft(find.textContaining('Prêt').last).dy;
+      expect(published, lessThan(ready));
     });
   });
 }

@@ -218,11 +218,15 @@ class _CouponBody extends ConsumerWidget {
           Card(
             child: Column(
               children: [
-                for (final h in c.history)
+                // Action la plus récente en premier.
+                for (final (i, h) in c.history.reversed.indexed)
                   ListTile(
                     dense: true,
-                    leading: const Icon(Icons.history, size: 20),
-                    title: Text(statusLabels[h.toStatus] ?? h.toStatus),
+                    leading: _HistoryIcon(h.toStatus, latest: i == 0),
+                    title: Text(statusLabels[h.toStatus] ?? h.toStatus,
+                        style: i == 0
+                            ? const TextStyle(fontWeight: FontWeight.w700)
+                            : null),
                     subtitle: Text(
                       '${shortDate(h.at)}/${h.at.year} à ${timeLabel(h.at)}${h.reason == null ? '' : ' · ${h.reason}'}',
                     ),
@@ -282,6 +286,36 @@ class _CouponBody extends ConsumerWidget {
           textAlign: TextAlign.center,
         ),
       ],
+    );
+  }
+}
+
+/// Icône d'une étape de l'historique ; la plus récente est mise en couleur.
+class _HistoryIcon extends StatelessWidget {
+  const _HistoryIcon(this.status, {required this.latest});
+
+  final String status;
+  final bool latest;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final (icon, color) = switch (status) {
+      'published' => (Icons.campaign_outlined, scheme.primary),
+      'ready' => (Icons.event_available_outlined, scheme.primary),
+      'pending_review' => (Icons.rate_review_outlined, scheme.tertiary),
+      'rejected' || 'withdrawn' => (Icons.block, scheme.error),
+      'expired' => (Icons.timer_off_outlined, scheme.outline),
+      _ => (Icons.history, scheme.onSurfaceVariant),
+    };
+    final c = latest ? color : scheme.onSurfaceVariant;
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+          color: c.withValues(alpha: latest ? 0.16 : 0.08),
+          shape: BoxShape.circle),
+      child: Icon(icon, size: 18, color: c),
     );
   }
 }

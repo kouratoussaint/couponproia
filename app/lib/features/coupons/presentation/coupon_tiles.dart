@@ -48,21 +48,55 @@ class _Tag extends StatelessWidget {
       );
 }
 
+/// Risque estimé, toujours affiché (même quand le nom du coupon le dit déjà).
 class RiskTag extends StatelessWidget {
-  const RiskTag(this.risk, {super.key, this.name});
+  const RiskTag(this.risk, {super.key});
 
   final String risk;
-
-  /// Nom du coupon : l'étiquette est masquée s'il dit déjà le risque (« Coupon prudent »).
-  final String? name;
 
   @override
   Widget build(BuildContext context) {
     final s = riskStyle(context, risk);
-    if (name != null && name!.toLowerCase().contains(s.label.toLowerCase())) {
-      return const SizedBox.shrink();
-    }
-    return _Tag(s.label, s.fg, s.bg);
+    return Semantics(
+        label: 'Risque estimé : ${s.label.toLowerCase()}',
+        child: ExcludeSemantics(child: _Tag(s.label, s.fg, s.bg)));
+  }
+}
+
+/// Icône de chaque type de coupon.
+IconData categoryIcon(String category) => switch (category) {
+      'du_jour' => Icons.wb_sunny_outlined,
+      'prudent' => Icons.shield_outlined,
+      'equilibre' => Icons.balance,
+      'audacieux' => Icons.local_fire_department_outlined,
+      'cote_elevee' => Icons.trending_up,
+      'multi_competitions' => Icons.public,
+      'competition' => Icons.emoji_events_outlined,
+      'marche' => Icons.query_stats,
+      'strategie' => Icons.bolt,
+      _ => Icons.receipt_long_outlined,
+    };
+
+/// Pastille carrée avec l'icône du type de coupon, teintée selon le risque estimé.
+class CategoryIcon extends StatelessWidget {
+  const CategoryIcon(this.coupon, {super.key, this.size = 40});
+
+  final Coupon coupon;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = riskStyle(context, coupon.riskLevel);
+    return ExcludeSemantics(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+            color: s.bg, borderRadius: BorderRadius.circular(size * 0.3)),
+        child:
+            Icon(categoryIcon(coupon.category), size: size * 0.55, color: s.fg),
+      ),
+    );
   }
 }
 
@@ -220,15 +254,25 @@ class FeaturedCouponCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  CategoryIcon(c, size: 44),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(couponName(c).toUpperCase(),
-                            style: theme.textTheme.labelMedium?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.8)),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(couponName(c).toUpperCase(),
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.8)),
+                            RiskTag(c.riskLevel),
+                          ],
+                        ),
                         const SizedBox(height: 4),
                         Text(
                             '${c.selections.isEmpty ? '' : '${c.selections.length} sélections · '}1er match ${kickoffShort(c.firstKickoffAt, now)}',
@@ -311,6 +355,8 @@ class CompactCouponTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
+                CategoryIcon(c),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,7 +369,7 @@ class CompactCouponTile extends StatelessWidget {
                           Text(couponName(c),
                               style: theme.textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.w700)),
-                          RiskTag(c.riskLevel, name: couponName(c)),
+                          RiskTag(c.riskLevel),
                           if (c.locked)
                             Icon(Icons.lock_outline,
                                 size: 14,
@@ -425,18 +471,21 @@ class LiveCouponCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  CategoryIcon(c),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Wrap(
                             spacing: 8,
+                            runSpacing: 4,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(couponName(c),
                                   style: theme.textTheme.titleMedium
                                       ?.copyWith(fontWeight: FontWeight.w700)),
-                              RiskTag(c.riskLevel, name: couponName(c)),
+                              RiskTag(c.riskLevel),
                             ]),
                         const SizedBox(height: 4),
                         Text(
@@ -624,9 +673,20 @@ class ResultCouponTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(couponName(c),
-                          style: theme.textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700)),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Icon(categoryIcon(c.category),
+                              size: 16,
+                              color: riskStyle(context, c.riskLevel).fg),
+                          Text(couponName(c),
+                              style: theme.textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700)),
+                          RiskTag(c.riskLevel),
+                        ],
+                      ),
                       if (detail.isNotEmpty)
                         Text(detail,
                             maxLines: 1,

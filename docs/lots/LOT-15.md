@@ -32,3 +32,10 @@ Logos des équipes sur les matchs et sur la carte de l'analyse offerte.
 Mots-clés et nombres du message prioritaires (nombre de sélections et de coupons, cotes par
 match et totale, jour, marchés, risque), rien d'inventé ; prompt `assistant_intent` v2 et
 récapitulatif « Demande comprise » en tête de réponse.
+
+## Retouches (version 0.22.1)
+- Fiche coupon : historique du plus récent au plus ancien, une icône par étape, la dernière
+  mise en couleur.
+- Liste des coupons (À jouer, En cours, Résultats, accueil) : risque estimé toujours affiché et
+  icône propre à chaque type de coupon (du jour, prudent, équilibré, audacieux, cote élevée,
+  multi-compétitions, spécial compétition, spécial marché, opportunités), teintée selon le risque.
