@@ -1,3 +1,4 @@
+import 'features/profile/data/language_sync.dart';
 import 'dart:io' show Directory;
 
 import 'package:flutter/foundation.dart';
@@ -87,6 +88,7 @@ Future<void> main() async {
           s.event == AuthChangeEvent.initialSession) {
         reporter.flush();
         touchActivity();
+        syncAccountLanguage(Supabase.instance.client);
       }
     });
   }

@@ -114,7 +114,10 @@ class CouponSelection {
         impliedProbability: _dn(j['implied_probability']),
         edge: _dn(j['edge']),
         reliability: j['reliability'] as String? ?? 'faible',
-        justification: j['justification'] as String? ?? '',
+        justification:
+            (appLanguage == 'en' ? j['justification_en'] as String? : null) ??
+                j['justification'] as String? ??
+                '',
         result: j['result'] as String?,
       );
 
@@ -185,7 +188,11 @@ class Coupon {
   });
 
   factory Coupon.fromJson(Map<String, dynamic> j) {
-    final analysis = _map(j['analysis']);
+    final raw = _map(j['analysis']);
+    // Résumé anglais écrit à la création (analysis.en) ; sinon le français.
+    final en = _map(raw['en']);
+    final analysis =
+        appLanguage == 'en' && en.isNotEmpty ? {...raw, ...en} : raw;
     final selections = [
       for (final s in (j['coupon_selections'] as List? ?? const []))
         CouponSelection.fromJson(_map(s)),

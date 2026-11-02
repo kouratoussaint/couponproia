@@ -51,6 +51,8 @@ export interface FicheInput {
   generatedAt: string;
   /** Dernière évaluation : le moteur fait-il mieux que la référence, par famille de marchés ? */
   quality?: { evaluatedMatches: number; beatsBaseline: Record<string, boolean> } | null;
+  /** Langue des textes de la fiche (« fr » par défaut ; « en » pour une analyse en anglais). */
+  lang?: "fr" | "en";
 }
 
 /** Famille d'évaluation d'une issue : 1X2 (et double chance), OU, BTTS, DNB, TT (buts par équipe). */
@@ -161,29 +163,52 @@ export function buildFiche(input: FicheInput) {
     return r ? { rank: r.rank, points: r.points, played: r.played, goal_diff: r.goalDiff } : null;
   };
 
+  const en = input.lang === "en";
   const missing: string[] = [
-    "Compositions, blessures et suspensions : non fournies par la source de données",
+    en
+      ? "Line-ups, injuries and suspensions: not provided by the data source"
+      : "Compositions, blessures et suspensions : non fournies par la source de données",
   ];
-  if (input.odds.length === 0) missing.push("Cotes du marché indisponibles pour ce match");
+  if (input.odds.length === 0) missing.push(en ? "Market odds unavailable for this match" : "Cotes du marché indisponibles pour ce match");
   if (model.reliability === "faible") {
-    missing.push("Peu de matchs joués cette saison par ces équipes : estimation fragile");
+    missing.push(
+      en
+        ? "Few matches played this season by these teams: fragile estimate"
+        : "Peu de matchs joués cette saison par ces équipes : estimation fragile",
+    );
   }
   if (input.history.length < 20 && prior.length === 0) {
-    missing.push("Début de saison : moyennes de la compétition encore peu stables");
+    missing.push(
+      en
+        ? "Start of season: competition averages still not very stable"
+        : "Début de saison : moyennes de la compétition encore peu stables",
+    );
   }
   if (input.history.length < 60 && prior.length > 0) {
-    missing.push("Début de saison : le modèle s'appuie en partie sur la saison précédente (effectifs et promus ont pu changer)");
+    missing.push(
+      en
+        ? "Start of season: the model relies partly on the previous season (squads and promoted teams may have changed)"
+        : "Début de saison : le modèle s'appuie en partie sur la saison précédente (effectifs et promus ont pu changer)",
+    );
   }
-  if (input.headToHead.length === 0) missing.push("Aucune confrontation directe dans les données disponibles");
+  if (input.headToHead.length === 0) {
+    missing.push(en ? "No head-to-head match in the available data" : "Aucune confrontation directe dans les données disponibles");
+  }
   const weak = Object.entries(input.quality?.beatsBaseline ?? {}).filter(([, ok]) => !ok).map(([g]) => g);
   if (weak.length) {
-    missing.push(`Marchés où le moteur ne fait pas mieux qu'une simple fréquence sur l'historique : ${weak.join(", ")}`);
+    missing.push(
+      en
+        ? `Markets where the engine does no better than a simple frequency on past data: ${weak.join(", ")}`
+        : `Marchés où le moteur ne fait pas mieux qu'une simple fréquence sur l'historique : ${weak.join(", ")}`,
+    );
   }
 
   return {
     engine_version: ENGINE_VERSION,
     generated_at: input.generatedAt,
-    note: "Probabilités estimées par un modèle statistique (Poisson, forme récente pondérée) : ce sont des estimations, pas des certitudes.",
+    note: en
+      ? "Probabilities estimated by a statistical model (Poisson, weighted recent form): these are estimates, not certainties."
+      : "Probabilités estimées par un modèle statistique (Poisson, forme récente pondérée) : ce sont des estimations, pas des certitudes.",
     match: {
       id: match.id,
       competition: match.competition.name,

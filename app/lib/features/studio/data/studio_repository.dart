@@ -31,7 +31,7 @@ String studioErrorMessage(Object e) {
       case 'feature_disabled':
         return tr('Le studio est momentanément indisponible.');
     }
-    if (e.code == '22023' || e.code == '42501') return e.message;
+    if (e.code == '22023' || e.code == '42501') return tr(e.message);
   }
   return tr('Action impossible pour le moment. Réessayez.');
 }

@@ -1,3 +1,4 @@
+import '../data/language_sync.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
@@ -496,16 +497,10 @@ class _LanguageSelectorState extends ConsumerState<LanguageSelector> {
 
   Future<void> _choose(String lang) async {
     await _prefs?.setString(languagePrefKey, lang);
-    final uid = ref.read(currentUserProvider)?.id;
-    if (uid != null) {
-      try {
-        await ref
-            .read(supabaseClientProvider)
-            .from('profiles')
-            .update({'locale': lang}).eq('id', uid);
-      } catch (_) {
-        // Hors ligne : la langue reste enregistrée sur le téléphone.
-      }
+    try {
+      await syncAccountLanguage(ref.read(supabaseClientProvider), lang: lang);
+    } catch (_) {
+      // Sans session (tests) : la langue reste enregistrée sur le téléphone.
     }
     if (!mounted) return;
     setState(() {});

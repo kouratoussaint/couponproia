@@ -3,7 +3,7 @@
 // telles et ne prédisent aucun résultat réel.
 import type { CouponLine } from "../assistant/actions.ts";
 import { fragility } from "../assistant/actions.ts";
-import { type Candidate, outcomeLabel, qualityFamilyOf } from "../coupons/generator.ts";
+import { type Candidate, outcomeLabel, outcomeLabelEn, qualityFamilyOf } from "../coupons/generator.ts";
 
 const round = (x: number, d = 4) => Math.round(x * 10 ** d) / 10 ** d;
 
@@ -46,7 +46,13 @@ export interface Simulation {
   model_return_per_unit: number;
 }
 
-export function simulate(probabilities: number[], totalOdd: number, runs = 1000, seed = 42): Simulation {
+export function simulate(
+  probabilities: number[],
+  totalOdd: number,
+  runs = 1000,
+  seed = 42,
+  lang: "fr" | "en" = "fr",
+): Simulation {
   const rand = seeded(seed);
   let wins = 0;
   for (let r = 0; r < runs; r++) {
@@ -56,7 +62,9 @@ export function simulate(probabilities: number[], totalOdd: number, runs = 1000,
   const sd = Math.sqrt(runs * pAll * (1 - pAll));
   const dist = correctCountDistribution(probabilities);
   return {
-    label: `Simulation : ${runs} coupons tirés au hasard selon les probabilités du modèle. Ce n'est pas un résultat réel ni une prévision de gain.`,
+    label: lang === "en"
+      ? `Simulation: ${runs} coupons drawn at random according to the model probabilities. This is not a real result nor a forecast of profit.`
+      : `Simulation : ${runs} coupons tirés au hasard selon les probabilités du modèle. Ce n'est pas un résultat réel ni une prévision de gain.`,
     runs,
     probability_all_correct: round(pAll),
     distribution: dist,
@@ -90,7 +98,12 @@ export interface Comparison {
 }
 
 /** Indicateurs comparables entre coupons (cote, probabilités, diversification, corrélations, données). */
-export function compareCoupons(coupons: CouponSummaryLine[], beatsBaseline: Record<string, boolean> | null): Comparison[] {
+export function compareCoupons(
+  coupons: CouponSummaryLine[],
+  beatsBaseline: Record<string, boolean> | null,
+  lang: "fr" | "en" = "fr",
+): Comparison[] {
+  const label = lang === "en" ? outcomeLabelEn : outcomeLabel;
   return coupons.map((c) => {
     const lines = c.lines;
     const total = round(lines.reduce((x, l) => x * l.odd, 1), 2);
@@ -119,7 +132,7 @@ export function compareCoupons(coupons: CouponSummaryLine[], beatsBaseline: Reco
       correlated_pairs: correlated,
       low_reliability: lines.filter((l) => l.reliability === "faible").length,
       unvalidated_markets: lines.filter((l) => beatsBaseline?.[qualityFamilyOf(l.key)] === false).length,
-      weakest: weakest ? `${outcomeLabel(weakest.key, weakest.home, weakest.away)} (${weakest.home} – ${weakest.away})` : null,
+      weakest: weakest ? `${label(weakest.key, weakest.home, weakest.away)} (${weakest.home} – ${weakest.away})` : null,
     };
   });
 }
@@ -144,7 +157,14 @@ export interface Alternative {
  * (autre issue du même match, ou autre match de cote voisine), avec la cote et la probabilité
  * du coupon après remplacement. L'utilisateur choisit.
  */
-export function alternativesFor(lines: CouponLine[], candidates: Candidate[], howMany = 2, perLine = 3): Alternative[] {
+export function alternativesFor(
+  lines: CouponLine[],
+  candidates: Candidate[],
+  howMany = 2,
+  perLine = 3,
+  lang: "fr" | "en" = "fr",
+): Alternative[] {
+  const label = lang === "en" ? outcomeLabelEn : outcomeLabel;
   const used = new Set(lines.map((l) => l.matchId));
   const total = lines.reduce((x, l) => x * l.odd, 1);
   const pAll = lines.reduce((x, l) => x * l.modelProbability, 1);
@@ -162,10 +182,10 @@ export function alternativesFor(lines: CouponLine[], candidates: Candidate[], ho
     for (const { c, kind } of pick) {
       out.push({
         replace_position: l.position,
-        replaced: `${outcomeLabel(l.key, l.home, l.away)} (${l.home} – ${l.away})`,
+        replaced: `${label(l.key, l.home, l.away)} (${l.home} – ${l.away})`,
         match_id: c.matchId,
         key: c.key,
-        selection: outcomeLabel(c.key, c.home, c.away),
+        selection: label(c.key, c.home, c.away),
         match: `${c.home} – ${c.away}`,
         odd: c.odd,
         model_probability: c.modelProbability,

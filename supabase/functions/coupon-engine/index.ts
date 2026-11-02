@@ -9,6 +9,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { type AiResult, runValidated } from "../_shared/ai/analyst.ts";
 import { loadAiSetup } from "../_shared/ai/setup.ts";
+import { withLanguage } from "../_shared/ai/language.ts";
 import { type CouponSummary, validateCouponSummary } from "../_shared/ai/validate.ts";
 import {
   type CandidateLoad,
@@ -27,6 +28,7 @@ import {
   diversify,
   filterCandidates,
   outcomeLabel,
+  outcomeLabelEn,
   parseCriteria,
   propose,
   type ProposedCoupon,
@@ -394,7 +396,8 @@ class CouponEngine {
     return created;
   }
 
-  private couponFiche(p: ProposedCoupon, risk: string) {
+  private couponFiche(p: ProposedCoupon, risk: string, lang: "fr" | "en" = "fr") {
+    const en = lang === "en";
     return {
       total_odd: p.totalOdd,
       combined_probability: p.combinedProbability,
@@ -404,24 +407,41 @@ class CouponEngine {
         match: `${s.home} – ${s.away}`,
         competition: s.competitionName,
         kickoff: s.kickoffAt.slice(0, 16).replace("T", " "),
-        selection: outcomeLabel(s.key, s.home, s.away),
+        selection: en ? outcomeLabelEn(s.key, s.home, s.away) : outcomeLabel(s.key, s.home, s.away),
         odd: s.odd,
         model_probability: s.modelProbability,
         implied_probability: s.impliedProbability,
         edge: s.edge,
         reliability: s.reliability,
       })),
-      note: "Probabilité de chaque sélection = estimation retenue (mélange du modèle et du marché). Probabilité combinée = produit de ces estimations (matchs supposés indépendants).",
+      note: en
+        ? "Probability of each selection = retained estimate (blend of model and market). Combined probability = product of these estimates (matches assumed independent)."
+        : "Probabilité de chaque sélection = estimation retenue (mélange du modèle et du marché). Probabilité combinée = produit de ces estimations (matchs supposés indépendants).",
     };
   }
 
-  private async summarize(fiche: unknown): Promise<{ summary: CouponSummary | null; ai: AiResult<CouponSummary> | null }> {
+  /** Résumé anglais du coupon (IA, sinon calcul), rangé dans analysis.en : écrit à la création. */
+  private async englishAnalysis(p: ProposedCoupon, risk: string) {
+    const { summary } = await this.summarize(this.couponFiche(p, risk, "en"), "en");
+    const s = summary ?? defaultSummary(p, "en");
+    return {
+      ...s,
+      market_note: p.impliedProbability !== null
+        ? `Combined probability according to the market (margins removed): ${Math.round(p.impliedProbability * 100)}%.`
+        : null,
+    };
+  }
+
+  private async summarize(
+    fiche: unknown,
+    lang: "fr" | "en" = "fr",
+  ): Promise<{ summary: CouponSummary | null; ai: AiResult<CouponSummary> | null }> {
     if (this.settings["ai.coupon_summary"] === false) return { summary: null, ai: null };
     const { data: prompt } = await this.db.from("ai_prompts").select("system_prompt")
       .eq("key", "coupon_summary").eq("is_active", true).maybeSingle();
     if (!prompt) return { summary: null, ai: null };
     const { choices, pricing } = await loadAiSetup(this.db, (k) => env(k));
-    const ai = await runValidated(fiche, prompt.system_prompt, choices, (raw) => validateCouponSummary(raw, fiche), pricing);
+    const ai = await runValidated(fiche, withLanguage(prompt.system_prompt, lang), choices, (raw) => validateCouponSummary(raw, fiche), pricing);
     if (ai.logs.length) {
       await this.db.from("ai_requests").insert(ai.logs.map((l) => ({
         user_id: null,
@@ -453,7 +473,7 @@ class CouponEngine {
     const thresholds = (this.settings["coupons.risk_thresholds"] ?? { prudent: 0.4, equilibre: 0.18 }) as RiskThresholds;
     const risk = riskLevel(p.combinedProbability, thresholds);
     const fiche = this.couponFiche(p, risk);
-    const { summary: aiSummary, ai } = await this.summarize(fiche);
+    const [{ summary: aiSummary, ai }, english] = await Promise.all([this.summarize(fiche), this.englishAnalysis(p, risk)]);
     const summary = aiSummary ?? defaultSummary(p);
 
     const firstKickoff = Date.parse(p.selections[0].kickoffAt);
@@ -491,6 +511,7 @@ class CouponEngine {
           ? `Probabilité combinée selon le marché (marges retirées) : ${pct(p.impliedProbability)}.`
           : null,
         engine_quality: this.quality,
+        en: english,
       },
       fingerprint: p.fingerprint,
     }).select("id").single();
@@ -515,6 +536,7 @@ class CouponEngine {
       edge: s.edge,
       reliability: s.reliability,
       justification: s.justification,
+      justification_en: s.justificationEn ?? null,
     })));
     if (selError) {
       await this.db.from("coupons").delete().eq("id", coupon.id);
@@ -754,7 +776,10 @@ class CouponEngine {
     const p = this.withAiJustifications(proposal);
     const thresholds = (this.settings["coupons.risk_thresholds"] ?? { prudent: 0.4, equilibre: 0.18 }) as RiskThresholds;
     const risk = riskLevel(p.combinedProbability, thresholds);
-    const { summary: aiSummary } = await this.summarize(this.couponFiche(p, risk));
+    const [{ summary: aiSummary }, english] = await Promise.all([
+      this.summarize(this.couponFiche(p, risk)),
+      this.englishAnalysis(p, risk),
+    ]);
     const summary = aiSummary ?? defaultSummary(p);
     const latest = Date.parse(p.selections[0].kickoffAt) - 30 * 60_000;
     const { error } = await this.db.from("coupons").update({
@@ -776,6 +801,7 @@ class CouponEngine {
         market_note: p.impliedProbability !== null
           ? `Probabilité combinée selon le marché (marges retirées) : ${pct(p.impliedProbability)}.`
           : null,
+        en: english,
         edited: true,
       },
     }).eq("id", couponId);
@@ -798,6 +824,7 @@ class CouponEngine {
       edge: s.edge,
       reliability: s.reliability,
       justification: s.justification,
+      justification_en: s.justificationEn ?? null,
     })));
     if (selError) return { ok: false, message: `Sélections non enregistrées : ${selError.message}` };
     return { ok: true };

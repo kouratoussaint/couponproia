@@ -201,6 +201,7 @@ export async function loadCandidates(
         oddsCapturedAt: row.captured_at,
         reliability: fiche.reliability as Reliability,
         justification: justificationFor(base, fiche),
+        justificationEn: justificationFor(base, fiche, "en"),
         ...base,
       });
     }

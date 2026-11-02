@@ -276,7 +276,7 @@ class _FormCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 for (final e in form)
                   Text(
-                    '${e.letter} · ${shortDate(e.kickoffAt)} · ${e.atHome ? tr('contre') : tr('chez')} ${e.opponent} '
+                    '${formLetterShown(e.letter)} · ${shortDate(e.kickoffAt)} · ${e.atHome ? tr('contre') : tr('chez')} ${e.opponent} '
                     '${e.goalsFor}-${e.goalsAgainst} · ${e.competition}',
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: theme.colorScheme.onSurfaceVariant),

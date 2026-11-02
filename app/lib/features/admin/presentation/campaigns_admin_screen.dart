@@ -67,7 +67,7 @@ final campaignsProvider =
 
 /// Mots refusés par le serveur (mêmes règles que les visuels du studio).
 final _forbidden = RegExp(
-    r'(^|[^\p{L}\p{N}])(sûr(e|s|es)?|sûrement|garanti(e|es|s|r|t)?|assuré(e|s|es)?|certitudes?|imparables?|infaillibles?|sans risque|gains?)([^\p{L}\p{N}]|$)|(^|[^\p{L}\p{N}])100 ?%',
+    r"(^|[^\p{L}\p{N}])(sûr(e|s|es)?|sûrement|garanti(e|es|s|r|t)?|assuré(e|s|es)?|certitudes?|imparables?|infaillibles?|sans risque|gains?|guaranteed?|guarantees|sure (bets?|wins?|thing)|risk[- ]free|winnings|unbeatable|can'?t lose|certaint(y|ies))([^\p{L}\p{N}]|$)|(^|[^\p{L}\p{N}])100 ?%",
     caseSensitive: false,
     unicode: true);
 
@@ -87,12 +87,16 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
   String _route = '/accueil';
   final _title = TextEditingController();
   final _body = TextEditingController();
+  final _titleEn = TextEditingController();
+  final _bodyEn = TextEditingController();
   bool _sending = false;
 
   @override
   void dispose() {
     _title.dispose();
     _body.dispose();
+    _titleEn.dispose();
+    _bodyEn.dispose();
     super.dispose();
   }
 
@@ -102,7 +106,14 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
     if (b.length < 3 || b.length > 300) {
       return tr('Message : 3 à 300 caractères.');
     }
-    if (hasForbiddenWords('$t $b')) {
+    final te = _titleEn.text.trim(), be = _bodyEn.text.trim();
+    if (te.isNotEmpty || be.isNotEmpty) {
+      if (te.length < 3 || te.length > 80 || be.length < 3 || be.length > 300) {
+        return tr(
+            'Version anglaise : titre (3 à 80 caractères) et message (3 à 300), ou rien.');
+      }
+    }
+    if (hasForbiddenWords('$t $b $te $be')) {
       return tr(
           'Mot interdit (sûr, garanti, assuré, gain, sans risque, 100 %…).');
     }
@@ -137,16 +148,21 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
         'p_title': _title.text.trim(),
         'p_body': _body.text.trim(),
         'p_route': _route,
+        'p_title_en':
+            _titleEn.text.trim().isEmpty ? null : _titleEn.text.trim(),
+        'p_body_en': _bodyEn.text.trim().isEmpty ? null : _bodyEn.text.trim(),
       });
       ref.invalidate(campaignsProvider);
       if (mounted) {
         _title.clear();
         _body.clear();
+        _titleEn.clear();
+        _bodyEn.clear();
         showMessage(
             context, trf('Notification envoyée à {0} utilisateur(s).', [n]));
       }
     } on PostgrestException catch (e) {
-      if (mounted) showMessage(context, e.message, error: true);
+      if (mounted) showMessage(context, tr(e.message), error: true);
     } catch (e) {
       if (mounted) showMessage(context, userMessageFor(e), error: true);
     } finally {
@@ -218,6 +234,29 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
             maxLines: 3,
             decoration: InputDecoration(
                 labelText: tr('Message'), border: OutlineInputBorder()),
+            onChanged: (_) => setState(() {}),
+          ),
+          SectionTitle(tr('Version anglaise (facultative)')),
+          Text(
+              tr('Envoyée aux utilisateurs dont l’application est en anglais ; sans elle, ils reçoivent le français.'),
+              style: theme.textTheme.bodySmall),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _titleEn,
+            maxLength: 80,
+            decoration: InputDecoration(
+                labelText: tr('Titre en anglais'),
+                border: OutlineInputBorder()),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _bodyEn,
+            maxLength: 300,
+            maxLines: 3,
+            decoration: InputDecoration(
+                labelText: tr('Message en anglais'),
+                border: OutlineInputBorder()),
             onChanged: (_) => setState(() {}),
           ),
           DropdownButtonFormField<String>(

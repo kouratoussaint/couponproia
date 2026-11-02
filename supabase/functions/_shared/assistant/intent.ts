@@ -92,25 +92,31 @@ export function parseIntent(raw: unknown): { ok: true; value: Intent } | { ok: f
 }
 
 /** Période de matchs demandée, en heure locale. Par défaut : les 48 prochaines heures. */
-export function dateRange(jour: string | null, now: Date, timeZone: string): { from: Date; until: Date; label: string } {
+export function dateRange(
+  jour: string | null,
+  now: Date,
+  timeZone: string,
+  lang: "fr" | "en" = "fr",
+): { from: Date; until: Date; label: string } {
+  const en = lang === "en";
   const offset = tzOffsetMs(now, timeZone);
   const local = new Date(now.getTime() + offset);
   const dayStart = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - offset);
   const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86400_000);
   const today = dayStart(local);
-  if (jour === "aujourdhui") return { from: now, until: addDays(today, 1), label: "aujourd'hui" };
-  if (jour === "demain") return { from: addDays(today, 1), until: addDays(today, 2), label: "demain" };
+  if (jour === "aujourdhui") return { from: now, until: addDays(today, 1), label: en ? "today" : "aujourd'hui" };
+  if (jour === "demain") return { from: addDays(today, 1), until: addDays(today, 2), label: en ? "tomorrow" : "demain" };
   if (jour === "week_end") {
     const dow = local.getUTCDay(); // 0 dimanche … 6 samedi
     const toSat = dow === 0 ? -1 : 6 - dow;
     const sat = addDays(today, toSat);
-    return { from: dow === 6 || dow === 0 ? now : sat, until: addDays(sat, 2), label: "ce week-end" };
+    return { from: dow === 6 || dow === 0 ? now : sat, until: addDays(sat, 2), label: en ? "this weekend" : "ce week-end" };
   }
   if (jour && /^\d{4}-\d{2}-\d{2}$/.test(jour)) {
     const d = new Date(Date.parse(`${jour}T00:00:00Z`) - offset);
-    return { from: d, until: addDays(d, 1), label: `le ${jour.slice(8, 10)}/${jour.slice(5, 7)}` };
+    return { from: d, until: addDays(d, 1), label: `${en ? "on" : "le"} ${jour.slice(8, 10)}/${jour.slice(5, 7)}` };
   }
-  return { from: now, until: new Date(now.getTime() + 48 * 3600_000), label: "des 48 prochaines heures" };
+  return { from: now, until: new Date(now.getTime() + 48 * 3600_000), label: en ? "in the next 48 hours" : "des 48 prochaines heures" };
 }
 
 const RISK = {
@@ -123,7 +129,11 @@ const RISK = {
  * Critères du générateur pour une demande. `validatedOnly` : marchés non demandés
  * explicitement → seulement ceux où le moteur bat la référence.
  */
-export function criteriaFromIntent(i: Intent, windowHours: number): { criteria: Criteria; warnings: string[] } {
+export function criteriaFromIntent(
+  i: Intent,
+  windowHours: number,
+  lang: "fr" | "en" = "fr",
+): { criteria: Criteria; warnings: string[] } {
   const warnings: string[] = [];
   const risk = i.risque ? RISK[i.risque] : null;
   const marketsAsked = i.marches.length > 0 || i.issues.length > 0;
@@ -163,12 +173,16 @@ export function criteriaFromIntent(i: Intent, windowHours: number): { criteria: 
   });
   if (marketsAsked && markets.some((m) => m === "OU" || m === "BTTS")) {
     warnings.push(
-      "Sur l'historique, le moteur ne fait pas mieux qu'une simple fréquence pour les buts (plus/moins, les deux marquent) : ces probabilités sont à prendre avec prudence.",
+      lang === "en"
+        ? "On past data, the engine does no better than a simple frequency for goals (over/under, both teams score): treat these probabilities with caution."
+        : "Sur l'historique, le moteur ne fait pas mieux qu'une simple fréquence pour les buts (plus/moins, les deux marquent) : ces probabilités sont à prendre avec prudence.",
     );
   }
   if (marketsAsked && markets.some((m) => m === "DNB" || m === "TTH" || m === "TTA")) {
     warnings.push(
-      "Remboursé si nul et buts par équipe : marchés récents, pas encore validés par l'évaluation du moteur ; probabilités à prendre avec prudence.",
+      lang === "en"
+        ? "Draw no bet and team goals: recent markets, not yet validated by the engine evaluation; treat the probabilities with caution."
+        : "Remboursé si nul et buts par équipe : marchés récents, pas encore validés par l'évaluation du moteur ; probabilités à prendre avec prudence.",
     );
   }
   return { criteria, warnings };

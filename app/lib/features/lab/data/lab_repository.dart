@@ -202,7 +202,8 @@ class LabRepository {
 
   Future<Map<String, dynamic>> _call(Map<String, dynamic> body) async {
     try {
-      final res = await _client.functions.invoke('lab', body: body);
+      final res = await _client.functions
+          .invoke('lab', body: {...body, 'lang': appLanguage});
       return Map<String, dynamic>.from(res.data as Map);
     } on FunctionException catch (e) {
       final d = e.details is Map ? e.details as Map : const {};

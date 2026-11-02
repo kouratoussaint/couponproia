@@ -41,23 +41,32 @@ class LegalAdminScreen extends ConsumerWidget {
                       title: Text(legalTitles[code]!),
                       subtitle: Text(d == null
                           ? tr('Aucune version publiée')
-                          : trf('Version {0} · publiée le {1}/{2}', [
-                              d.version,
-                              shortDate(d.publishedAt),
-                              d.publishedAt.year
-                            ])),
+                          : '${trf('Version {0} · publiée le {1}/{2}', [
+                                  d.version,
+                                  shortDate(d.publishedAt),
+                                  d.publishedAt.year
+                                ])} · ${d.english == null ? tr('sans traduction anglaise') : tr('traduction anglaise à jour')}'),
                       trailing: PopupMenuButton<String>(
-                        onSelected: (a) => a == 'read'
-                            ? openLegalDocument(context, code)
-                            : Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                    builder: (_) =>
-                                        _LegalEditor(code: code, current: d))),
+                        onSelected: (a) => switch (a) {
+                          'read' => openLegalDocument(context, code),
+                          'english' =>
+                            Navigator.of(context).push(MaterialPageRoute<void>(
+                                builder: (_) =>
+                                    _EnglishEditor(code: code, document: d!))),
+                          _ => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      _LegalEditor(code: code, current: d))),
+                        },
                         itemBuilder: (_) => [
                           PopupMenuItem(value: 'read', child: Text(tr('Lire'))),
                           PopupMenuItem(
                               value: 'edit',
                               child: Text(tr('Publier une nouvelle version'))),
+                          if (d != null)
+                            PopupMenuItem(
+                                value: 'english',
+                                child: Text(tr('Traduction anglaise'))),
                         ],
                       ),
                     ),
@@ -81,8 +90,8 @@ class _LegalEditor extends ConsumerStatefulWidget {
 
 class _LegalEditorState extends ConsumerState<_LegalEditor> {
   late final _title = TextEditingController(
-      text: widget.current?.title ?? legalTitles[widget.code]);
-  late final _body = TextEditingController(text: widget.current?.body ?? '');
+      text: widget.current?.frTitle ?? legalTitles[widget.code]);
+  late final _body = TextEditingController(text: widget.current?.frBody ?? '');
   late final _version = TextEditingController(text: _today());
   bool _busy = false;
 
@@ -176,6 +185,89 @@ class _LegalEditorState extends ConsumerState<_LegalEditor> {
           const SizedBox(height: 16),
           FilledButton(
               onPressed: _busy ? null : _publish, child: Text(tr('Publier'))),
+        ],
+      ),
+    );
+  }
+}
+
+/// Traduction anglaise de la version en vigueur : affichée aux utilisateurs anglophones,
+/// la version française reste celle qui fait foi et qui est acceptée.
+class _EnglishEditor extends ConsumerStatefulWidget {
+  const _EnglishEditor({required this.code, required this.document});
+
+  final String code;
+  final LegalDocument document;
+
+  @override
+  ConsumerState<_EnglishEditor> createState() => _EnglishEditorState();
+}
+
+class _EnglishEditorState extends ConsumerState<_EnglishEditor> {
+  late final _title =
+      TextEditingController(text: widget.document.english?.title ?? '');
+  late final _body =
+      TextEditingController(text: widget.document.english?.body ?? '');
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _body.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(legalRepositoryProvider).saveEnglish(
+          documentId: widget.document.id,
+          title: _title.text.trim(),
+          body: _body.text);
+      ref.invalidate(legalDocumentProvider(widget.code));
+      if (!mounted) return;
+      showMessage(context, tr('Traduction anglaise enregistrée.'));
+      Navigator.pop(context);
+    } catch (e) {
+      if (mounted) showMessage(context, adminErrorMessage(e), error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(tr('Traduction anglaise'))),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          Text(
+              trf('Version {0}. La version française fait foi : c’est elle que les utilisateurs acceptent.',
+                  [widget.document.version]),
+              style: theme.textTheme.bodySmall),
+          const SizedBox(height: 12),
+          TextField(
+              controller: _title,
+              decoration: InputDecoration(labelText: tr('Titre en anglais'))),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _body,
+            minLines: 12,
+            maxLines: null,
+            keyboardType: TextInputType.multiline,
+            decoration: InputDecoration(
+              labelText: tr('Texte en anglais'),
+              alignLabelWithHint: true,
+              helperText: tr(
+                  'Même mise en forme et mêmes champs {{…}} que la version française.'),
+              helperMaxLines: 2,
+            ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+              onPressed: _busy ? null : _save, child: Text(tr('Enregistrer'))),
         ],
       ),
     );

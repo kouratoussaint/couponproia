@@ -42,6 +42,7 @@ class AssistantRepository {
     try {
       final res = await _client.functions.invoke('assistant', body: {
         'message': message,
+        'lang': appLanguage,
         if (conversationId != null) 'conversation_id': conversationId,
         if (couponId != null) 'coupon_id': couponId,
         if (quick != null) 'quick': quick,

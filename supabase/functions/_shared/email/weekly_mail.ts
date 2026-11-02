@@ -16,6 +16,8 @@ export interface Recipient {
   user_id: string;
   email: string;
   name: string;
+  /** Langue du profil (« fr » par défaut). */
+  locale?: string;
   mine: Counts;
   journal: JournalWeek;
 }
@@ -42,6 +44,7 @@ export function weeklyEmail(
   until: Date,
   currency = "FCFA",
 ): { subject: string; text: string } {
+  if (r.locale === "en") return weeklyEmailEn(r, platform, since, until, currency);
   const period = `du ${day(since)} au ${day(until)}`;
   const mineTotal = r.mine.won + r.mine.lost + r.mine.void;
   const pDecided = platform.won + platform.lost;
@@ -85,4 +88,64 @@ export function weeklyEmail(
     "Notifications → Rapport hebdomadaire par e-mail.",
   ];
   return { subject: `Votre semaine Coupon Pro IA (${period})`, text: lines.join("\n") };
+}
+
+/** 12,500 */
+export const moneyEn = (n: number) => Math.round(n).toLocaleString("en-US");
+const pluralEn = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+function decidedEn(c: Counts, wonWord = "won"): string {
+  const parts = [`${c.won} ${wonWord}`, `${c.lost} lost`];
+  if (c.void) parts.push(`${c.void} void`);
+  return parts.join(", ");
+}
+
+/** Même rapport, en anglais (profil réglé sur English). */
+export function weeklyEmailEn(
+  r: Recipient,
+  platform: PlatformWeek,
+  since: Date,
+  until: Date,
+  currency = "FCFA",
+): { subject: string; text: string } {
+  const period = `${day(since)} to ${day(until)}`;
+  const mineTotal = r.mine.won + r.mine.lost + r.mine.void;
+  const pDecided = platform.won + platform.lost;
+  const pTotal = pDecided + platform.void;
+  const net = r.journal.returned - r.journal.staked;
+  const lines = [
+    `Hello${r.name ? ` ${r.name}` : ""},`,
+    "",
+    `Here is your week on Coupon Pro IA (${period}), losses included.`,
+    "",
+    "MY COUPONS",
+    mineTotal
+      ? `- ${pluralEn(mineTotal, "coupon decided", "coupons decided")}: ${decidedEn(r.mine)}.`
+      : "- None of your saved coupons was decided this week.",
+    "",
+    "MY BETTING LOG",
+    ...(r.journal.bets
+      ? [
+        `- ${pluralEn(r.journal.bets, "bet settled", "bets settled")}: ${
+          decidedEn({ won: r.journal.won, lost: r.journal.lost, void: r.journal.bets - r.journal.won - r.journal.lost })
+        }.`,
+        `- Stakes: ${moneyEn(r.journal.staked)} ${currency} · Return: ${moneyEn(r.journal.returned)} ${currency} · ` +
+        `Net result: ${net > 0 ? "+" : net < 0 ? "−" : ""}${moneyEn(Math.abs(net))} ${currency}.`,
+      ]
+      : ["- No bet settled this week in your log."]),
+    "",
+    "PLATFORM COUPONS",
+    pTotal
+      ? `- ${pluralEn(pTotal, "coupon decided", "coupons decided")}: ${decidedEn(platform)}` +
+        (pDecided ? ` (success ${Math.round((platform.won / pDecided) * 100)}%, void excluded).` : ".")
+      : "- No platform coupon decided this week.",
+    ...(platform.won && platform.avg_won_odd ? [`- Average odd of winning coupons: ${platform.avg_won_odd.toFixed(2)}.`] : []),
+    "",
+    "Coupon Pro IA probabilities are estimates: past results do not predict future ones.",
+    "Coupon Pro IA is not a bookmaker and takes no bets. Play in moderation.",
+    "",
+    "You receive this report because you asked for it. To stop it: app → Profile →",
+    "Notifications → Weekly report by email.",
+  ];
+  return { subject: `Your Coupon Pro IA week (${period})`, text: lines.join("\n") };
 }

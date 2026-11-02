@@ -38,3 +38,22 @@ Deno.test("rapport hebdomadaire : semaine sans activité", () => {
   assertStringIncludes(m.text, "Aucun coupon de la plateforme décidé cette semaine.");
   assert(!m.text.includes("Cote moyenne"));
 });
+
+Deno.test("rapport hebdomadaire en anglais (profil English)", () => {
+  const m = weeklyEmail(
+    {
+      user_id: "u", email: "a@b.c", name: "Sam", locale: "en",
+      mine: { won: 1, lost: 1, void: 0 },
+      journal: { bets: 2, won: 1, lost: 1, staked: 12000, returned: 15500 },
+    },
+    { won: 7, lost: 5, void: 1, avg_won_odd: 2.1 },
+    since, until,
+  );
+  assertEquals(m.subject, "Your Coupon Pro IA week (26/10 to 02/11)");
+  assertStringIncludes(m.text, "Hello Sam,");
+  assertStringIncludes(m.text, "2 coupons decided: 1 won, 1 lost.");
+  assertStringIncludes(m.text, "Stakes: 12,000 FCFA · Return: 15,500 FCFA · Net result: +3,500 FCFA.");
+  assertStringIncludes(m.text, "13 coupons decided: 7 won, 5 lost, 1 void (success 58%, void excluded).");
+  assertStringIncludes(m.text, "Average odd of winning coupons: 2.10.");
+  assert(!/guarantee|winnings|sure bet|risk-free/i.test(m.text), "no forbidden words");
+});

@@ -21,7 +21,7 @@ String communityErrorMessage(Object e) {
       case 'already_published':
         return tr('Ce coupon est déjà publié.');
       case 'rate_limited':
-        return e.message;
+        return tr(e.message);
       case 'feature_disabled':
         return tr('La communauté est momentanément indisponible.');
     }
@@ -31,7 +31,7 @@ String communityErrorMessage(Object e) {
           : tr('C’est déjà fait.');
     }
     if (e.code == '22023' || e.code == '42501' || e.code == 'P0002') {
-      return e.message;
+      return tr(e.message);
     }
   }
   return tr('Action impossible pour le moment. Réessayez.');

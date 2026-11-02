@@ -1,8 +1,24 @@
 // Page affichée par le navigateur après le paiement (retour de l'agrégateur).
 // Elle ne valide rien : l'app vérifie elle-même le paiement auprès du serveur.
+import { browserLang } from "../_shared/lang.ts";
+
 Deno.serve((req) => {
-  const cancelled = new URL(req.url).searchParams.has("annule");
-  const lines = cancelled
+  const url = new URL(req.url);
+  const cancelled = url.searchParams.has("annule");
+  const en = browserLang(req.headers.get("accept-language"), url.searchParams.get("lang")) === "en";
+  const lines = en
+    ? cancelled
+      ? ["Coupon Pro IA", "", "Payment cancelled: no amount was charged.", "Go back to the app to try again whenever you like."]
+      : [
+        "Coupon Pro IA",
+        "",
+        "Your payment has been sent.",
+        "Go back to the app: your plan or credits are activated as soon as the operator confirms the payment",
+        "(usually in less than a minute).",
+        "",
+        "You can close this page.",
+      ]
+    : cancelled
     ? [
       "Coupon Pro IA",
       "",

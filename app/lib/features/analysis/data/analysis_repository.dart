@@ -54,12 +54,13 @@ class AnalysisRepository {
 
   final SupabaseClient _client;
 
-  /// Dernière analyse enregistrée pour un match (partagée entre utilisateurs).
+  /// Dernière analyse enregistrée pour un match, dans la langue de l'app.
   Future<MatchAnalysis?> latest(int matchId) async {
     final row = await _client
         .from('match_analyses')
         .select(_analysisColumns)
         .eq('match_id', matchId)
+        .eq('language', appLanguage)
         .order('created_at', ascending: false)
         .limit(1)
         .maybeSingle();
@@ -78,8 +79,11 @@ class AnalysisRepository {
 
   /// Lance (ou récupère en cache) l'analyse d'un match. `force` : administrateurs.
   Future<MatchAnalysis> analyze(int matchId, {bool force = false}) async {
-    final data = await _invoke(
-        'analyze-match', {'match_id': matchId, if (force) 'force': true});
+    final data = await _invoke('analyze-match', {
+      'match_id': matchId,
+      'lang': appLanguage,
+      if (force) 'force': true,
+    });
     return MatchAnalysis.fromJson(data);
   }
 

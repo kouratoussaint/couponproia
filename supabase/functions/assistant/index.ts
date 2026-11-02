@@ -8,8 +8,10 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { type AttemptLog, runValidated } from "../_shared/ai/analyst.ts";
 import { loadAiSetup } from "../_shared/ai/setup.ts";
+import { withLanguage } from "../_shared/ai/language.ts";
+import { asLang, type Lang } from "../_shared/lang.ts";
 import { FORBIDDEN, validateCouponSummary } from "../_shared/ai/validate.ts";
-import { diagnoseCoupon, opportunities } from "../_shared/assistant/actions.ts";
+import { diagnoseCoupon, exclusionLabel, opportunities } from "../_shared/assistant/actions.ts";
 import {
   criteriaFromIntent,
   dateRange,
@@ -29,6 +31,7 @@ import {
   defaultSummary,
   filterCandidates,
   outcomeLabel,
+  outcomeLabelEn,
   parseCriteria,
   type ProposedCoupon,
   riskLevel,
@@ -37,8 +40,10 @@ import {
 import { type EngineQuality, loadEngineQuality } from "../_shared/engine/quality.ts";
 import { callerFrom, corsHeaders, env, json, readSettings, serverContext } from "../_shared/http.ts";
 
-const pct = (p: number) => `${Math.round(p * 100)} %`;
-const dec = (x: number) => x.toFixed(2).replace(".", ",");
+const pctFr = (p: number) => `${Math.round(p * 100)} %`;
+const decFr = (x: number) => x.toFixed(2).replace(".", ",");
+const pctEn = (p: number) => `${Math.round(p * 100)}%`;
+const decEn = (x: number) => x.toFixed(2);
 
 interface Result {
   content: string;
@@ -73,7 +78,29 @@ class Assistant {
   private quality: EngineQuality | null = null;
   readonly warnings: string[] = [];
 
-  constructor(private readonly db: SupabaseClient, private readonly userId: string, private readonly now: Date) {}
+  constructor(
+    private readonly db: SupabaseClient,
+    private readonly userId: string,
+    private readonly now: Date,
+    readonly lang: Lang = "fr",
+  ) {}
+
+  private get en() {
+    return this.lang === "en";
+  }
+  /** Texte selon la langue de l'utilisateur. */
+  private t(fr: string, en: string) {
+    return this.en ? en : fr;
+  }
+  private pct(p: number) {
+    return this.en ? pctEn(p) : pctFr(p);
+  }
+  private dec(x: number) {
+    return this.en ? decEn(x) : decFr(x);
+  }
+  private label(key: string, home: string, away: string) {
+    return this.en ? outcomeLabelEn(key, home, away) : outcomeLabel(key, home, away);
+  }
 
   async init() {
     this.settings = await readSettings(this.db, [
@@ -113,15 +140,16 @@ class Assistant {
         ? current.map((l) => ({
           position: l.position,
           match: `${l.home} – ${l.away}`,
-          selection: outcomeLabel(l.key, l.home, l.away),
+          selection: this.label(l.key, l.home, l.away),
           cote: l.odd,
         }))
         : null,
       competitions: (await this.competitions()).map((c) => c.name),
-      date_du_jour: new Intl.DateTimeFormat("fr-FR", { timeZone: this.timeZone, dateStyle: "full" }).format(this.now),
+      date_du_jour: new Intl.DateTimeFormat(this.en ? "en-GB" : "fr-FR", { timeZone: this.timeZone, dateStyle: "full" })
+        .format(this.now),
       date_iso: this.now.toISOString().slice(0, 10),
     };
-    const res = await runValidated(input, prompt.system_prompt, choices, (raw) => {
+    const res = await runValidated(input, withLanguage(prompt.system_prompt, this.lang), choices, (raw) => {
       const v = parseIntent(raw);
       if (!v.ok) return v;
       const bad = v.value.reponse.match(FORBIDDEN);
@@ -136,7 +164,7 @@ class Assistant {
   /** IA indisponible : une demande de coupon reste comprise grâce aux mots-clés et aux chiffres. */
   fallbackIntent(message: string): Intent | null {
     const x = extractConstraints(message, this.now, this.timeZone);
-    const wantsCoupon = /\b(coupons?|tickets?|combines?|composer?|propose|fais|cree|creer|genere)\b/
+    const wantsCoupon = /\b(coupons?|tickets?|combines?|composer?|propose|fais|cree|creer|genere|make|build|create|give|slip|accumulator|acca)\b/
       .test(message.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase());
     if (!wantsCoupon) return null;
     return {
@@ -164,13 +192,15 @@ class Assistant {
 
   // ---------------------------------------------------------------------------
   private async candidatesFor(i: Intent) {
-    const range = dateRange(i.jour, this.now, this.timeZone);
+    const range = dateRange(i.jour, this.now, this.timeZone, this.lang);
     const hours = Math.max(1, (range.until.getTime() - this.now.getTime()) / 3600_000);
     const load = await loadCandidates(this.db, this.now, hours, this.quality, range);
     let cands = load.candidates;
     if (i.competitions.length) {
       const { ids, unknown } = matchNames(i.competitions, await this.competitions());
-      if (unknown.length) this.warnings.push(`Compétition(s) non suivie(s) : ${unknown.join(", ")}.`);
+      if (unknown.length) {
+        this.warnings.push(this.t(`Compétition(s) non suivie(s) : ${unknown.join(", ")}.`, `Competition(s) not covered: ${unknown.join(", ")}.`));
+      }
       if (ids.length) cands = cands.filter((c) => ids.includes(c.competitionId));
     }
     if (i.exclure_equipes.length) {
@@ -189,10 +219,15 @@ class Assistant {
       const pick = (list: Candidate[]) => list.filter(ofTeam).sort((a, b) => b.modelProbability - a.modelProbability)[0];
       const best = pick(kept) ?? pick(all.filter((c) => (c.edge ?? 0) <= 0.1));
       if (!best) {
-        this.warnings.push(`Aucun match coté de « ${team} » sur la période.`);
+        this.warnings.push(this.t(`Aucun match coté de « ${team} » sur la période.`, `No priced match for “${team}” in the period.`));
         continue;
       }
-      if (!kept.includes(best)) this.warnings.push(`${best.home} – ${best.away} ajouté à votre demande, hors critères habituels du moteur.`);
+      if (!kept.includes(best)) {
+        this.warnings.push(this.t(
+          `${best.home} – ${best.away} ajouté à votre demande, hors critères habituels du moteur.`,
+          `${best.home} – ${best.away} added at your request, outside the engine's usual criteria.`,
+        ));
+      }
       if (!fixed.some((f) => f.matchId === best.matchId)) fixed.push(best);
     }
     return fixed;
@@ -221,17 +256,20 @@ class Assistant {
       coupons = buildCoupons(again.kept, relaxed, new Set(), 200_000, fixed);
       if (coupons.length) {
         this.warnings.push(keepTotals
-          ? "Seuil de probabilité légèrement assoupli pour respecter vos cotes."
-          : "Critères légèrement assouplis pour trouver une combinaison.");
+          ? this.t("Seuil de probabilité légèrement assoupli pour respecter vos cotes.", "Probability threshold slightly relaxed to respect your odds.")
+          : this.t("Critères légèrement assouplis pour trouver une combinaison.", "Criteria slightly relaxed to find a combination."));
       }
     }
     return { coupons, excluded, kept };
   }
 
   private noResult(why: string, excluded: Record<string, number>): Result {
-    const top = Object.entries(excluded).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([w, n]) => `${w} (${n})`);
+    const top = Object.entries(excluded).sort((a, b) => b[1] - a[1]).slice(0, 3)
+      .map(([w, n]) => `${exclusionLabel(w, this.lang)} (${n})`);
     return {
-      content: `${why}${top.length ? ` Principaux obstacles : ${top.join(", ")}.` : ""} Essayez une autre période, une cote cible différente ou moins de sélections. Aucun crédit n'a été débité.`,
+      content: this.en
+        ? `${why}${top.length ? ` Main obstacles: ${top.join(", ")}.` : ""} Try another period, a different target odd or fewer selections. No credit was charged.`
+        : `${why}${top.length ? ` Principaux obstacles : ${top.join(", ")}.` : ""} Essayez une autre période, une cote cible différente ou moins de sélections. Aucun crédit n'a été débité.`,
       intent: "aucun_resultat",
       coupons: [],
       payload: { excluded },
@@ -244,34 +282,57 @@ class Assistant {
     if (cands.length === 0) {
       return this.noResult(
         upcoming === 0
-          ? `Aucun match programmé ${range.label} dans les compétitions suivies.`
-          : `Pas de cotes disponibles ${range.label} pour les critères demandés (${withOdds} match(s) coté(s) sur ${upcoming}).`,
+          ? this.t(`Aucun match programmé ${range.label} dans les compétitions suivies.`, `No match scheduled ${range.label} in the competitions covered.`)
+          : this.t(
+            `Pas de cotes disponibles ${range.label} pour les critères demandés (${withOdds} match(s) coté(s) sur ${upcoming}).`,
+            `No odds available ${range.label} for the requested criteria (${withOdds} priced match(es) out of ${upcoming}).`,
+          ),
         {},
       );
     }
-    const { criteria, warnings } = criteriaFromIntent(i, hours);
+    const { criteria, warnings } = criteriaFromIntent(i, hours, this.lang);
     this.warnings.push(...warnings);
     const { kept: preKept } = filterCandidates(cands, criteria, this.now, this.quality?.beatsBaseline ?? null, this.quality?.competitions ?? {});
     const fixed = this.fixedForTeams(i, cands, preKept);
     const explicitTotals = Boolean(i.cote_totale_cible || i.cote_totale_min || i.cote_totale_max);
     const { coupons, excluded } = this.build(cands, criteria, fixed, explicitTotals);
-    const asked = describeRequest(i, range.label);
+    const asked = describeRequest(i, range.label, this.lang);
+    const dec = (x: number) => this.dec(x);
+    const pct = (p: number) => this.pct(p);
     if (coupons.length === 0) {
+      const n = criteria.min_selections === criteria.max_selections
+        ? `${criteria.min_selections}`
+        : `${criteria.min_selections} ${this.t("à", "to")} ${criteria.max_selections}`;
       return this.noResult(
-        `${asked} Je n'ai pas trouvé de combinaison de ${criteria.min_selections === criteria.max_selections ? criteria.min_selections : `${criteria.min_selections} à ${criteria.max_selections}`} sélections ${range.label} avec une cote totale entre ${dec(criteria.min_total_odd)} et ${dec(criteria.max_total_odd)}.`,
+        this.en
+          ? `${asked} I found no combination of ${n} selections ${range.label} with a total odd between ${dec(criteria.min_total_odd)} and ${dec(criteria.max_total_odd)}.`
+          : `${asked} Je n'ai pas trouvé de combinaison de ${n} sélections ${range.label} avec une cote totale entre ${dec(criteria.min_total_odd)} et ${dec(criteria.max_total_odd)}.`,
         excluded,
       );
     }
     const first = coupons[0];
+    const market = first.impliedProbability !== null ? ` (${this.t("marché : ", "market: ")}${pct(first.impliedProbability)})` : "";
     const content = coupons.length > 1
-      ? `Voici ${coupons.length} versions ${range.label}, cotes totales ${coupons.map((c) => dec(c.totalOdd)).join(", ")}. Comparez les probabilités estimées avant de choisir.`
-      : `Voici un coupon de ${first.selections.length} sélections ${range.label} : cote totale ${dec(first.totalOdd)}, probabilité estimée par le modèle ${pct(first.combinedProbability)}${first.impliedProbability !== null ? ` (marché : ${pct(first.impliedProbability)})` : ""}.`;
+      ? this.t(
+        `Voici ${coupons.length} versions ${range.label}, cotes totales ${coupons.map((c) => dec(c.totalOdd)).join(", ")}. Comparez les probabilités estimées avant de choisir.`,
+        `Here are ${coupons.length} versions ${range.label}, total odds ${coupons.map((c) => dec(c.totalOdd)).join(", ")}. Compare the estimated probabilities before choosing.`,
+      )
+      : this.t(
+        `Voici un coupon de ${first.selections.length} sélections ${range.label} : cote totale ${dec(first.totalOdd)}, probabilité estimée par le modèle ${pct(first.combinedProbability)}${market}.`,
+        `Here is a coupon of ${first.selections.length} selections ${range.label}: total odd ${dec(first.totalOdd)}, probability estimated by the model ${pct(first.combinedProbability)}${market}.`,
+      );
     return { content: `${asked} ${content}`, intent: i.intent, coupons, criteria, payload: {}, paid: true };
   }
 
   async modify(i: Intent, current: StoredLine[] | null, currentCriteria: unknown): Promise<Result> {
     if (!current?.length) {
-      return { content: "Je n'ai pas de coupon en cours à modifier. Demandez-moi d'abord d'en créer un.", intent: "question", coupons: [], payload: {}, paid: false };
+      return {
+        content: this.t("Je n'ai pas de coupon en cours à modifier. Demandez-moi d'abord d'en créer un.", "I have no current coupon to modify. Ask me to create one first."),
+        intent: "question",
+        coupons: [],
+        payload: {},
+        paid: false,
+      };
     }
     const base = parseCriteria(currentCriteria);
     const toRemove = new Set(i.retirer_positions);
@@ -283,7 +344,15 @@ class Assistant {
     }
     const removedMatches = new Set(current.filter((l) => toRemove.has(l.position)).map((l) => l.matchId));
     const target = current.length - (replace > 0 ? 0 : toRemove.size) + i.ajouter;
-    if (target < 1) return { content: "Le coupon serait vide : précisez quoi conserver.", intent: "question", coupons: [], payload: {}, paid: false };
+    if (target < 1) {
+      return {
+        content: this.t("Le coupon serait vide : précisez quoi conserver.", "The coupon would be empty: say what to keep."),
+        intent: "question",
+        coupons: [],
+        payload: {},
+        paid: false,
+      };
+    }
 
     const hours = Math.max(1, (Math.max(...current.map((l) => Date.parse(l.kickoffAt))) - this.now.getTime()) / 3600_000 + 24);
     const load = await loadCandidates(this.db, this.now, Math.max(hours, base.window_hours), this.quality);
@@ -293,7 +362,12 @@ class Assistant {
       if (toRemove.has(l.position)) continue;
       const fresh = byKey.get(`${l.matchId}:${l.key}`);
       if (fresh) kept.push(fresh);
-      else this.warnings.push(`${l.home} – ${l.away} retiré : match commencé ou issue plus cotée.`);
+      else {
+        this.warnings.push(this.t(
+          `${l.home} – ${l.away} retiré : match commencé ou issue plus cotée.`,
+          `${l.home} – ${l.away} removed: match started or outcome no longer priced.`,
+        ));
+      }
     }
     if (kept.length >= target) {
       const p = this.toProposal(kept.slice(0, target));
@@ -311,15 +385,20 @@ class Assistant {
       window_hours: Math.max(hours, base.window_hours),
     });
     const { coupons, excluded } = this.build(pool, criteria, kept);
-    if (!coupons.length) return this.noResult("Je n'ai pas trouvé de remplaçant compatible.", excluded);
+    if (!coupons.length) return this.noResult(this.t("Je n'ai pas trouvé de remplaçant compatible.", "I found no compatible replacement."), excluded);
     return { content: this.modifiedText(coupons[0], toRemove.size, coupons[0].selections.length - kept.length), intent: i.intent, coupons: [coupons[0]], criteria, payload: {}, paid: true };
   }
 
   private modifiedText(p: ProposedCoupon, removed: number, added: number) {
     const parts = [];
+    if (this.en) {
+      if (removed) parts.push(`${removed} selection(s) removed`);
+      if (added) parts.push(`${added} added`);
+      return `Coupon modified (${parts.join(", ") || "odds updated"}): ${p.selections.length} selections, total odd ${this.dec(p.totalOdd)}, estimated probability ${this.pct(p.combinedProbability)}.`;
+    }
     if (removed) parts.push(`${removed} sélection(s) retirée(s)`);
     if (added) parts.push(`${added} ajoutée(s)`);
-    return `Coupon modifié (${parts.join(", ") || "cotes actualisées"}) : ${p.selections.length} sélections, cote totale ${dec(p.totalOdd)}, probabilité estimée ${pct(p.combinedProbability)}.`;
+    return `Coupon modifié (${parts.join(", ") || "cotes actualisées"}) : ${p.selections.length} sélections, cote totale ${this.dec(p.totalOdd)}, probabilité estimée ${this.pct(p.combinedProbability)}.`;
   }
 
   private toProposal(selections: Candidate[]): ProposedCoupon {
@@ -338,20 +417,35 @@ class Assistant {
 
   async analyzeCoupon(current: StoredLine[] | null): Promise<Result> {
     if (!current?.length) {
-      return { content: "Je n'ai pas de coupon à analyser dans cette conversation. Créez-en un ou ouvrez un de vos coupons.", intent: "question", coupons: [], payload: {}, paid: false };
+      return {
+        content: this.t(
+          "Je n'ai pas de coupon à analyser dans cette conversation. Créez-en un ou ouvrez un de vos coupons.",
+          "I have no coupon to analyse in this conversation. Create one or open one of your coupons.",
+        ),
+        intent: "question",
+        coupons: [],
+        payload: {},
+        paid: false,
+      };
     }
     const live = await loadLiveChecks(this.db, current.map((l) => ({ matchId: l.matchId, key: l.key })));
     const lines = current.map((l) => {
       const x = live.get(`${l.matchId}:${l.key}`);
       return { ...l, status: x?.status ?? undefined, currentOdd: x ? x.currentOdd : undefined };
     });
-    const d = diagnoseCoupon(lines, this.quality?.beatsBaseline ?? null, this.now);
-    const fr = d.fragiles.map((f) => `n° ${f.position} ${f.selection} : ${f.raison}`).join(" ; ");
-    const content = [
-      `Cote totale ${dec(d.total_odd)}, probabilité estimée par le modèle ${pct(d.combined_probability)}${d.implied_probability !== null ? ` (marché : ${pct(d.implied_probability)})` : ""}.`,
-      fr ? `Les plus fragiles : ${fr}.` : "",
-      d.alertes.length ? `À vérifier : ${d.alertes.join(" ")}` : "",
-    ].filter(Boolean).join(" ");
+    const d = diagnoseCoupon(lines, this.quality?.beatsBaseline ?? null, this.now, this.lang);
+    const market = d.implied_probability !== null ? ` (${this.t("marché : ", "market: ")}${this.pct(d.implied_probability)})` : "";
+    const content = this.en
+      ? [
+        `Total odd ${this.dec(d.total_odd)}, probability estimated by the model ${this.pct(d.combined_probability)}${market}.`,
+        d.fragiles.length ? `Most fragile: ${d.fragiles.map((f) => `no. ${f.position} ${f.selection}: ${f.raison}`).join("; ")}.` : "",
+        d.alertes.length ? `To check: ${d.alertes.join(" ")}` : "",
+      ].filter(Boolean).join(" ")
+      : [
+        `Cote totale ${this.dec(d.total_odd)}, probabilité estimée par le modèle ${this.pct(d.combined_probability)}${market}.`,
+        d.fragiles.length ? `Les plus fragiles : ${d.fragiles.map((f) => `n° ${f.position} ${f.selection} : ${f.raison}`).join(" ; ")}.` : "",
+        d.alertes.length ? `À vérifier : ${d.alertes.join(" ")}` : "",
+      ].filter(Boolean).join(" ");
     return { content, intent: "analyser_coupon", coupons: [], payload: { diagnosis: d }, paid: true };
   }
 
@@ -371,10 +465,18 @@ class Assistant {
       require_validated_markets: !(i.marches.length || i.issues.length),
     });
     const { kept, excluded } = filterCandidates(cands, criteria, this.now, this.quality?.beatsBaseline ?? null, this.quality?.competitions ?? {});
-    const ops = opportunities(kept, 8);
-    if (!ops.length) return this.noResult(`Aucune rencontre ${range.label} ne se détache selon le modèle.`, excluded);
+    const ops = opportunities(kept, 8, this.lang);
+    if (!ops.length) {
+      return this.noResult(
+        this.t(`Aucune rencontre ${range.label} ne se détache selon le modèle.`, `No match ${range.label} stands out according to the model.`),
+        excluded,
+      );
+    }
     return {
-      content: `${ops.length} rencontre(s) ${range.label} où le modèle estime une issue plus probable que le marché (écart positif, sans dépasser 6 points). Ce sont des estimations ; demandez-moi d'en faire un coupon si vous le souhaitez.`,
+      content: this.t(
+        `${ops.length} rencontre(s) ${range.label} où le modèle estime une issue plus probable que le marché (écart positif, sans dépasser 6 points). Ce sont des estimations ; demandez-moi d'en faire un coupon si vous le souhaitez.`,
+        `${ops.length} match(es) ${range.label} where the model rates an outcome as more likely than the market (positive edge, no more than 6 points). These are estimates; ask me to make a coupon from them if you wish.`,
+      ),
       intent: "analyser_matchs",
       coupons: [],
       payload: { opportunities: ops },
@@ -392,35 +494,45 @@ class Assistant {
         match: `${s.home} – ${s.away}`,
         competition: s.competitionName,
         kickoff: s.kickoffAt.slice(0, 16).replace("T", " "),
-        selection: outcomeLabel(s.key, s.home, s.away),
+        selection: this.label(s.key, s.home, s.away),
         odd: s.odd,
         model_probability: s.modelProbability,
         implied_probability: s.impliedProbability,
         edge: s.edge,
         reliability: s.reliability,
       })),
-      note: "Probabilité combinée = produit des probabilités du modèle (matchs supposés indépendants).",
+      note: this.t(
+        "Probabilité combinée = produit des probabilités du modèle (matchs supposés indépendants).",
+        "Combined probability = product of the model probabilities (matches assumed independent).",
+      ),
     };
     const { data: prompt } = await this.db.from("ai_prompts").select("system_prompt")
       .eq("key", "coupon_summary").eq("is_active", true).maybeSingle();
-    if (!prompt) return { ...defaultSummary(p), source: "calcul" };
+    if (!prompt) return { ...defaultSummary(p, this.lang), source: "calcul" };
     const { choices, pricing } = await loadAiSetup(this.db, (k) => env(k));
-    const ai = await runValidated(fiche, prompt.system_prompt, choices, (raw) => validateCouponSummary(raw, fiche), pricing);
+    const ai = await runValidated(
+      fiche,
+      withLanguage(prompt.system_prompt, this.lang),
+      choices,
+      (raw) => validateCouponSummary(raw, fiche),
+      pricing,
+    );
     await logAi(this.db, this.userId, "coupon_summary", ai.logs);
-    return ai.status === "ok" ? { ...ai.value, source: "ia" } : { ...defaultSummary(p), source: "calcul" };
+    return ai.status === "ok" ? { ...ai.value, source: "ia" } : { ...defaultSummary(p, this.lang), source: "calcul" };
   }
 
   async saveProposals(result: Result, conversationId: string, messageId: string): Promise<string[]> {
     const ids: string[] = [];
     const thresholds = (this.settings["coupons.risk_thresholds"] ?? { prudent: 0.4, equilibre: 0.18 }) as RiskThresholds;
     for (const [index, p] of result.coupons.entries()) {
-      const summary = index === 0 ? await this.summary(p) : { ...defaultSummary(p), source: "calcul" };
+      const summary = index === 0 ? await this.summary(p) : { ...defaultSummary(p, this.lang), source: "calcul" };
       const id = await insertUserCoupon(this.db, {
         userId: this.userId,
         conversationId,
         messageId,
         status: "proposal",
         title: `Coupon de l'assistant · ${p.selections.length} sélection${p.selections.length > 1 ? "s" : ""}`,
+        lang: this.lang,
         criteria: result.criteria ?? {},
         proposal: p,
         risk: riskLevel(p.combinedProbability, thresholds),
@@ -450,7 +562,14 @@ Deno.serve(async (req) => {
     const { data: flag } = await db.from("feature_flags").select("enabled").eq("key", "assistant_ia").maybeSingle();
     if (!flag?.enabled) return json({ error: "feature_disabled" }, 403);
 
-    const assistant = new Assistant(db, caller.id, new Date());
+    // Langue des réponses : celle de l'app, sinon celle du profil.
+    let lang: Lang = asLang(body?.lang);
+    if (body?.lang !== "en" && body?.lang !== "fr") {
+      const { data: profile } = await db.from("profiles").select("locale").eq("id", caller.id).maybeSingle();
+      lang = asLang(profile?.locale);
+    }
+    const en = lang === "en";
+    const assistant = new Assistant(db, caller.id, new Date(), lang);
     await assistant.init();
 
     const dayStart = new Date();
@@ -496,7 +615,9 @@ Deno.serve(async (req) => {
     let result: Result;
     if (!intent) {
       result = {
-        content: "Je n'ai pas pu traiter votre demande pour l'instant (service d'IA indisponible). Réessayez dans un moment ; aucun crédit n'a été débité.",
+        content: en
+          ? "I could not process your request for now (AI service unavailable). Try again in a moment; no credit was charged."
+          : "Je n'ai pas pu traiter votre demande pour l'instant (service d'IA indisponible). Réessayez dans un moment ; aucun crédit n'a été débité.",
         intent: "erreur",
         coupons: [],
         payload: {},
@@ -508,7 +629,9 @@ Deno.serve(async (req) => {
       const credits = (await db.rpc("svc_credit_summary", { p_user: caller.id })).data as { total: number; unlimited: boolean } | null;
       if (PAID_INTENTS.includes(intent.intent) && credits && !credits.unlimited && credits.total < assistant.cost) {
         result = {
-          content: `Il vous faut ${assistant.cost} crédit(s) pour cette action et votre solde est de ${credits.total}. Vos crédits du forfait se renouvellent chaque mois ; des packs de crédits sont disponibles dans Abonnement et crédits.`,
+          content: en
+            ? `You need ${assistant.cost} credit(s) for this action and your balance is ${credits.total}. Your plan credits renew every month; credit packs are available in Subscription and credits.`
+            : `Il vous faut ${assistant.cost} crédit(s) pour cette action et votre solde est de ${credits.total}. Vos crédits du forfait se renouvellent chaque mois ; des packs de crédits sont disponibles dans Abonnement et crédits.`,
           intent: "credits_insuffisants",
           coupons: [],
           payload: { credits },
@@ -559,7 +682,9 @@ Deno.serve(async (req) => {
         // Solde épuisé entre-temps : le résultat n'est pas conservé, rien n'est débité.
         await db.from("user_coupons").delete().eq("message_id", messageId);
         couponIds = [];
-        assistantMessage.content = "Votre solde de crédits ne suffit plus pour cette action : résultat non conservé, aucun crédit débité.";
+        assistantMessage.content = en
+          ? "Your credit balance is no longer enough for this action: result not kept, no credit charged."
+          : "Votre solde de crédits ne suffit plus pour cette action : résultat non conservé, aucun crédit débité.";
         assistantMessage.intent = "credits_insuffisants";
         assistantMessage.payload = { warnings };
       } else {

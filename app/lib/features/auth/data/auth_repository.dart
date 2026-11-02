@@ -1,3 +1,4 @@
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -24,7 +25,7 @@ class AuthRepository {
     final response = await _auth.signUp(
       email: email.trim(),
       password: password,
-      data: {'display_name': displayName.trim()},
+      data: {'display_name': displayName.trim(), 'locale': appLanguage},
     );
     return response.session == null;
   }

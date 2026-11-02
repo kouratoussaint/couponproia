@@ -2,6 +2,8 @@
 // analyze-match (demande d'un utilisateur) et le moteur de coupons (analyse offerte du jour).
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { analyzeWithAi } from "../ai/analyst.ts";
+import { withLanguage } from "../ai/language.ts";
+import type { Lang } from "../lang.ts";
 import { loadAiSetup } from "../ai/setup.ts";
 import { loadEngineQuality } from "../engine/quality.ts";
 import { buildFiche, type NamedMatch, type OddsRow } from "../engine/fiche.ts";
@@ -13,7 +15,7 @@ export const MATCH_COLUMNS =
 
 export const PLAYED = ["finished", "awarded"];
 export const ANALYSIS_COLUMNS =
-  "id, match_id, engine_version, prompt_key, prompt_version, provider, model, status, status_reason, stats, analysis, source_updated_at, created_at";
+  "id, match_id, language, engine_version, prompt_key, prompt_version, provider, model, status, status_reason, stats, analysis, source_updated_at, created_at";
 const STATS_ONLY_TTL_MS = 60 * 60 * 1000;
 
 export interface MatchRow {
@@ -118,6 +120,7 @@ export async function generateMatchAnalysis(
   m: MatchRow,
   prompt: { key: string; version: number; system_prompt: string } | null,
   userId: string | null,
+  lang: Lang = "fr",
 ) {
   const inputs = await loadFicheInputs(db, m);
   const quality = await loadEngineQuality(db);
@@ -134,19 +137,21 @@ export async function generateMatchAnalysis(
     ...inputs,
     quality,
     generatedAt: new Date().toISOString(),
+    lang,
   });
 
 
   const { choices, pricing } = await loadAiSetup(db, (k) => env(k));
 
   const result = prompt
-    ? await analyzeWithAi(fiche, prompt.system_prompt, choices, pricing)
+    ? await analyzeWithAi(fiche, withLanguage(prompt.system_prompt, lang), choices, pricing)
     : { status: "stats_only" as const, reason: "no_prompt", logs: [] };
 
   const sourceUpdatedAt = [inputs.history.at(-1)?.kickoffAt, fiche.market.captured_at].filter(Boolean).sort().at(-1) ??
     m.kickoff_at;
   const { data: saved, error: saveError } = await db.from("match_analyses").insert({
     match_id: m.id,
+    language: lang,
     engine_version: ENGINE_VERSION,
     prompt_key: prompt?.key ?? null,
     prompt_version: prompt?.version ?? null,
@@ -181,8 +186,14 @@ export async function generateMatchAnalysis(
 }
 
 /** Dernière analyse encore valable pour ce match, sinon null. */
-export async function freshAnalysis(db: SupabaseClient, m: MatchRow, ttlHours: number, promptVersion: number | null) {
-  const { data: cached } = await db.from("match_analyses").select(ANALYSIS_COLUMNS).eq("match_id", m.id)
+export async function freshAnalysis(
+  db: SupabaseClient,
+  m: MatchRow,
+  ttlHours: number,
+  promptVersion: number | null,
+  lang: Lang = "fr",
+) {
+  const { data: cached } = await db.from("match_analyses").select(ANALYSIS_COLUMNS).eq("match_id", m.id).eq("language", lang)
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   return cached && isFresh(cached, PLAYED.includes(m.status), ttlHours, promptVersion) ? cached : null;
 }

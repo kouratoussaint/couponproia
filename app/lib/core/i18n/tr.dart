@@ -65,6 +65,32 @@ String get thousandsSeparator => _lang == 'en' ? ',' : '\u202f';
 String percentLabel(int n) => _lang == 'en' ? '$n%' : '$n %';
 
 final _selectionCount = RegExp(r'^(\d+) sélections?$');
+final _frenchDay = RegExp(
+    r'^(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche) (\d{1,2}) (janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)$',
+    caseSensitive: false);
+const _daysEn = {
+  'lundi': 'Monday',
+  'mardi': 'Tuesday',
+  'mercredi': 'Wednesday',
+  'jeudi': 'Thursday',
+  'vendredi': 'Friday',
+  'samedi': 'Saturday',
+  'dimanche': 'Sunday',
+};
+const _monthsEn = {
+  'janvier': 'January',
+  'février': 'February',
+  'mars': 'March',
+  'avril': 'April',
+  'mai': 'May',
+  'juin': 'June',
+  'juillet': 'July',
+  'août': 'August',
+  'septembre': 'September',
+  'octobre': 'October',
+  'novembre': 'November',
+  'décembre': 'December',
+};
 
 /// Titre de coupon venu du serveur (« Prudent · 02/11 », « Coupon manuel · 3 sélections ») :
 /// chaque partie connue est traduite, le reste (nom choisi, date) est gardé tel quel.
@@ -76,6 +102,15 @@ String trTitle(String title) {
       final n = int.parse(m[1]!);
       return '$n selection${n > 1 ? 's' : ''}';
     }
+    final d = _frenchDay.firstMatch(part);
+    if (d != null) {
+      return '${_daysEn[d[1]!.toLowerCase()]} ${d[2]} ${_monthsEn[d[3]!.toLowerCase()]}';
+    }
     return tr(part.replaceAll("'", '’'));
   }).join(' · ');
 }
+
+/// Lettre de forme affichée : V/N/D en français, W/D/L en anglais.
+String formLetterShown(String letter) => _lang == 'en'
+    ? switch (letter) { 'V' => 'W', 'N' => 'D', 'D' => 'L', _ => letter }
+    : letter;

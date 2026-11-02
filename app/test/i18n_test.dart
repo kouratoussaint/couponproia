@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:coupon_pro_ia/core/i18n/tr.dart';
+import 'package:coupon_pro_ia/features/coupons/data/coupon_models.dart';
 import 'package:coupon_pro_ia/features/help/help_screens.dart';
+import 'package:coupon_pro_ia/features/legal/legal_repository.dart';
 import 'package:coupon_pro_ia/features/simulator/data/stake_math.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -62,6 +64,8 @@ void main() {
         'Coupon de l’assistant': 'Assistant coupon',
       });
       expect(trTitle('Prudent · 02/11'), 'Cautious · 02/11');
+      expect(trTitle('Prudent · lundi 2 novembre'),
+          'Cautious · Monday 2 November');
       expect(trTitle("Coupon de l'assistant · 3 sélections"),
           'Assistant coupon · 3 selections');
       expect(trTitle('Mon combiné du soir · 1 sélection'),
@@ -112,12 +116,113 @@ void main() {
     test('aucun mot interdit dans les traductions', () {
       final forbidden = RegExp(r'\b(guaranteed?|sure bet|winnings|risk-free)\b',
           caseSensitive: false);
-      final bad = en.values.where(forbidden.hasMatch).toList();
+      // Les mots cités entre guillemets (règles, messages de refus) ne sont pas des promesses.
+      final quoted = RegExp(r'“[^”]*”|«[^»]*»');
+      final bad = en.values
+          .where((v) => forbidden.hasMatch(v.replaceAll(quoted, '')))
+          .toList();
       expect(bad, isEmpty);
     });
 
     test('aucune traduction vide', () {
       expect(en.entries.where((e) => e.value.trim().isEmpty), isEmpty);
+    });
+  });
+
+  group('textes du serveur selon la langue (partie 2)', () {
+    final now = DateTime.utc(2026, 11, 2, 12).toIso8601String();
+    Map<String, dynamic> couponJson() => {
+          'id': 'c1',
+          'category': 'prudent',
+          'title': 'Prudent · lundi 2 novembre',
+          'risk_level': 'prudent',
+          'total_odd': 2.5,
+          'combined_probability': 0.4,
+          'status': 'published',
+          'publish_at': now,
+          'first_kickoff_at': now,
+          'last_kickoff_at': now,
+          'engine_version': 'v',
+          'created_at': now,
+          'analysis': {
+            'analyse_generale': 'Résumé',
+            'points_de_vigilance': ['Point'],
+            'source': 'ia',
+            'en': {
+              'analyse_generale': 'Summary',
+              'points_de_vigilance': ['Point EN'],
+              'market_note': 'Market note'
+            },
+          },
+          'coupon_selections': [
+            {
+              'position': 1,
+              'selection_key': '1X2.HOME',
+              'odd': 1.5,
+              'odds_captured_at': now,
+              'model_probability': 0.6,
+              'reliability': 'bonne',
+              'justification': 'Modèle : 60 %',
+              'justification_en': 'Model: 60%',
+              'match': {
+                'id': 7,
+                'kickoff_at': now,
+                'status': 'scheduled',
+                'home': {'name': 'Lille'},
+                'away': {'name': 'Lens'},
+              },
+            }
+          ],
+        };
+
+    test('coupon de la plateforme : résumé et justification en anglais', () {
+      setLanguageForTest('en', const {});
+      final c = Coupon.fromJson(couponJson());
+      expect(c.summary, 'Summary');
+      expect(c.vigilance, ['Point EN']);
+      expect(c.summaryFromAi, isTrue);
+      expect(c.selections.single.justification, 'Model: 60%');
+      setLanguageForTest('fr', const {});
+      final f = Coupon.fromJson(couponJson());
+      expect(f.summary, 'Résumé');
+      expect(f.selections.single.justification, 'Modèle : 60 %');
+    });
+
+    test('document légal : traduction affichée, version française gardée', () {
+      final j = {
+        'id': 1,
+        'code': 'terms',
+        'version': '2026-10-31',
+        'title': 'Conditions générales d’utilisation',
+        'body': 'Texte français',
+        'published_at': now,
+        'legal_translations': [
+          {'language': 'en', 'title': 'General terms of use', 'body': 'English'}
+        ],
+      };
+      setLanguageForTest('en', const {});
+      final d = LegalDocument.fromJson(j);
+      expect((d.title, d.body, d.translated),
+          ('General terms of use', 'English', true));
+      expect(d.frBody, 'Texte français');
+      setLanguageForTest('fr', const {});
+      final f = LegalDocument.fromJson(j);
+      expect((f.title, f.translated),
+          ('Conditions générales d’utilisation', false));
+      expect(f.english?.title, 'General terms of use');
+    });
+
+    test('lettres de forme en anglais', () {
+      setLanguageForTest('en', const {});
+      expect([
+        for (final l in ['V', 'N', 'D']) formLetterShown(l)
+      ], [
+        'W',
+        'D',
+        'L'
+      ]);
+      setLanguageForTest('fr', const {});
+      expect(formLetterShown('V'), 'V');
     });
   });
 

@@ -10,6 +10,7 @@ import { ANALYSIS_COLUMNS, generateMatchAnalysis, isFresh, MATCH_COLUMNS, type M
 import { planFeatures } from "../_shared/billing.ts";
 import { analysisDecision } from "../_shared/analysis/access.ts";
 import { callerFrom, corsHeaders, json, readSettings, serverContext } from "../_shared/http.ts";
+import { asLang, type Lang } from "../_shared/lang.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -21,15 +22,23 @@ Deno.serve(async (req) => {
 
   let matchId: number;
   let force = false;
+  let asked: unknown = null;
   try {
     const body = await req.json();
     matchId = Number(body?.match_id);
     force = body?.force === true;
+    asked = body?.lang;
     if (!Number.isInteger(matchId) || matchId <= 0) return json({ error: "invalid_match_id" }, 400);
   } catch {
     return json({ error: "invalid_body" }, 400);
   }
   const { db } = ctx;
+  // Langue de l'analyse : celle de l'app, sinon celle du profil.
+  let lang: Lang = asLang(asked);
+  if (asked !== "en" && asked !== "fr") {
+    const { data: profile } = await db.from("profiles").select("locale").eq("id", caller.id).maybeSingle();
+    lang = asLang(profile?.locale);
+  }
   const canManage = caller.permissions.includes("ai.configure");
   // Fournisseur, modèle et prompt : visibles du seul super administrateur (permission ai.providers).
   const forCaller = (row: Record<string, unknown>) => {
@@ -92,13 +101,13 @@ Deno.serve(async (req) => {
     let fromCache = false;
     if (!force) {
       const { data: cached } = await db.from("match_analyses").select(ANALYSIS_COLUMNS).eq("match_id", matchId)
-        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        .eq("language", lang).order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (cached && isFresh(cached, played, ttlHours, prompt?.version ?? null)) {
         result = cached;
         fromCache = true;
       }
     }
-    if (!result) result = await generateMatchAnalysis(db, m, prompt, caller.id);
+    if (!result) result = await generateMatchAnalysis(db, m, prompt, caller.id, lang);
 
     if (decision) {
       // Accès personnel, puis débit des crédits (FREE) ; sans crédit au moment du débit, rien n'est ouvert.

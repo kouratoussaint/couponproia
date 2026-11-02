@@ -132,6 +132,8 @@ export interface Candidate {
   rawEdge?: number | null;
   reliability: Reliability;
   justification: string;
+  /** Même justification en anglais (coupons de la plateforme, utilisateurs anglophones). */
+  justificationEn?: string;
 }
 
 /**
@@ -148,6 +150,8 @@ export function blendWithMarket(candidates: Candidate[], marketWeight: number): 
     const edge = round(p - c.impliedProbability, 4);
     const raw = c.modelProbability;
     const rest = c.justification.includes(" ; ") ? c.justification.slice(c.justification.indexOf(" ; ")) : ".";
+    const en = c.justificationEn;
+    const restEn = en?.includes("; ") ? en.slice(en.indexOf("; ")) : ".";
     return {
       ...c,
       rawModelProbability: raw,
@@ -155,6 +159,9 @@ export function blendWithMarket(candidates: Candidate[], marketWeight: number): 
       modelProbability: p,
       edge,
       justification: `Estimation retenue : ${pct(p)} (modèle ${pct(raw)}, marché ${pct(c.impliedProbability)})${rest}`,
+      ...(en === undefined ? {} : {
+        justificationEn: `Retained estimate: ${pctEn(p)} (model ${pctEn(raw)}, market ${pctEn(c.impliedProbability)})${restEn}`,
+      }),
     };
   });
 }
@@ -456,6 +463,8 @@ export function qualityCheck(
 // ---------------------------------------------------------------------------
 const pct = (p: number) => `${Math.round(p * 100)} %`;
 const dec = (x: number, d = 2) => x.toFixed(d).replace(".", ",");
+const pctEn = (p: number) => `${Math.round(p * 100)}%`;
+const decEn = (x: number, d = 2) => x.toFixed(d);
 
 export function outcomeLabel(key: string, home: string, away: string): string {
   const [market, outcome, ...rest] = key.split(".");
@@ -471,6 +480,21 @@ export function outcomeLabel(key: string, home: string, away: string): string {
   return key;
 }
 
+/** Libellé d'une sélection en anglais. */
+export function outcomeLabelEn(key: string, home: string, away: string): string {
+  const [market, outcome, ...rest] = key.split(".");
+  const line = rest.join(".");
+  if (market === "1X2") return outcome === "HOME" ? `${home} win` : outcome === "AWAY" ? `${away} win` : "Draw";
+  if (market === "DC") return outcome === "1X" ? `${home} or draw` : outcome === "X2" ? `Draw or ${away}` : `${home} or ${away}`;
+  if (market === "OU") return `${outcome === "OVER" ? "Over" : "Under"} ${line} goals`;
+  if (market === "BTTS") return outcome === "YES" ? "Both teams score" : "At least one team does not score";
+  if (market === "DNB") return `${outcome === "HOME" ? home : away} (draw no bet)`;
+  if (market === "TTH" || market === "TTA") {
+    return `${market === "TTH" ? home : away}: ${outcome === "OVER" ? "over" : "under"} ${line} goal${line === "0.5" ? "" : "s"}`;
+  }
+  return key;
+}
+
 interface FicheFacts {
   model: { expected_goals_home: number; expected_goals_away: number };
   teams: {
@@ -479,33 +503,70 @@ interface FicheFacts {
   };
 }
 
-/** Justification factuelle d'une sélection, tirée de la fiche du moteur. */
+/** Justification factuelle d'une sélection, tirée de la fiche du moteur (français ou anglais). */
 export function justificationFor(
   c: Pick<Candidate, "modelProbability" | "impliedProbability" | "edge" | "home" | "away">,
   fiche: FicheFacts,
+  lang: "fr" | "en" = "fr",
 ): string {
-  const parts = [`Modèle : ${pct(c.modelProbability)}`];
+  const en = lang === "en";
+  const P = en ? pctEn : pct;
+  const D = en ? decEn : dec;
+  const parts = [en ? `Model: ${P(c.modelProbability)}` : `Modèle : ${P(c.modelProbability)}`];
   if (c.impliedProbability !== null && c.edge !== null) {
     const pts = Math.round(c.edge * 100);
-    parts[0] += ` contre ${pct(c.impliedProbability)} pour le marché (écart ${pts >= 0 ? "+" : "−"}${Math.abs(pts)} pts)`;
+    const sign = `${pts >= 0 ? "+" : "−"}${Math.abs(pts)}`;
+    parts[0] += en
+      ? ` vs ${P(c.impliedProbability)} for the market (edge ${sign} pts)`
+      : ` contre ${P(c.impliedProbability)} pour le marché (écart ${sign} pts)`;
   }
-  parts.push(`buts attendus ${dec(fiche.model.expected_goals_home)} – ${dec(fiche.model.expected_goals_away)}`);
+  parts.push(
+    `${en ? "expected goals" : "buts attendus"} ${D(fiche.model.expected_goals_home)} – ${D(fiche.model.expected_goals_away)}`,
+  );
+  const letters = (f: string) => (en ? [...f].map((x) => ({ V: "W", N: "D", D: "L" } as Record<string, string>)[x] ?? x).join("") : f);
   const form = [
-    fiche.teams.home.form ? `${c.home} ${fiche.teams.home.form}` : "",
-    fiche.teams.away.form ? `${c.away} ${fiche.teams.away.form}` : "",
+    fiche.teams.home.form ? `${c.home} ${letters(fiche.teams.home.form)}` : "",
+    fiche.teams.away.form ? `${c.away} ${letters(fiche.teams.away.form)}` : "",
   ].filter(Boolean);
-  if (form.length) parts.push(`forme (V/N/D, du plus récent) : ${form.join(", ")}`);
+  if (form.length) {
+    parts.push(en ? `form (W/D/L, most recent first): ${form.join(", ")}` : `forme (V/N/D, du plus récent) : ${form.join(", ")}`);
+  }
   const hr = fiche.teams.home.standing?.rank;
   const ar = fiche.teams.away.standing?.rank;
-  if (hr && ar) parts.push(`classement : ${hr}e contre ${ar}e`);
-  return parts.join(" ; ") + ".";
+  if (hr && ar) parts.push(en ? `table: ${ordinal(hr)} vs ${ordinal(ar)}` : `classement : ${hr}e contre ${ar}e`);
+  return parts.join(en ? "; " : " ; ") + ".";
 }
 
-/** Analyse générale calculée (repli si l'IA est indisponible ou refusée). */
-export function defaultSummary(coupon: ProposedCoupon): { analyse_generale: string; points_de_vigilance: string[] } {
+const ordinal = (n: number) => {
+  const t = n % 100;
+  const s = t >= 11 && t <= 13 ? "th" : n % 10 === 1 ? "st" : n % 10 === 2 ? "nd" : n % 10 === 3 ? "rd" : "th";
+  return `${n}${s}`;
+};
+
+/** Analyse générale calculée (repli si l'IA est indisponible ou refusée), en français ou en anglais. */
+export function defaultSummary(
+  coupon: ProposedCoupon,
+  lang: "fr" | "en" = "fr",
+): { analyse_generale: string; points_de_vigilance: string[] } {
   const byP = [...coupon.selections].sort((a, b) => b.modelProbability - a.modelProbability);
   const strongest = byP[0];
   const weakest = byP.at(-1)!;
+  if (lang === "en") {
+    const label = (s: Candidate) => `${outcomeLabelEn(s.key, s.home, s.away)} (${s.home} – ${s.away}, ${pctEn(s.modelProbability)})`;
+    const text = [
+      `${coupon.selections.length} selection${coupon.selections.length > 1 ? "s" : ""} for a total odd of ${decEn(coupon.totalOdd)}.`,
+      `Estimated combined probability: ${pctEn(coupon.combinedProbability)}` +
+      (coupon.impliedProbability !== null ? ` (market: ${pctEn(coupon.impliedProbability)}).` : "."),
+      coupon.selections.length > 1 ? `Strongest selection: ${label(strongest)}; most fragile: ${label(weakest)}.` : "",
+    ].filter(Boolean).join(" ");
+    return {
+      analyse_generale: text,
+      points_de_vigilance: [
+        "The combined probability assumes independent matches: it is an estimate.",
+        "Line-ups, injuries and suspensions are not taken into account.",
+      ],
+    };
+  }
   const label = (s: Candidate) => `${outcomeLabel(s.key, s.home, s.away)} (${s.home} – ${s.away}, ${pct(s.modelProbability)})`;
   const text = [
     `${coupon.selections.length} sélections pour une cote totale de ${dec(coupon.totalOdd)}.`,

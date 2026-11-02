@@ -38,7 +38,8 @@ export interface FicheLike {
 const qualityGroupOf = (key: string) => (key.startsWith("DC.") ? "1X2" : key.split(".")[0]);
 
 /** Indices qu'une justification s'appuie sur la fiche, pas seulement sur la probabilité. */
-const GROUNDING = /forme|domicile|extérieur|buts? attendus?|classement|points?|confrontation|série|encaiss|marqu|bilan|cote|marché|écart|défense|attaque|moyenne/iu;
+const GROUNDING =
+  /forme|domicile|extérieur|buts? attendus?|classement|points?|confrontation|série|encaiss|marqu|bilan|cote|marché|écart|défense|attaque|moyenne|form|home|away|expected goals|standing|table|head-to-head|streak|conced|scor|record|odds?|market|edge|defen[cs]e|attack|average/iu;
 
 /** Une justification qui se contente de répéter la probabilité n'apporte rien. */
 export function isGrounded(justification: string): boolean {
@@ -62,6 +63,17 @@ export const FORBIDDEN = new RegExp(
     "infaillibles?",
     "sans risque",
     "gains?",
+    // Anglais (analyses demandées en anglais).
+    "guaranteed?",
+    "guarantees",
+    "sure (?:bets?|wins?|thing)",
+    "surely",
+    "certaint(?:y|ies)",
+    "unbeatable",
+    "infallible",
+    "risk[- ]free",
+    "winnings",
+    "can'?t lose",
   ].map((w) => `${L}${w}${R}`).join("|") + String.raw`|${L}100\s?%`,
   "iu",
 );

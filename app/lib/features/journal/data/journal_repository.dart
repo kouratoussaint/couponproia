@@ -255,7 +255,7 @@ class JournalRepository {
   }
 
   static String _message(PostgrestException e) => switch (e.code) {
-        '22023' || '54000' || 'P0002' => e.message,
+        '22023' || '54000' || 'P0002' => tr(e.message),
         '42501' => tr('Connectez-vous pour tenir votre carnet.'),
         _ => tr('Enregistrement impossible pour le moment.'),
       };

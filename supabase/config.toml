@@ -32,11 +32,11 @@ otp_length = 6
 otp_expiry = 3600
 
 [auth.email.template.confirmation]
-subject = "Votre code Coupon Pro IA"
+subject = "Votre code Coupon Pro IA · Your Coupon Pro IA code"
 content_path = "./supabase/templates/confirmation.html"
 
 [auth.email.template.recovery]
-subject = "Réinitialisation de votre mot de passe Coupon Pro IA"
+subject = "Mot de passe Coupon Pro IA · Coupon Pro IA password"
 content_path = "./supabase/templates/recovery.html"
 
 [functions.delete-account]

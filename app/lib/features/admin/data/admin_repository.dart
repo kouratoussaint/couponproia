@@ -14,7 +14,7 @@ int asInt(Object? v) => (v as num?)?.toInt() ?? 0;
 String adminErrorMessage(Object e) {
   if (e is PostgrestException) {
     if (e.code == '42501') return tr('Permission refusée.');
-    if (e.code == '22023' || e.code == 'P0002') return e.message;
+    if (e.code == '22023' || e.code == 'P0002') return tr(e.message);
     // Code affiché pour permettre le diagnostic à partir d'une capture d'écran.
     if (e.code != null) {
       return trf('Action impossible pour le moment (code {0}).', [e.code]);

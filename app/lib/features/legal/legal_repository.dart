@@ -21,16 +21,37 @@ class LegalDocument {
     required this.title,
     required this.body,
     required this.publishedAt,
-  });
+    this.translated = false,
+    this.english,
+    String? frTitle,
+    String? frBody,
+  })  : frTitle = frTitle ?? title,
+        frBody = frBody ?? body;
 
-  factory LegalDocument.fromJson(Map<String, dynamic> j) => LegalDocument(
-        id: (j['id'] as num).toInt(),
-        code: j['code'] as String,
-        version: j['version'] as String,
-        title: j['title'] as String,
-        body: j['body'] as String? ?? '',
-        publishedAt: DateTime.parse(j['published_at'] as String).toLocal(),
-      );
+  /// En anglais, la traduction (si elle existe) remplace le titre et le texte affichés ;
+  /// la version française reste celle qui fait foi et qui est acceptée.
+  factory LegalDocument.fromJson(Map<String, dynamic> j) {
+    Map<String, dynamic>? en;
+    for (final t in (j['legal_translations'] as List? ?? const [])) {
+      final m = Map<String, dynamic>.from(t as Map);
+      if (m['language'] == 'en') en = m;
+    }
+    final useEn = appLanguage == 'en' && en != null;
+    return LegalDocument(
+      id: (j['id'] as num).toInt(),
+      code: j['code'] as String,
+      version: j['version'] as String,
+      title: useEn ? en['title'] as String : j['title'] as String,
+      body: useEn ? en['body'] as String? ?? '' : j['body'] as String? ?? '',
+      publishedAt: DateTime.parse(j['published_at'] as String).toLocal(),
+      translated: useEn,
+      frTitle: j['title'] as String,
+      frBody: j['body'] as String? ?? '',
+      english: en == null
+          ? null
+          : (title: en['title'] as String, body: en['body'] as String? ?? ''),
+    );
+  }
 
   final int id;
   final String code;
@@ -38,6 +59,16 @@ class LegalDocument {
   final String title;
   final String body;
   final DateTime publishedAt;
+
+  /// Texte affiché : la traduction anglaise.
+  final bool translated;
+
+  /// Traduction anglaise enregistrée (console).
+  final ({String title, String body})? english;
+
+  /// Version française (celle qui fait foi), quelle que soit la langue de l'app.
+  final String frTitle;
+  final String frBody;
 }
 
 /// Version d'un document à accepter.
@@ -70,7 +101,8 @@ class LegalRepository {
   Future<LegalDocument?> current(String code) async {
     final row = await _client
         .from('legal_documents')
-        .select('id, code, version, title, body, published_at')
+        .select(
+            'id, code, version, title, body, published_at, legal_translations(language, title, body)')
         .eq('code', code)
         .order('published_at', ascending: false)
         .order('id', ascending: false)
@@ -99,6 +131,19 @@ class LegalRepository {
       _client.rpc('admin_publish_legal', params: {
         'p_code': code,
         'p_version': version,
+        'p_title': title,
+        'p_body': body,
+      });
+}
+
+extension LegalTranslation on LegalRepository {
+  /// Traduction anglaise d'une version (console, réglages).
+  Future<void> saveEnglish(
+          {required int documentId,
+          required String title,
+          required String body}) =>
+      _client.rpc('admin_save_legal_translation', params: {
+        'p_document_id': documentId,
         'p_title': title,
         'p_body': body,
       });

@@ -223,7 +223,7 @@ class _LegalAcceptanceScreenState extends ConsumerState<LegalAcceptanceScreen> {
                 for (final p in widget.pending)
                   ListTile(
                     leading: const Icon(Icons.description_outlined),
-                    title: Text(p.title),
+                    title: Text(legalTitles[p.code] ?? p.title),
                     subtitle: Text(trf('Version du {0}', [_day(p.version)])),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => openLegalDocument(context, p.code),

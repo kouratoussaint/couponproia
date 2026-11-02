@@ -52,9 +52,11 @@ export interface NewUserCoupon {
   proposal: ProposedCoupon;
   risk: "prudent" | "equilibre" | "audacieux";
   analysis: Record<string, unknown>;
+  /** Langue de l'utilisateur : choisit la justification enregistrée (coupon personnel). */
+  lang?: "fr" | "en";
 }
 
-function selectionRows(couponId: string, p: ProposedCoupon) {
+function selectionRows(couponId: string, p: ProposedCoupon, lang: "fr" | "en" = "fr") {
   return p.selections.map((s, k) => ({
     coupon_id: couponId,
     position: k + 1,
@@ -71,7 +73,7 @@ function selectionRows(couponId: string, p: ProposedCoupon) {
     implied_probability: s.impliedProbability,
     edge: s.edge,
     reliability: s.reliability,
-    justification: s.justification,
+    justification: lang === "en" ? s.justificationEn ?? s.justification : s.justification,
   }));
 }
 
@@ -94,7 +96,7 @@ export async function insertUserCoupon(db: SupabaseClient, c: NewUserCoupon): Pr
     fingerprint: p.fingerprint,
   }).select("id").single();
   if (error) throw new Error(error.message);
-  const { error: selError } = await db.from("user_coupon_selections").insert(selectionRows(coupon.id, p));
+  const { error: selError } = await db.from("user_coupon_selections").insert(selectionRows(coupon.id, p, c.lang));
   if (selError) {
     await db.from("user_coupons").delete().eq("id", coupon.id);
     throw new Error(selError.message);
@@ -122,6 +124,6 @@ export async function replaceUserCoupon(
   }).eq("id", couponId);
   if (error) throw new Error(error.message);
   await db.from("user_coupon_selections").delete().eq("coupon_id", couponId);
-  const { error: selError } = await db.from("user_coupon_selections").insert(selectionRows(couponId, p));
+  const { error: selError } = await db.from("user_coupon_selections").insert(selectionRows(couponId, p, c.lang));
   if (selError) throw new Error(selError.message);
 }

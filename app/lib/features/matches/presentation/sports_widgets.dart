@@ -249,7 +249,7 @@ class FormChips extends StatelessWidget {
               borderRadius: BorderRadius.circular(size / 4),
               border: Border.all(color: colorFor(r)),
             ),
-            child: Text(r,
+            child: Text(formLetterShown(r),
                 style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: size * 0.5,

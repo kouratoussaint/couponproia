@@ -14,6 +14,7 @@ import { alternativesFor, compareCoupons, simulate } from "../_shared/lab/lab.ts
 import { labDecision } from "../_shared/lab/pricing.ts";
 import { planFeatures } from "../_shared/billing.ts";
 import { callerFrom, corsHeaders, json, readSettings, serverContext } from "../_shared/http.ts";
+import { asLang, type Lang } from "../_shared/lang.ts";
 
 const MAX_SELECTIONS = 12;
 
@@ -42,6 +43,12 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   const action = String(body?.action ?? "");
   const now = new Date();
+  let lang: Lang = asLang(body?.lang);
+  if (body?.lang !== "en" && body?.lang !== "fr") {
+    const { data: profile } = await db.from("profiles").select("locale").eq("id", caller.id).maybeSingle();
+    lang = asLang(profile?.locale);
+  }
+  const en = lang === "en";
 
   try {
     const { data: flag } = await db.from("feature_flags").select("enabled").eq("key", "ai_lab").maybeSingle();
@@ -89,16 +96,24 @@ Deno.serve(async (req) => {
       if (wanted.length > MAX_SELECTIONS) return json({ error: "too_many", max: MAX_SELECTIONS }, 400);
       const errors: string[] = [];
       if (new Set(wanted.map((w: { matchId: number }) => w.matchId)).size !== wanted.length) {
-        errors.push("Une seule sélection par match : deux issues d'un même match ne peuvent pas être combinées.");
+        errors.push(
+          en
+            ? "One selection per match: two outcomes of the same match cannot be combined."
+            : "Une seule sélection par match : deux issues d'un même match ne peuvent pas être combinées.",
+        );
       }
       const load = await loadCandidates(db, now, 168, quality, undefined, wanted.map((w: { matchId: number }) => w.matchId));
       const chosen: Candidate[] = [];
       for (const w of wanted) {
         const c = load.candidates.find((x) => x.matchId === w.matchId && x.key === w.key);
         if (!c) {
-          errors.push(`Match ${w.matchId} : issue ${w.key} indisponible (match commencé, hors programme ou plus cotée).`);
+          errors.push(
+            en
+              ? `Match ${w.matchId}: outcome ${w.key} unavailable (match started, not scheduled or no longer priced).`
+              : `Match ${w.matchId} : issue ${w.key} indisponible (match commencé, hors programme ou plus cotée).`,
+          );
         } else if (Date.parse(c.kickoffAt) <= now.getTime()) {
-          errors.push(`${c.home} – ${c.away} : le match a commencé.`);
+          errors.push(en ? `${c.home} – ${c.away}: the match has started.` : `${c.home} – ${c.away} : le match a commencé.`);
         } else chosen.push(c);
       }
       if (errors.length) return json({ error: "invalid_selections", errors }, 422);
@@ -106,13 +121,13 @@ Deno.serve(async (req) => {
       const risk = riskLevel(p.combinedProbability, thresholds);
       // Version optimisée d'un de vos coupons (alternative appliquée depuis le laboratoire).
       const source = await own(body?.variant_of);
-      const analysis = { ...defaultSummary(p), source: "calcul", manual: true, ...(source ? { variant_of: source.id } : {}) };
+      const analysis = { ...defaultSummary(p, lang), source: "calcul", manual: true, ...(source ? { variant_of: source.id } : {}) };
       const n = p.selections.length;
       const title = `${source ? "Version optimisée" : "Coupon manuel"} · ${n} sélection${n > 1 ? "s" : ""}`;
       const existing = await own(body?.coupon_id);
       let id: string;
       if (existing) {
-        await replaceUserCoupon(db, existing.id, { title, criteria: { source: "manuel" }, proposal: p, risk, analysis });
+        await replaceUserCoupon(db, existing.id, { title, criteria: { source: "manuel" }, proposal: p, risk, analysis, lang });
         id = existing.id;
       } else {
         id = await insertUserCoupon(db, {
@@ -123,6 +138,7 @@ Deno.serve(async (req) => {
           proposal: p,
           risk,
           analysis,
+          lang,
         });
       }
       return json({
@@ -147,20 +163,22 @@ Deno.serve(async (req) => {
       const coupon = await own(body?.coupon_id);
       if (!coupon || coupon.lines.length === 0) return json({ error: "coupon_not_found" }, 404);
       if (action === "analyze") {
-        return await paid({ diagnosis: diagnoseCoupon(await withLive(coupon.lines), quality?.beatsBaseline ?? null, now) });
+        return await paid({ diagnosis: diagnoseCoupon(await withLive(coupon.lines), quality?.beatsBaseline ?? null, now, lang) });
       }
       if (action === "simulate") {
         const runs = Math.min(10000, Math.max(100, Number(body?.runs) || 1000));
         const total = coupon.lines.reduce((x, l) => x * l.odd, 1);
-        return await paid({ simulation: simulate(coupon.lines.map((l) => l.modelProbability), total, runs) });
+        return await paid({ simulation: simulate(coupon.lines.map((l) => l.modelProbability), total, runs, 42, lang) });
       }
       const lastKickoff = Math.max(...coupon.lines.map((l) => Date.parse(l.kickoffAt)));
       const hours = Math.max(24, (lastKickoff - now.getTime()) / 3600_000 + 12);
       const load = await loadCandidates(db, now, hours, quality);
       const fresh = load.candidates.filter((c) => Date.parse(c.kickoffAt) - now.getTime() > 15 * 60_000);
       return await paid({
-        alternatives: alternativesFor(coupon.lines, fresh),
-        note: "Alternatives plus probables selon le modèle ; la cote du coupon change en conséquence. Vous choisissez.",
+        alternatives: alternativesFor(coupon.lines, fresh, 2, 3, lang),
+        note: en
+          ? "More likely alternatives according to the model; the coupon odd changes accordingly. You choose."
+          : "Alternatives plus probables selon le modèle ; la cote du coupon change en conséquence. Vous choisissez.",
       });
     }
 
@@ -175,8 +193,10 @@ Deno.serve(async (req) => {
         coupons.push({ id: c.id, title: head?.title ?? "", lines: c.lines });
       }
       return await paid({
-        comparison: compareCoupons(coupons, quality?.beatsBaseline ?? null),
-        note: "Probabilités du modèle, sélections supposées indépendantes ; les paires d'une même compétition le même jour peuvent être liées.",
+        comparison: compareCoupons(coupons, quality?.beatsBaseline ?? null, lang),
+        note: en
+          ? "Model probabilities, selections assumed independent; pairs from the same competition on the same day may be linked."
+          : "Probabilités du modèle, sélections supposées indépendantes ; les paires d'une même compétition le même jour peuvent être liées.",
       });
     }
 

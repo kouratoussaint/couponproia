@@ -4,7 +4,7 @@ Deux niveaux :
 - toujours : confirmation d'email obligatoire, codes à 6 chiffres, mot de passe de
   8 caractères minimum, page d'arrivée des liens (Edge Function email-confirmed) ;
 - si un SMTP est fourni (variables SMTP_USER, SMTP_PASS, SMTP_SENDER_EMAIL) : serveur
-  d'envoi, modèles d'emails en français affichant le code, limite d'envoi relevée.
+  d'envoi, modèles d'emails en français ou en anglais (métadonnée locale) affichant le code, limite d'envoi relevée.
   Sans SMTP, Supabase refuse la modification des modèles sur l'offre gratuite.
 
 Usage : SUPABASE_REF=xxxx python3 scripts/supabase/auth_config.py > auth.json
@@ -48,11 +48,11 @@ if smtp_user and smtp_pass and smtp_sender:
         "smtp_admin_email": smtp_sender,
         "smtp_sender_name": "Coupon Pro IA",
         "rate_limit_email_sent": 30,
-        "mailer_subjects_confirmation": "Votre code Coupon Pro IA",
+        "mailer_subjects_confirmation": "Votre code Coupon Pro IA · Your Coupon Pro IA code",
         "mailer_templates_confirmation_content": template("confirmation.html"),
-        "mailer_subjects_recovery": "Réinitialisation de votre mot de passe Coupon Pro IA",
+        "mailer_subjects_recovery": "Mot de passe Coupon Pro IA · Coupon Pro IA password",
         "mailer_templates_recovery_content": template("recovery.html"),
-        "mailer_subjects_email_change": "Confirmez votre nouvelle adresse Coupon Pro IA",
+        "mailer_subjects_email_change": "Nouvelle adresse Coupon Pro IA · New Coupon Pro IA address",
         "mailer_templates_email_change_content": template("email_change.html"),
     })
     print("mode=smtp", file=sys.stderr)

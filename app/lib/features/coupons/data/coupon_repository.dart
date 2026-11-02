@@ -9,7 +9,7 @@ import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 const _selectionColumns =
     'position, selection_key, odd, odd_best, bookmakers, odds_captured_at, '
-    'model_probability, implied_probability, edge, reliability, justification, result, '
+    'model_probability, implied_probability, edge, reliability, justification, justification_en, result, '
     'match:matches(id, kickoff_at, status, home_goals, away_goals, '
     'home:teams!matches_home_team_fk(name, logo_url), away:teams!matches_away_team_fk(name, logo_url), '
     'competition:competitions(name))';

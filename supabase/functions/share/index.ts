@@ -2,6 +2,7 @@
 // l'application ou, si elle n'est pas installée, vers le téléchargement de l'APK ; ailleurs, un court
 // texte. Chaque ouverture est comptée (type, cible, Android ou non) pour le tableau de conversion.
 import { serverContext } from "../_shared/http.ts";
+import { browserLang } from "../_shared/lang.ts";
 import { downloadUrl, intentUrl, isAndroid, parseShare } from "../_shared/share/links.ts";
 
 Deno.serve(async (req) => {
@@ -9,7 +10,8 @@ Deno.serve(async (req) => {
   const target = parseShare(new URL(req.url).pathname);
   const text = (body: string, status = 200) =>
     new Response(body, { status, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
-  if (!target) return text("Lien Coupon Pro IA invalide ou expiré.", 404);
+  const en = browserLang(req.headers.get("accept-language")) === "en";
+  if (!target) return text(en ? "Invalid or expired Coupon Pro IA link." : "Lien Coupon Pro IA invalide ou expiré.", 404);
 
   const ctx = serverContext();
   const projectUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -29,6 +31,17 @@ Deno.serve(async (req) => {
   const download = downloadUrl(projectUrl, published);
   if (isAndroid(req.headers.get("user-agent"))) {
     return new Response(null, { status: 302, headers: { Location: intentUrl(target, download), "Cache-Control": "no-store" } });
+  }
+  if (en) {
+    return text([
+      "Coupon Pro IA",
+      "",
+      `This ${target.kind === "coupon" ? "coupon" : "match"} opens in the Coupon Pro IA app (Android).`,
+      "Open this link from your Android phone, or install the app:",
+      download,
+      "",
+      "Estimates, never certainties. 18+ · Bet responsibly.",
+    ].join("\n"));
   }
   return text([
     "Coupon Pro IA",
