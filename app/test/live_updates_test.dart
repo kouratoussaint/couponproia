@@ -1,7 +1,6 @@
 // Direct en temps réel : état des matchs appliqué sans actualisation manuelle.
 import 'package:coupon_pro_ia/features/matches/data/live_updates.dart';
 import 'package:coupon_pro_ia/features/matches/data/sports_format.dart';
-import 'package:coupon_pro_ia/features/matches/data/sports_models.dart';
 import 'package:coupon_pro_ia/features/matches/data/sports_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
