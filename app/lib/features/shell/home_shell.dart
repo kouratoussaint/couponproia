@@ -12,6 +12,7 @@ import '../system/maintenance_screen.dart';
 import '../system/system_providers.dart';
 import '../system/update_prompt.dart';
 import 'app_drawer.dart';
+import 'live_scope.dart';
 
 /// Coque de l'app : menu latéral, barre à cinq onglets (Accueil, Matchs, Coupons,
 /// Assistant IA, Profil) et balayage gauche / droite entre les onglets.
@@ -163,7 +164,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     }
 
     final scheme = Theme.of(context).colorScheme;
-    return PopScope(
+    return LiveUpdatesScope(
+        child: PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _onBack();
@@ -213,6 +215,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           ),
         ),
       ),
-    );
+    ));
   }
 }

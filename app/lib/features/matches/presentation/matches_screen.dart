@@ -10,6 +10,7 @@ import '../../analysis/presentation/analyze_access.dart';
 import '../../search/search_screen.dart';
 import 'competitions_screen.dart';
 import 'sports_widgets.dart';
+import '../data/live_updates.dart';
 
 /// Matchs : onglet Calendrier (un jour à la fois, hier à J+6, recherche et filtre par
 /// compétition) et onglet Compétitions et classements.
@@ -91,7 +92,7 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
     final days = [
       for (var i = -1; i <= 6; i++) DateTime(day.year, day.month, day.day + i)
     ];
-    final matches = ref.watch(matchesOfDayProvider(day));
+    final matches = ref.watch(liveMatchesOfDayProvider(day));
     final markets =
         ref.watch(market1x2OfDayProvider(day)).valueOrNull ?? const {};
 

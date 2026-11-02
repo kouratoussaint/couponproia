@@ -14,6 +14,7 @@ import 'match_tabs.dart';
 import 'sports_widgets.dart';
 import '../../community/data/community_repository.dart';
 import '../../../core/widgets/form_widgets.dart';
+import '../data/live_updates.dart';
 
 /// Fiche d'un match : en-tête, puis 4 onglets (Pronostic, Analyse, Marchés, Stats).
 /// Les estimations viennent du moteur (serveur) ; chaque fait indique sa source et son heure.
@@ -24,7 +25,7 @@ class MatchDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final match = ref.watch(matchProvider(matchId));
+    final match = ref.watch(liveMatchProvider(matchId));
     return Scaffold(
       bottomNavigationBar: const ManualCouponBar(),
       appBar: AppBar(

@@ -33,6 +33,7 @@ import '../onboarding/data/preferences_repository.dart';
 import '../onboarding/presentation/onboarding_sheet.dart';
 import '../profile/data/profile_repository.dart';
 import '../shell/app_drawer.dart';
+import '../matches/data/live_updates.dart';
 
 const _weekdays = [
   'lundi',
@@ -251,7 +252,7 @@ class _StatusTiles extends ConsumerWidget {
         if (!c.isWithdrawn && c.result == null) c
     ];
     final split = splitActive(open, now);
-    final matches = ref.watch(matchesOfDayProvider(day)).valueOrNull;
+    final matches = ref.watch(liveMatchesOfDayProvider(day)).valueOrNull;
     final upcoming = (matches ?? const <MatchSummary>[])
         .where((m) =>
             m.status == MatchStatus.scheduled && m.kickoffAt.isAfter(now))
@@ -529,7 +530,8 @@ class _FeaturedMatch extends ConsumerWidget {
     const gold = BrandColors.orange;
     final ink = dark ? const Color(0xFFF4C46B) : const Color(0xFF8A5300);
     final id = ref.watch(featuredMatchProvider).valueOrNull;
-    final match = id == null ? null : ref.watch(matchProvider(id)).valueOrNull;
+    final match =
+        id == null ? null : ref.watch(liveMatchProvider(id)).valueOrNull;
     return Material(
       color: gold.withValues(alpha: dark ? 0.16 : 0.12),
       shape: RoundedRectangleBorder(
@@ -651,7 +653,7 @@ class _MatchesBlockState extends ConsumerState<_MatchesBlock> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final day = _tomorrow ? widget.tomorrow : widget.today;
-    final matches = ref.watch(matchesOfDayProvider(day));
+    final matches = ref.watch(liveMatchesOfDayProvider(day));
     final markets = ref.watch(market1x2OfDayProvider(day)).valueOrNull ??
         const <int, Market1x2>{};
     Widget seg(String label, bool value) {
@@ -1029,7 +1031,7 @@ class _LiveBlockState extends ConsumerState<_LiveBlock> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final all = ref.watch(matchesOfDayProvider(widget.day)).valueOrNull ??
+    final all = ref.watch(liveMatchesOfDayProvider(widget.day)).valueOrNull ??
         const <MatchSummary>[];
     final teams = ref.watch(favoriteTeamsProvider).valueOrNull?.keys.toSet() ??
         const <int>{};

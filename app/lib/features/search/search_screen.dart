@@ -12,6 +12,7 @@ import '../assistant/presentation/my_coupons_screen.dart';
 import '../community/data/community_repository.dart';
 import '../coupons/data/coupon_repository.dart';
 import '../coupons/presentation/coupon_tiles.dart';
+import '../matches/data/live_updates.dart';
 import '../matches/data/sports_models.dart';
 import '../matches/data/sports_repository.dart';
 import '../matches/presentation/sports_widgets.dart';
@@ -61,7 +62,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ref.watch(savedCouponsProvider).valueOrNull ?? const [], q)
         : const [];
     final ids = ([for (final t in teams) t.id]..sort()).join(',');
-    final matches = ref.watch(teamMatchesProvider(ids));
+    final live = ref.watch(liveUpdatesProvider);
+    final matches = ref
+        .watch(teamMatchesProvider(ids))
+        .whenData((list) => [for (final m in list) withLive(m, live[m.id])]);
     final favorites =
         ref.watch(favoriteTeamsProvider).valueOrNull ?? const <int, String>{};
     final loadingTeams = ref.watch(allTeamsProvider).isLoading;

@@ -30,3 +30,13 @@
 ## Vérifications
 - SQL : test 033 (13), test 002 mis à jour ; Deno : `new_markets_test.ts` (6),
   `weekly_mail_test.ts` (2) ; Flutter : `lot21_test.dart` (5).
+
+# 0.29.1 : direct en temps réel
+- Serveur (migration 47) : suivi des matchs en cours toutes les 30 secondes (au lieu de 5 minutes),
+  seulement s'il y a un match en cours et jamais pendant un passage encore en cours
+  (`app_private.invoke_live_sync`). Environ 2 appels API-Football par minute de direct.
+- App (`features/matches/data/live_updates.dart`) : relecture des matchs proches toutes les
+  30 secondes (2 minutes sans match en cours), seulement les lignes modifiées, pause en
+  arrière-plan. Minute, score et statut appliqués partout (accueil, Matchs, fiche du match,
+  recherche) sans tirer pour actualiser ; coupons et carnet relus à chaque but ou fin de match.
+- Tests : SQL 034 (3), Flutter `live_updates_test.dart` (4).
