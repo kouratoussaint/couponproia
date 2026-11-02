@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/i18n/tr.dart';
 import 'core/router/app_router.dart';
 import 'core/offline/offline_banner.dart';
 import 'core/theme/app_theme.dart';
@@ -15,15 +16,15 @@ class CouponProApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: 'Coupon Pro IA',
+      title: tr('Coupon Pro IA'),
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: rootMessengerKey,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(routerProvider),
-      locale: const Locale('fr'),
-      supportedLocales: const [Locale('fr')],
+      locale: Locale(appLanguage),
+      supportedLocales: const [Locale('fr'), Locale('en')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       builder: (context, child) =>
           AppTextScale(child: OfflineBanner(child: child)),

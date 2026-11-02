@@ -9,6 +9,7 @@ import '../../../core/widgets/form_widgets.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../data/studio_models.dart';
 import '../data/studio_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 const _swatches = [
   '#0E7C47',
@@ -38,13 +39,13 @@ class BrandingScreen extends ConsumerWidget {
     final rights = ref.watch(studioRightsProvider);
     final branding = ref.watch(brandingProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Mon identité visuelle')),
+      appBar: AppBar(title: Text(tr('Mon identité visuelle'))),
       body: switch ((rights, branding)) {
         (AsyncError(:final error), _) ||
         (_, AsyncError(:final error)) =>
           InfoMessage(
               icon: Icons.cloud_off_outlined,
-              title: 'Indisponible',
+              title: tr('Indisponible'),
               body: userMessageFor(error)),
         (AsyncData(value: final r), AsyncData(value: final b)) =>
           _BrandingForm(rights: r, initial: b),
@@ -94,7 +95,7 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
     try {
       final bytes = await file.readAsBytes();
       if (bytes.length > 2 * 1024 * 1024) {
-        throw const StudioException('Image trop lourde (2 Mo maximum).');
+        throw StudioException(tr('Image trop lourde (2 Mo maximum).'));
       }
       final ext = file.name.split('.').last;
       final path = await ref
@@ -112,8 +113,10 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
     for (final t in [_name.text, _signature.text]) {
       final bad = forbiddenWordIn(t);
       if (bad != null) {
-        showMessage(context,
-            'Texte refusé : « $bad ». Les pronostics sont des estimations.',
+        showMessage(
+            context,
+            trf('Texte refusé : « {0} ». Les pronostics sont des estimations.',
+                [bad]),
             error: true);
         return;
       }
@@ -133,7 +136,7 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
       await repo.removeUnusedImages({_logo, _cover}).catchError((_) {});
       ref.invalidate(brandingProvider);
       if (mounted) {
-        showMessage(context, 'Identité visuelle enregistrée.');
+        showMessage(context, tr('Identité visuelle enregistrée.'));
         context.pop();
       }
     } catch (e) {
@@ -157,70 +160,71 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
           Card(
             child: ListTile(
               leading: const Icon(Icons.lock_outline),
-              title: const Text('Personnalisation à partir du forfait STARTER'),
-              subtitle: const Text(
-                  'Votre nom et vos couleurs sur les visuels ; logo, couverture et signature avec PRO TIPSTER.'),
+              title: Text(tr('Personnalisation à partir du forfait STARTER')),
+              subtitle: Text(tr(
+                  'Votre nom et vos couleurs sur les visuels ; logo, couverture et signature avec PRO TIPSTER.')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push(AppRoutes.billing),
             ),
           ),
-        const SectionTitle('Nom affiché'),
+        SectionTitle(tr('Nom affiché')),
         TextField(
           controller: _name,
           enabled: r.canName,
           maxLength: 40,
-          decoration: const InputDecoration(hintText: 'Ex. : Kouassi Pronos'),
+          decoration: InputDecoration(hintText: tr('Ex. : Kouassi Pronos')),
         ),
-        const SectionTitle('Couleurs'),
-        Text('Principale', style: theme.textTheme.labelLarge),
+        SectionTitle(tr('Couleurs')),
+        Text(tr('Principale'), style: theme.textTheme.labelLarge),
         _SwatchRow(
             selected: _primary,
             enabled: r.canName,
             onSelected: (c) => setState(() => _primary = c)),
         const SizedBox(height: 8),
-        Text('Accent (cotes, cote totale)', style: theme.textTheme.labelLarge),
+        Text(tr('Accent (cotes, cote totale)'),
+            style: theme.textTheme.labelLarge),
         _SwatchRow(
             selected: _accent,
             enabled: r.canName,
             onSelected: (c) => setState(() => _accent = c)),
-        Text('Sans choix, chaque modèle utilise ses propres couleurs.',
+        Text(tr('Sans choix, chaque modèle utilise ses propres couleurs.'),
             style: muted),
-        const SectionTitle('Logo et couverture'),
+        SectionTitle(tr('Logo et couverture')),
         if (!r.canFull)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Text('Disponible à partir du forfait PRO TIPSTER.',
+            child: Text(tr('Disponible à partir du forfait PRO TIPSTER.'),
                 style: muted),
           ),
         _ImageTile(
-          label: 'Logo (carré, 600 px)',
+          label: tr('Logo (carré, 600 px)'),
           path: _logo,
           enabled: r.canFull && !_busy,
           onPick: () => _pick('logo'),
           onClear: () => setState(() => _logo = null),
         ),
         _ImageTile(
-          label: 'Image de couverture (modèle Prestige)',
+          label: tr('Image de couverture (modèle Prestige)'),
           path: _cover,
           enabled: r.canFull && !_busy,
           onPick: () => _pick('cover'),
           onClear: () => setState(() => _cover = null),
         ),
-        const SectionTitle('Signature'),
+        SectionTitle(tr('Signature')),
         TextField(
           controller: _signature,
           enabled: r.canFull,
           maxLength: 80,
-          decoration: const InputDecoration(
-              hintText: 'Ex. : Analyses du week-end par Kouassi'),
+          decoration: InputDecoration(
+              hintText: tr('Ex. : Analyses du week-end par Kouassi')),
         ),
         Text(
-            'Pas de promesse de résultat : « sûr », « garanti », « gain »… sont refusés.',
+            tr('Pas de promesse de résultat : « sûr », « garanti », « gain »… sont refusés.'),
             style: muted),
         const SizedBox(height: 16),
         FilledButton(
             onPressed: _busy || !r.canName ? null : _save,
-            child: const Text('Enregistrer')),
+            child: Text(tr('Enregistrer'))),
       ],
     );
   }
@@ -319,17 +323,17 @@ class _ImageTile extends ConsumerWidget {
           ),
         ),
         title: Text(label),
-        subtitle: Text(path == null ? 'Aucune image' : 'Image choisie'),
+        subtitle: Text(path == null ? tr('Aucune image') : tr('Image choisie')),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (path != null)
               IconButton(
-                  tooltip: 'Retirer',
+                  tooltip: tr('Retirer'),
                   onPressed: enabled ? onClear : null,
                   icon: const Icon(Icons.close)),
             IconButton(
-                tooltip: 'Choisir',
+                tooltip: tr('Choisir'),
                 onPressed: enabled ? onPick : null,
                 icon: const Icon(Icons.upload)),
           ],

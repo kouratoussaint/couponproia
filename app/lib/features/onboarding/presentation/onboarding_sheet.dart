@@ -9,6 +9,7 @@ import '../../matches/data/sports_repository.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../profile/data/profile_repository.dart';
 import '../data/preferences_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Ouvre le parcours (au premier lancement, ou depuis le profil pour modifier ses choix).
 Future<void> showOnboarding(BuildContext context, {bool fromProfile = false}) =>
@@ -142,7 +143,8 @@ class _OnboardingSheetState extends ConsumerState<OnboardingSheet> {
             ],
           ),
           const SizedBox(height: 10),
-          Text('Étape ${_step + 1} sur 3', style: theme.textTheme.labelMedium),
+          Text(trf('Étape {0} sur 3', [_step + 1]),
+              style: theme.textTheme.labelMedium),
           const SizedBox(height: 12),
           Flexible(child: SingleChildScrollView(child: step)),
           const SizedBox(height: 16),
@@ -157,13 +159,14 @@ class _OnboardingSheetState extends ConsumerState<OnboardingSheet> {
                             : () => widget.fromProfile
                                 ? Navigator.of(context).pop()
                                 : _finish(skipped: true),
-                        child:
-                            Text(widget.fromProfile ? 'Annuler' : 'Plus tard'),
+                        child: Text(widget.fromProfile
+                            ? tr('Annuler')
+                            : tr('Plus tard')),
                       )
                     : OutlinedButton.icon(
                         onPressed: _busy ? null : () => setState(() => _step--),
                         icon: const Icon(Icons.arrow_back),
-                        label: const Text('Retour'),
+                        label: Text(tr('Retour')),
                       ),
               ),
               const SizedBox(width: 12),
@@ -171,7 +174,7 @@ class _OnboardingSheetState extends ConsumerState<OnboardingSheet> {
                 child: FilledButton.icon(
                   onPressed: _busy ? null : _next,
                   icon: Icon(_step < 2 ? Icons.arrow_forward : Icons.check),
-                  label: Text(_step < 2 ? 'Suivant' : 'Terminer'),
+                  label: Text(_step < 2 ? tr('Suivant') : tr('Terminer')),
                 ),
               ),
             ],
@@ -228,17 +231,17 @@ class _NameStep extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _StepHeader(
+          _StepHeader(
             icon: Icons.waving_hand_outlined,
-            title: 'Bienvenue sur Coupon Pro IA',
-            subtitle: 'Comment souhaitez-vous qu’on vous appelle ?',
+            title: tr('Bienvenue sur Coupon Pro IA'),
+            subtitle: tr('Comment souhaitez-vous qu’on vous appelle ?'),
           ),
           TextField(
             controller: controller,
             maxLength: 40,
             textCapitalization: TextCapitalization.words,
-            decoration:
-                InputDecoration(labelText: 'Votre pseudo', errorText: error),
+            decoration: InputDecoration(
+                labelText: tr('Votre pseudo'), errorText: error),
           ),
         ],
       );
@@ -266,10 +269,10 @@ class _CompetitionsStep extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _StepHeader(
+        _StepHeader(
           icon: Icons.emoji_events_outlined,
-          title: 'Vos compétitions',
-          subtitle: 'Leurs matchs passeront en premier sur l’accueil.',
+          title: tr('Vos compétitions'),
+          subtitle: tr('Leurs matchs passeront en premier sur l’accueil.'),
         ),
         competitions.when(
           loading: () => const LinearProgressIndicator(),
@@ -299,13 +302,14 @@ class _CompetitionsStep extends ConsumerWidget {
                 if (!showAll && all.length > _initial)
                   TextButton(
                       onPressed: onShowAll,
-                      child: Text('Voir les ${all.length} compétitions')),
+                      child:
+                          Text(trf('Voir les {0} compétitions', [all.length]))),
               ],
             );
           },
         ),
         const SizedBox(height: 6),
-        Text('Facultatif : vous pouvez passer cette étape.',
+        Text(tr('Facultatif : vous pouvez passer cette étape.'),
             style: theme.textTheme.bodySmall),
       ],
     );
@@ -382,11 +386,11 @@ class _LevelStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _StepHeader(
+        _StepHeader(
           icon: Icons.menu_book_outlined,
-          title: 'Votre niveau',
-          subtitle:
-              'On adapte les explications. Les chiffres restent les mêmes pour tout le monde.',
+          title: tr('Votre niveau'),
+          subtitle: tr(
+              'On adapte les explications. Les chiffres restent les mêmes pour tout le monde.'),
         ),
         for (final l in UserLevel.values)
           Padding(

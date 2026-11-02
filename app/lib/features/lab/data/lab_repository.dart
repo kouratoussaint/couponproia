@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers.dart';
 import '../../matches/data/sports_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 double _d(Object? v) => (v as num).toDouble();
 double? _dn(Object? v) => v == null ? null : (v as num).toDouble();
@@ -211,16 +212,20 @@ class LabRepository {
       throw LabException(
           switch (d['error']) {
             'invalid_selections' =>
-              'Certaines sélections ne sont plus valides :',
-            'too_many' => 'Douze sélections au maximum.',
-            'feature_disabled' => 'Le Laboratoire est momentanément désactivé.',
-            'coupon_not_found' => 'Coupon introuvable.',
+              tr('Certaines sélections ne sont plus valides :'),
+            'too_many' => tr('Douze sélections au maximum.'),
+            'feature_disabled' =>
+              tr('Le Laboratoire est momentanément désactivé.'),
+            'coupon_not_found' => tr('Coupon introuvable.'),
             'need_two_coupons' =>
-              'Choisissez au moins deux coupons à comparer.',
-            'credits_required' =>
-              'Crédits insuffisants : ce calcul coûte ${(d['cost'] as num?)?.toInt() ?? 1} crédit${((d['cost'] as num?)?.toInt() ?? 1) > 1 ? 's' : ''} '
-                  'avec le forfait FREE. Achetez des crédits ou passez à un forfait payant.',
-            _ => 'Le calcul a échoué. Réessayez dans un instant.',
+              tr('Choisissez au moins deux coupons à comparer.'),
+            'credits_required' => trf(
+                  'Crédits insuffisants : ce calcul coûte {0} crédit{1} avec le forfait FREE. Achetez des crédits ou passez à un forfait payant.',
+                  [
+                    (d['cost'] as num?)?.toInt() ?? 1,
+                    ((d['cost'] as num?)?.toInt() ?? 1) > 1 ? 's' : ''
+                  ]),
+            _ => tr('Le calcul a échoué. Réessayez dans un instant.'),
           },
           errors,
           d['error']?.toString());

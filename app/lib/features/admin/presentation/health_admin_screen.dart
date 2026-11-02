@@ -10,6 +10,7 @@ import '../../../core/widgets/form_widgets.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Alerte d'exploitation (ouverte ou close).
 class OpsAlert {
@@ -126,7 +127,7 @@ final openOpsAlertsProvider = FutureProvider.autoDispose<int>((ref) async {
   return list.where((a) => a.resolvedAt == null).length;
 });
 
-String _when(DateTime d) => '${shortDate(d)} à ${timeLabel(d)}';
+String _when(DateTime d) => trf('{0} à {1}', [shortDate(d), timeLabel(d)]);
 
 /// Console → Santé de l'application : alertes d'exploitation, plantages et lenteurs.
 class HealthAdminScreen extends ConsumerStatefulWidget {
@@ -154,8 +155,9 @@ class _HealthAdminScreenState extends ConsumerState<HealthAdminScreen> {
         showMessage(
             context,
             (d['sent'] as num? ?? 0) > 0
-                ? 'Aperçu du rapport hebdomadaire envoyé à votre adresse.'
-                : 'Envoi impossible : ${d['error'] ?? 'adresse non confirmée'}',
+                ? tr('Aperçu du rapport hebdomadaire envoyé à votre adresse.')
+                : trf('Envoi impossible : {0}',
+                    [d['error'] ?? tr('adresse non confirmée')]),
             error: (d['sent'] as num? ?? 0) == 0);
       }
     } on FunctionException catch (e) {
@@ -163,8 +165,8 @@ class _HealthAdminScreenState extends ConsumerState<HealthAdminScreen> {
         showMessage(
             context,
             e.status == 503
-                ? 'E-mail non configuré (secrets SMTP).'
-                : 'Envoi impossible (${e.status}).',
+                ? tr('E-mail non configuré (secrets SMTP).')
+                : trf('Envoi impossible ({0}).', [e.status]),
             error: true);
       }
     } catch (e) {
@@ -186,17 +188,20 @@ class _HealthAdminScreenState extends ConsumerState<HealthAdminScreen> {
       if (mounted) {
         final mail = d['smtp'] == true
             ? (d['emailed'] as num? ?? 0) > 0
-                ? ' E-mail envoyé.'
+                ? tr(' E-mail envoyé.')
                 : d['email_error'] != null
-                    ? ' E-mail impossible : ${d['email_error']}'
+                    ? trf(' E-mail impossible : {0}', [d['email_error']])
                     : ''
-            : ' (e-mail non configuré)';
-        showMessage(context,
-            'Contrôle terminé : ${d['opened']} nouvelle(s), ${d['resolved']} close(s), ${d['open']} en cours.$mail');
+            : tr(' (e-mail non configuré)');
+        showMessage(
+            context,
+            trf('Contrôle terminé : {0} nouvelle(s), {1} close(s), {2} en cours.{3}',
+                [d['opened'], d['resolved'], d['open'], mail]));
       }
     } on FunctionException catch (e) {
       if (mounted) {
-        showMessage(context, 'Contrôle impossible (${e.status}).', error: true);
+        showMessage(context, trf('Contrôle impossible ({0}).', [e.status]),
+            error: true);
       }
     } catch (e) {
       if (mounted) showMessage(context, userMessageFor(e), error: true);
@@ -211,17 +216,17 @@ class _HealthAdminScreenState extends ConsumerState<HealthAdminScreen> {
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!perms.contains('ops.monitor')) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Santé de l’application')),
-        body: const InfoMessage(
+        appBar: AppBar(title: Text(tr('Santé de l’application'))),
+        body: InfoMessage(
             icon: Icons.lock_outline,
-            title: 'Écran réservé au super administrateur'),
+            title: tr('Écran réservé au super administrateur')),
       );
     }
     final theme = Theme.of(context);
     final alerts = ref.watch(opsAlertsProvider);
     final errors = ref.watch(clientErrorsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Santé de l’application')),
+      appBar: AppBar(title: Text(tr('Santé de l’application'))),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(opsAlertsProvider);
@@ -232,10 +237,7 @@ class _HealthAdminScreenState extends ConsumerState<HealthAdminScreen> {
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
           children: [
             Text(
-                'Contrôle automatique toutes les 15 minutes : synchronisations, quota API-Football, IA, '
-                'publication des coupons, paiements, notifications, fonctions planifiées et plantages. '
-                'Vous êtes prévenu par notification (et par e-mail si un SMTP est configuré) ; '
-                'une alerte se ferme d’elle-même quand le problème disparaît.',
+                tr('Contrôle automatique toutes les 15 minutes : synchronisations, quota API-Football, IA, publication des coupons, paiements, notifications, fonctions planifiées et plantages. Vous êtes prévenu par notification (et par e-mail si un SMTP est configuré) ; une alerte se ferme d’elle-même quand le problème disparaît.'),
                 style: theme.textTheme.bodySmall),
             const SizedBox(height: 8),
             Align(
@@ -248,7 +250,7 @@ class _HealthAdminScreenState extends ConsumerState<HealthAdminScreen> {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.health_and_safety_outlined),
-                label: const Text('Lancer un contrôle maintenant'),
+                label: Text(tr('Lancer un contrôle maintenant')),
               ),
             ),
             Align(
@@ -256,8 +258,7 @@ class _HealthAdminScreenState extends ConsumerState<HealthAdminScreen> {
               child: TextButton.icon(
                 onPressed: _sendingReport ? null : _previewWeekly,
                 icon: const Icon(Icons.mark_email_read_outlined),
-                label:
-                    const Text('M’envoyer un aperçu du rapport hebdomadaire'),
+                label: Text(tr('M’envoyer un aperçu du rapport hebdomadaire')),
               ),
             ),
             ...alerts.when(
@@ -268,27 +269,27 @@ class _HealthAdminScreenState extends ConsumerState<HealthAdminScreen> {
                 final closed =
                     list.where((a) => a.resolvedAt != null).take(15).toList();
                 return [
-                  SectionTitle('Alertes en cours (${open.length})'),
+                  SectionTitle(trf('Alertes en cours ({0})', [open.length])),
                   if (open.isEmpty)
                     Card(
                       child: ListTile(
                         leading: Icon(Icons.check_circle,
                             color: theme.colorScheme.primary),
-                        title: const Text('Tout fonctionne'),
-                        subtitle: const Text('Aucune alerte ouverte.'),
+                        title: Text(tr('Tout fonctionne')),
+                        subtitle: Text(tr('Aucune alerte ouverte.')),
                       ),
                     ),
                   for (final a in open) _AlertCard(alert: a),
                   if (closed.isNotEmpty) ...[
-                    const SectionTitle('Alertes closes récemment'),
+                    SectionTitle(tr('Alertes closes récemment')),
                     for (final a in closed) _AlertCard(alert: a),
                   ],
                 ];
               },
             ),
-            SectionTitle('Plantages et lenteurs',
+            SectionTitle(tr('Plantages et lenteurs'),
                 trailing: FilterChip(
-                  label: const Text('Résolus'),
+                  label: Text(tr('Résolus')),
                   selected: _showResolvedErrors,
                   onSelected: (v) => setState(() => _showResolvedErrors = v),
                 )),
@@ -305,8 +306,8 @@ class _HealthAdminScreenState extends ConsumerState<HealthAdminScreen> {
                       child: ListTile(
                         leading: const Icon(Icons.bug_report_outlined),
                         title: Text(_showResolvedErrors
-                            ? 'Aucun problème résolu'
-                            : 'Aucun plantage ni lenteur à traiter'),
+                            ? tr('Aucun problème résolu')
+                            : tr('Aucun plantage ni lenteur à traiter')),
                       ),
                     )
                   ];
@@ -316,8 +317,7 @@ class _HealthAdminScreenState extends ConsumerState<HealthAdminScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-                'Les rapports arrivent des téléphones connectés dont l’utilisateur n’a pas désactivé les rapports '
-                'd’erreurs (Profil). Ils ne contiennent ni coupon, ni montant, ni message personnel.',
+                tr('Les rapports arrivent des téléphones connectés dont l’utilisateur n’a pas désactivé les rapports d’erreurs (Profil). Ils ne contiennent ni coupon, ni montant, ni message personnel.'),
                 style: theme.textTheme.bodySmall),
           ],
         ),
@@ -357,13 +357,16 @@ class _AlertCard extends StatelessWidget {
         subtitle: Text([
           a.body,
           open
-              ? 'Depuis le ${_when(a.openedAt)}${a.emailedAt != null ? ' · e-mail envoyé' : ''}'
-              : 'Du ${_when(a.openedAt)} au ${_when(a.resolvedAt!)}',
+              ? trf('Depuis le {0}{1}', [
+                  _when(a.openedAt),
+                  a.emailedAt != null ? tr(' · e-mail envoyé') : ''
+                ])
+              : trf('Du {0} au {1}', [_when(a.openedAt), _when(a.resolvedAt!)]),
         ].join('\n')),
         isThreeLine: true,
         trailing: open && a.route != null
             ? IconButton(
-                tooltip: 'Ouvrir',
+                tooltip: tr('Ouvrir'),
                 icon: const Icon(Icons.chevron_right),
                 onPressed: () => context.push(a.route!),
               )
@@ -389,10 +392,15 @@ class _ErrorTile extends ConsumerWidget {
       child: ListTile(
         leading: Icon(icon, color: color),
         title: Text(e.message, maxLines: 2, overflow: TextOverflow.ellipsis),
-        subtitle: Text(
-            '${e.occurrences} fois · ${e.users} utilisateur${e.users > 1 ? 's' : ''}'
-            '${e.version == null ? '' : ' · v${e.version}'} · dernier ${_when(e.lastSeen)}'
-            '${e.context == null ? '' : '\n${e.context}'}'),
+        subtitle:
+            Text(trf('{0} fois · {1} utilisateur{2}{3} · dernier {4}{5}', [
+          e.occurrences,
+          e.users,
+          e.users > 1 ? 's' : '',
+          e.version == null ? '' : trf(' · v{0}', [e.version]),
+          _when(e.lastSeen),
+          e.context == null ? '' : '\n${e.context}'
+        ])),
         onTap: () => _details(context, ref),
       ),
     );
@@ -403,24 +411,26 @@ class _ErrorTile extends ConsumerWidget {
     final resolve = await showDialog<bool>(
       context: context,
       builder: (d) => AlertDialog(
-        title: Text(e.kind == 'slow' ? 'Lenteur' : 'Plantage'),
+        title: Text(e.kind == 'slow' ? tr('Lenteur') : tr('Plantage')),
         content: SingleChildScrollView(
           child: SelectableText([
             e.message,
             '',
-            'Écran ou requête : ${e.context ?? '—'}',
-            'Version : ${e.version ?? '—'} · ${e.os ?? '—'}',
-            'Première fois : ${_when(e.firstSeen)} · dernière : ${_when(e.lastSeen)}',
+            trf('Écran ou requête : {0}', [e.context ?? '—']),
+            trf('Version : {0} · {1}', [e.version ?? '—', e.os ?? '—']),
+            trf('Première fois : {0} · dernière : {1}',
+                [_when(e.firstSeen), _when(e.lastSeen)]),
             if (e.stack != null) ...['', e.stack!],
           ].join('\n')),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(d), child: const Text('Fermer')),
+              onPressed: () => Navigator.pop(d), child: Text(tr('Fermer'))),
           FilledButton(
               onPressed: () => Navigator.pop(d, e.resolvedAt == null),
-              child: Text(
-                  e.resolvedAt == null ? 'Marquer comme résolu' : 'Rouvrir')),
+              child: Text(e.resolvedAt == null
+                  ? tr('Marquer comme résolu')
+                  : tr('Rouvrir'))),
         ],
       ),
     );

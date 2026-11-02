@@ -10,6 +10,7 @@ import '../../../core/widgets/form_widgets.dart';
 import '../../legal/legal_repository.dart';
 import '../../legal/legal_screens.dart';
 import '../data/auth_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -41,7 +42,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_adult || !_acceptedTerms || !_acceptedLegal) {
-      showMessage(context, 'Cochez les trois cases pour continuer.',
+      showMessage(context, tr('Cochez les trois cases pour continuer.'),
           error: true);
       return;
     }
@@ -87,8 +88,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return AuthScaffold(
-      title: 'Créer un compte',
-      subtitle: 'Gratuit. Un code de confirmation vous sera envoyé par e-mail.',
+      title: tr('Créer un compte'),
+      subtitle:
+          tr('Gratuit. Un code de confirmation vous sera envoyé par e-mail.'),
       showBack: true,
       child: AutofillGroup(
         child: Form(
@@ -103,8 +105,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 textInputAction: TextInputAction.next,
                 validator: Validators.displayName,
                 maxLength: 40,
-                decoration: const InputDecoration(
-                  labelText: 'Nom affiché',
+                decoration: InputDecoration(
+                  labelText: tr('Nom affiché'),
                   prefixIcon: Icon(Icons.person_outline),
                 ),
               ),
@@ -115,8 +117,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 autofillHints: const [AutofillHints.email],
                 textInputAction: TextInputAction.next,
                 validator: Validators.email,
-                decoration: const InputDecoration(
-                  labelText: 'Adresse e-mail',
+                decoration: InputDecoration(
+                  labelText: tr('Adresse e-mail'),
                   prefixIcon: Icon(Icons.alternate_email),
                 ),
               ),
@@ -130,10 +132,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               const SizedBox(height: 16),
               PasswordField(
                 controller: _confirm,
-                label: 'Confirmer le mot de passe',
+                label: tr('Confirmer le mot de passe'),
                 autofillHints: const [AutofillHints.newPassword],
                 validator: (v) => v != _password.text
-                    ? 'Les mots de passe ne correspondent pas.'
+                    ? tr('Les mots de passe ne correspondent pas.')
                     : null,
                 onSubmitted: (_) => _submit(),
               ),
@@ -143,7 +145,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 onChanged: (v) => setState(() => _adult = v ?? false),
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
-                title: const Text('J’ai 18 ans ou plus.'),
+                title: Text(tr('J’ai 18 ans ou plus.')),
               ),
               CheckboxListTile(
                 value: _acceptedTerms,
@@ -151,7 +153,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
                 title: Text(
-                  'Je comprends que les pronostics sont des estimations et qu’aucun gain n’est garanti.',
+                  tr('Je comprends que les pronostics sont des estimations et qu’aucun gain n’est garanti.'),
                   style: theme.textTheme.bodyMedium,
                 ),
               ),
@@ -164,7 +166,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               ),
               const SizedBox(height: 16),
               BusyButton(
-                  label: 'Créer mon compte', busy: _busy, onPressed: _submit),
+                  label: tr('Créer mon compte'),
+                  busy: _busy,
+                  onPressed: _submit),
             ],
           ),
         ),

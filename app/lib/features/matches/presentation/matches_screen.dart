@@ -11,6 +11,7 @@ import '../../search/search_screen.dart';
 import 'competitions_screen.dart';
 import 'sports_widgets.dart';
 import '../data/live_updates.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Matchs : onglet Calendrier (un jour à la fois, hier à J+6, recherche et filtre par
 /// compétition) et onglet Compétitions et classements.
@@ -44,11 +45,11 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
     final day = _day ?? base;
     final appBar = AppBar(
       leading: const DrawerMenuButton(),
-      title: const Text('Matchs'),
+      title: Text(tr('Matchs')),
       actions: [
         const SearchButton(),
         IconButton(
-          tooltip: 'Choisir une date',
+          tooltip: tr('Choisir une date'),
           icon: const Icon(Icons.calendar_month_outlined),
           onPressed: () async {
             final now = DateTime.now();
@@ -57,7 +58,7 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
               initialDate: day,
               firstDate: DateTime(2022, 7, 1),
               lastDate: DateTime(now.year + 1, 12, 31),
-              helpText: 'Afficher les matchs du',
+              helpText: tr('Afficher les matchs du'),
             );
             if (picked != null) {
               setState(() {
@@ -68,10 +69,10 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
           },
         ),
       ],
-      bottom: const TabBar(
+      bottom: TabBar(
         tabs: [
-          Tab(text: 'Calendrier'),
-          Tab(text: 'Compétitions et classements'),
+          Tab(text: tr('Calendrier')),
+          Tab(text: tr('Compétitions et classements')),
         ],
       ),
     );
@@ -79,12 +80,12 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
     if (flags != null && flags['matches'] == false) {
       return Scaffold(
         appBar: AppBar(
-            leading: const DrawerMenuButton(), title: const Text('Matchs')),
-        body: const InfoMessage(
+            leading: const DrawerMenuButton(), title: Text(tr('Matchs'))),
+        body: InfoMessage(
           icon: Icons.sports_soccer,
-          title: 'Matchs momentanément indisponibles',
-          body:
-              'Ce module est mis en pause pour le moment. Réessayez plus tard.',
+          title: tr('Matchs momentanément indisponibles'),
+          body: tr(
+              'Ce module est mis en pause pour le moment. Réessayez plus tard.'),
         ),
       );
     }
@@ -103,8 +104,8 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
             leading: const Icon(Icons.history_edu_outlined),
             content: Text(
-              'Données d’archive : saison ${seasonLabel(archive)}. Ce sont de vrais matchs, déjà joués ; '
-              'la saison en cours sera disponible avec l’offre Pro du fournisseur.',
+              trf('Données d’archive : saison {0}. Ce sont de vrais matchs, déjà joués ; la saison en cours sera disponible avec l’offre Pro du fournisseur.',
+                  [seasonLabel(archive)]),
             ),
             actions: [
               TextButton(
@@ -112,7 +113,7 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                   _day = null;
                   _competitionId = null;
                 }),
-                child: const Text('Revenir au jour'),
+                child: Text(tr('Revenir au jour')),
               ),
             ],
           ),
@@ -141,12 +142,12 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
               isDense: true,
-              hintText: 'Rechercher une équipe ou une compétition',
+              hintText: tr('Rechercher une équipe ou une compétition'),
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _search.text.isEmpty
                   ? null
                   : IconButton(
-                      tooltip: 'Effacer',
+                      tooltip: tr('Effacer'),
                       icon: const Icon(Icons.close),
                       onPressed: () => setState(_search.clear),
                     ),
@@ -166,12 +167,12 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                 children: [
                   InfoMessage(
                     icon: Icons.cloud_off_outlined,
-                    title: 'Impossible de charger les matchs',
+                    title: tr('Impossible de charger les matchs'),
                     body: userMessageFor(e),
                     action: OutlinedButton(
                       onPressed: () =>
                           ref.invalidate(matchesOfDayProvider(day)),
-                      child: const Text('Réessayer'),
+                      child: Text(tr('Réessayer')),
                     ),
                   ),
                 ],
@@ -198,7 +199,7 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                             Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: FilterChip(
-                                label: const Text('Toutes'),
+                                label: Text(tr('Toutes')),
                                 selected: _competitionId == null,
                                 onSelected: (_) =>
                                     setState(() => _competitionId = null),
@@ -222,17 +223,17 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                       ),
                     if (markets.isNotEmpty) const OneXTwoLegend(),
                     if (all.isEmpty)
-                      const InfoMessage(
+                      InfoMessage(
                         icon: Icons.event_busy_outlined,
-                        title: 'Aucun match pour ce jour',
-                        body:
-                            'Aucune des compétitions suivies ne joue ce jour-là, ou le calendrier n’est pas encore '
-                            'synchronisé (mise à jour chaque matin à 4 h). Essayez un autre jour.',
+                        title: tr('Aucun match pour ce jour'),
+                        body: tr(
+                            'Aucune des compétitions suivies ne joue ce jour-là, ou le calendrier n’est pas encore synchronisé (mise à jour chaque matin à 4 h). Essayez un autre jour.'),
                       )
                     else if (filtered.isEmpty)
-                      const InfoMessage(
+                      InfoMessage(
                         icon: Icons.search_off,
-                        title: 'Aucun match ne correspond à votre recherche',
+                        title:
+                            tr('Aucun match ne correspond à votre recherche'),
                       ),
                     for (final (competition, list) in shown) ...[
                       _CompetitionHeader(

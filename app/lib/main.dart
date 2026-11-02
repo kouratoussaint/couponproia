@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'core/i18n/tr.dart';
 import 'core/config/app_config.dart';
 import 'core/monitoring/error_reporter.dart';
 import 'core/offline/offline_http_client.dart';
@@ -24,6 +25,10 @@ Future<void> main() async {
 
   const config = AppConfig.fromEnvironment;
   final prefs = await SharedPreferences.getInstance();
+
+  // Langue de l'interface, fixée avant l'affichage (changer de langue redémarre l'app).
+  await loadLanguage(prefs.getString(languagePrefKey) ??
+      defaultLanguage(PlatformDispatcher.instance.locale.languageCode));
 
   // Plantages et lenteurs (sans contenu personnel, désactivable dans le Profil).
   final reporter = ErrorReporter(prefs);

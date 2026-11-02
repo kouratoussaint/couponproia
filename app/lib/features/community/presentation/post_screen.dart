@@ -7,6 +7,7 @@ import '../../matches/presentation/sports_widgets.dart';
 import '../data/community_models.dart';
 import '../data/community_repository.dart';
 import 'community_widgets.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Une publication et ses commentaires.
 class PostScreen extends ConsumerStatefulWidget {
@@ -54,12 +55,12 @@ class _PostScreenState extends ConsumerState<PostScreen> {
     final post = ref.watch(postProvider(widget.postId));
     final now = DateTime.now();
     return Scaffold(
-      appBar: AppBar(title: const Text('Publication')),
+      appBar: AppBar(title: Text(tr('Publication'))),
       body: post.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Publication indisponible',
+            title: tr('Publication indisponible'),
             body: userMessageFor(e)),
         data: (p) => Column(
           children: [
@@ -73,11 +74,12 @@ class _PostScreenState extends ConsumerState<PostScreen> {
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
                   children: [
                     PostCard(post: p, openOnTap: false, onChanged: _refresh),
-                    SectionTitle('Commentaires (${p.commentList.length})'),
+                    SectionTitle(
+                        trf('Commentaires ({0})', [p.commentList.length])),
                     if (p.commentList.isEmpty)
-                      const Padding(
+                      Padding(
                           padding: EdgeInsets.all(8),
-                          child: Text('Aucun commentaire pour l’instant.')),
+                          child: Text(tr('Aucun commentaire pour l’instant.'))),
                     for (final c in p.commentList)
                       Card(
                         child: ListTile(
@@ -100,7 +102,7 @@ class _PostScreenState extends ConsumerState<PostScreen> {
                             ],
                           ),
                           subtitle: Text(c.hidden
-                              ? '${c.body}\n(masqué par la modération)'
+                              ? trf('{0}\n(masqué par la modération)', [c.body])
                               : c.body),
                           trailing:
                               _CommentMenu(comment: c, onChanged: _refresh),
@@ -122,14 +124,14 @@ class _PostScreenState extends ConsumerState<PostScreen> {
                         maxLength: 500,
                         minLines: 1,
                         maxLines: 4,
-                        decoration: const InputDecoration(
-                            hintText: 'Ajouter un commentaire',
+                        decoration: InputDecoration(
+                            hintText: tr('Ajouter un commentaire'),
                             counterText: ''),
                       ),
                     ),
                     const SizedBox(width: 6),
                     IconButton.filled(
-                      tooltip: 'Envoyer',
+                      tooltip: tr('Envoyer'),
                       onPressed: _sending ? null : _send,
                       icon: const Icon(Icons.send),
                     ),
@@ -152,7 +154,7 @@ class _CommentMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => PopupMenuButton<String>(
-        tooltip: 'Options',
+        tooltip: tr('Options'),
         onSelected: (a) async {
           final repo = ref.read(communityRepositoryProvider);
           try {
@@ -174,12 +176,13 @@ class _CommentMenu extends ConsumerWidget {
         },
         itemBuilder: (_) => [
           if (comment.isMine)
-            const PopupMenuItem(value: 'delete', child: Text('Supprimer')),
+            PopupMenuItem(value: 'delete', child: Text(tr('Supprimer'))),
           if (!comment.isMine)
-            const PopupMenuItem(value: 'report', child: Text('Signaler')),
+            PopupMenuItem(value: 'report', child: Text(tr('Signaler'))),
           if (!comment.isMine)
             PopupMenuItem(
-                value: 'block', child: Text('Bloquer ${comment.author}')),
+                value: 'block',
+                child: Text(trf('Bloquer {0}', [comment.author]))),
         ],
       );
 }

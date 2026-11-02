@@ -11,6 +11,7 @@ import '../../coupons/data/coupon_repository.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../data/studio_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Studio graphique : choisir un coupon à mettre en forme.
 class StudioHomeScreen extends ConsumerWidget {
@@ -24,7 +25,7 @@ class StudioHomeScreen extends ConsumerWidget {
     final mine = ref.watch(savedCouponsProvider);
     final remaining = rights?.remaining;
     return Scaffold(
-      appBar: AppBar(title: const Text('Studio graphique')),
+      appBar: AppBar(title: Text(tr('Studio graphique'))),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(studioRightsProvider);
@@ -38,25 +39,25 @@ class StudioHomeScreen extends ConsumerWidget {
               child: ListTile(
                 leading: Icon(Icons.palette_outlined,
                     color: theme.colorScheme.primary),
-                title: const Text('Transformez un coupon en visuel'),
+                title: Text(tr('Transformez un coupon en visuel')),
                 subtitle: Text([
-                  'Carré, portrait, story ou paysage ; PNG, JPG ou PDF.',
+                  tr('Carré, portrait, story ou paysage ; PNG, JPG ou PDF.'),
                   if (rights != null && remaining != null)
-                    '$remaining visuel(s) restant(s) aujourd’hui.',
+                    trf('{0} visuel(s) restant(s) aujourd’hui.', [remaining]),
                 ].join(' ')),
               ),
             ),
             Card(
               child: ListTile(
                 leading: const Icon(Icons.badge_outlined),
-                title: const Text('Mon identité visuelle'),
+                title: Text(tr('Mon identité visuelle')),
                 subtitle:
-                    const Text('Nom, couleurs, logo, couverture, signature'),
+                    Text(tr('Nom, couleurs, logo, couverture, signature')),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push(AppRoutes.studioBranding),
               ),
             ),
-            const SectionTitle('Coupons de la plateforme'),
+            SectionTitle(tr('Coupons de la plateforme')),
             platform.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text(userMessageFor(e)),
@@ -67,16 +68,19 @@ class StudioHomeScreen extends ConsumerWidget {
                     .take(20)
                     .toList();
                 if (usable.isEmpty) {
-                  return const Text('Aucun coupon disponible pour le moment.');
+                  return Text(tr('Aucun coupon disponible pour le moment.'));
                 }
                 return Card(
                   child: Column(children: [
                     for (final c in usable)
                       _CouponTile(
                         title: c.title,
-                        subtitle:
-                            '${categoryLabels[c.category] ?? c.category} · ${c.selections.length} sélection(s) · '
-                            '${shortDate(c.firstKickoffAt)} ${timeLabel(c.firstKickoffAt)}',
+                        subtitle: trf('{0} · {1} sélection(s) · {2} {3}', [
+                          categoryLabels[c.category] ?? c.category,
+                          c.selections.length,
+                          shortDate(c.firstKickoffAt),
+                          timeLabel(c.firstKickoffAt)
+                        ]),
                         odd: c.totalOdd,
                         onTap: () =>
                             context.push(AppRoutes.studioFor('platform', c.id)),
@@ -85,7 +89,7 @@ class StudioHomeScreen extends ConsumerWidget {
                 );
               },
             ),
-            const SectionTitle('Mes coupons enregistrés'),
+            SectionTitle(tr('Mes coupons enregistrés')),
             mine.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text(userMessageFor(e)),
@@ -95,16 +99,16 @@ class StudioHomeScreen extends ConsumerWidget {
                     .take(20)
                     .toList();
                 if (usable.isEmpty) {
-                  return const Text(
-                      'Aucun coupon enregistré. Créez-en un avec l’assistant ou le laboratoire.');
+                  return Text(tr(
+                      'Aucun coupon enregistré. Créez-en un avec l’assistant ou le laboratoire.'));
                 }
                 return Card(
                   child: Column(children: [
                     for (final c in usable)
                       _CouponTile(
                         title: c.title,
-                        subtitle:
-                            '${c.selections.length} sélection(s) · créé le ${shortDate(c.createdAt)}',
+                        subtitle: trf('{0} sélection(s) · créé le {1}',
+                            [c.selections.length, shortDate(c.createdAt)]),
                         odd: c.totalOdd,
                         onTap: () =>
                             context.push(AppRoutes.studioFor('user', c.id)),
@@ -136,7 +140,7 @@ class _CouponTile extends StatelessWidget {
   Widget build(BuildContext context) => ListTile(
         title: Text(title),
         subtitle: Text(subtitle),
-        trailing: Text('Cote ${decimal(odd)}',
+        trailing: Text(trf('Cote {0}', [decimal(odd)]),
             style: Theme.of(context).textTheme.labelLarge),
         onTap: onTap,
       );

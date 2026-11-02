@@ -8,6 +8,7 @@ import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/admin_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Documents légaux : version en vigueur et publication d'une nouvelle version.
 /// Une nouvelle version des CGU ou de la politique de confidentialité redemande l'acceptation
@@ -19,14 +20,14 @@ class LegalAdminScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Documents légaux')),
+      appBar: AppBar(title: Text(tr('Documents légaux'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
           const EditorIdentityCard(),
-          const SectionTitle('Documents'),
+          SectionTitle(tr('Documents')),
           Text(
-              'Faites relire les textes par un juriste avant l’ouverture commerciale.',
+              tr('Faites relire les textes par un juriste avant l’ouverture commerciale.'),
               style: theme.textTheme.bodySmall),
           const SizedBox(height: 8),
           for (final code in legalCodes)
@@ -39,8 +40,12 @@ class LegalAdminScreen extends ConsumerWidget {
                     data: (d) => ListTile(
                       title: Text(legalTitles[code]!),
                       subtitle: Text(d == null
-                          ? 'Aucune version publiée'
-                          : 'Version ${d.version} · publiée le ${shortDate(d.publishedAt)}/${d.publishedAt.year}'),
+                          ? tr('Aucune version publiée')
+                          : trf('Version {0} · publiée le {1}/{2}', [
+                              d.version,
+                              shortDate(d.publishedAt),
+                              d.publishedAt.year
+                            ])),
                       trailing: PopupMenuButton<String>(
                         onSelected: (a) => a == 'read'
                             ? openLegalDocument(context, code)
@@ -48,11 +53,11 @@ class LegalAdminScreen extends ConsumerWidget {
                                 MaterialPageRoute<void>(
                                     builder: (_) =>
                                         _LegalEditor(code: code, current: d))),
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(value: 'read', child: Text('Lire')),
+                        itemBuilder: (_) => [
+                          PopupMenuItem(value: 'read', child: Text(tr('Lire'))),
                           PopupMenuItem(
                               value: 'edit',
-                              child: Text('Publier une nouvelle version')),
+                              child: Text(tr('Publier une nouvelle version'))),
                         ],
                       ),
                     ),
@@ -100,18 +105,19 @@ class _LegalEditorState extends ConsumerState<_LegalEditor> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('Publier cette version ?'),
+        title: Text(tr('Publier cette version ?')),
         content: Text(needsAcceptance
-            ? 'Tous les utilisateurs devront l’accepter à leur prochaine ouverture de l’app. '
-                'La version précédente reste archivée.'
-            : 'Elle remplace la version affichée. La version précédente reste archivée.'),
+            ? tr(
+                'Tous les utilisateurs devront l’accepter à leur prochaine ouverture de l’app. La version précédente reste archivée.')
+            : tr(
+                'Elle remplace la version affichée. La version précédente reste archivée.')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
-              child: const Text('Annuler')),
+              child: Text(tr('Annuler'))),
           FilledButton(
               onPressed: () => Navigator.pop(c, true),
-              child: const Text('Publier')),
+              child: Text(tr('Publier'))),
         ],
       ),
     );
@@ -127,7 +133,7 @@ class _LegalEditorState extends ConsumerState<_LegalEditor> {
       ref.invalidate(legalDocumentProvider(widget.code));
       ref.invalidate(legalStatusProvider);
       if (!mounted) return;
-      showMessage(context, 'Nouvelle version publiée.');
+      showMessage(context, tr('Nouvelle version publiée.'));
       Navigator.pop(context);
     } catch (e) {
       if (mounted) showMessage(context, adminErrorMessage(e), error: true);
@@ -145,43 +151,43 @@ class _LegalEditorState extends ConsumerState<_LegalEditor> {
         children: [
           TextField(
             controller: _version,
-            decoration: const InputDecoration(
-                labelText: 'Version',
-                helperText: 'AAAA-MM-JJ (ou AAAA-MM-JJ.2)'),
+            decoration: InputDecoration(
+                labelText: tr('Version'),
+                helperText: tr('AAAA-MM-JJ (ou AAAA-MM-JJ.2)')),
           ),
           const SizedBox(height: 8),
           TextField(
               controller: _title,
-              decoration: const InputDecoration(labelText: 'Titre')),
+              decoration: InputDecoration(labelText: tr('Titre'))),
           const SizedBox(height: 8),
           TextField(
             controller: _body,
             minLines: 12,
             maxLines: null,
             keyboardType: TextInputType.multiline,
-            decoration: const InputDecoration(
-              labelText: 'Texte',
+            decoration: InputDecoration(
+              labelText: tr('Texte'),
               alignLabelWithHint: true,
-              helperText:
-                  '« ## » titre, « - » puce, **gras**. Champs : {{editeur}}, {{forme}}, {{adresse}}, {{pays}}, {{immatriculation}}, {{contact}}.',
+              helperText: tr(
+                  '« ## » titre, « - » puce, **gras**. Champs : {{editeur}}, {{forme}}, {{adresse}}, {{pays}}, {{immatriculation}}, {{contact}}.'),
               helperMaxLines: 3,
             ),
           ),
           const SizedBox(height: 16),
           FilledButton(
-              onPressed: _busy ? null : _publish, child: const Text('Publier')),
+              onPressed: _busy ? null : _publish, child: Text(tr('Publier'))),
         ],
       ),
     );
   }
 }
 
-const editorFields = {
-  'name': 'Nom ou raison sociale',
-  'legal_form': 'Forme juridique (ex. SARL, entreprise individuelle)',
-  'address': 'Adresse',
-  'country': 'Pays',
-  'registration': 'Immatriculation (RCCM, IFU…)',
+final editorFields = {
+  'name': tr('Nom ou raison sociale'),
+  'legal_form': tr('Forme juridique (ex. SARL, entreprise individuelle)'),
+  'address': tr('Adresse'),
+  'country': tr('Pays'),
+  'registration': tr('Immatriculation (RCCM, IFU…)'),
 };
 
 /// Identité de l'éditeur et e-mail du support, affichés dans les CGU et la politique de
@@ -201,7 +207,7 @@ class EditorIdentityCard extends ConsumerWidget {
     final missing = [
       if ((editor['name'] as String? ?? '').trim().isEmpty) 'nom',
       if ((editor['address'] as String? ?? '').trim().isEmpty) 'adresse',
-      if (email.isEmpty) 'e-mail du support',
+      if (email.isEmpty) tr('e-mail du support'),
     ];
     return Card(
       child: Padding(
@@ -209,7 +215,7 @@ class EditorIdentityCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Identité de l’éditeur et contact',
+            Text(tr('Identité de l’éditeur et contact'),
                 style: theme.textTheme.titleSmall
                     ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
@@ -217,11 +223,11 @@ class EditorIdentityCard extends ConsumerWidget {
               Text(
                   '${e.value.split(' (').first} : ${(editor[e.key] as String? ?? '').trim().isEmpty ? '–' : editor[e.key]}',
                   style: theme.textTheme.bodyMedium),
-            Text('E-mail du support : ${email.isEmpty ? '–' : email}',
+            Text(trf('E-mail du support : {0}', [email.isEmpty ? '–' : email]),
                 style: theme.textTheme.bodyMedium),
             if (missing.isNotEmpty) ...[
               const SizedBox(height: 6),
-              Text('À compléter : ${missing.join(', ')}.',
+              Text(trf('À compléter : {0}.', [missing.join(', ')]),
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: theme.colorScheme.error)),
             ],
@@ -240,7 +246,7 @@ class EditorIdentityCard extends ConsumerWidget {
                   ),
                 ),
                 icon: const Icon(Icons.edit_outlined),
-                label: const Text('Modifier'),
+                label: Text(tr('Modifier')),
               ),
             ),
           ],
@@ -283,7 +289,7 @@ class _EditorIdentityFormState extends ConsumerState<_EditorIdentityForm> {
     final email = _email.text.trim();
     if (email.isNotEmpty &&
         !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      setState(() => _error = 'Adresse e-mail invalide.');
+      setState(() => _error = tr('Adresse e-mail invalide.'));
       return;
     }
     setState(() {
@@ -299,7 +305,7 @@ class _EditorIdentityFormState extends ConsumerState<_EditorIdentityForm> {
       ref.invalidate(publicSettingsProvider);
       ref.invalidate(adminSettingsProvider);
       if (!mounted) return;
-      showMessage(context, 'Identité de l’éditeur enregistrée.');
+      showMessage(context, tr('Identité de l’éditeur enregistrée.'));
       Navigator.pop(context);
     } catch (e) {
       if (mounted) setState(() => _error = adminErrorMessage(e));
@@ -316,12 +322,11 @@ class _EditorIdentityFormState extends ConsumerState<_EditorIdentityForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Identité de l’éditeur',
+            Text(tr('Identité de l’éditeur'),
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 4),
             Text(
-                'Affichée dans les conditions d’utilisation et la politique de confidentialité. '
-                'Un champ vide n’apparaît pas.',
+                tr('Affichée dans les conditions d’utilisation et la politique de confidentialité. Un champ vide n’apparaît pas.'),
                 style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 8),
             for (final e in editorFields.entries) ...[
@@ -337,10 +342,10 @@ class _EditorIdentityFormState extends ConsumerState<_EditorIdentityForm> {
             TextField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                  labelText: 'E-mail du support',
-                  helperText:
-                      'Bouton « Contacter le support » et documents légaux'),
+              decoration: InputDecoration(
+                  labelText: tr('E-mail du support'),
+                  helperText: tr(
+                      'Bouton « Contacter le support » et documents légaux')),
             ),
             if (_error != null)
               Padding(
@@ -352,7 +357,7 @@ class _EditorIdentityFormState extends ConsumerState<_EditorIdentityForm> {
             const SizedBox(height: 12),
             FilledButton(
                 onPressed: _busy ? null : _save,
-                child: const Text('Enregistrer')),
+                child: Text(tr('Enregistrer'))),
           ],
         ),
       ),

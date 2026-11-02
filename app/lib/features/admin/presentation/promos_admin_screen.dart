@@ -7,11 +7,12 @@ import '../../billing/billing_screen.dart';
 import '../../matches/data/sports_format.dart';
 import '../../system/system_providers.dart';
 import '../data/admin_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
-const promoScopes = {
-  'all': 'Tous les achats',
-  'subscription': 'Forfaits',
-  'credits': 'Crédits IA',
+final promoScopes = {
+  'all': tr('Tous les achats'),
+  'subscription': tr('Forfaits'),
+  'credits': tr('Crédits IA'),
 };
 
 String _day(DateTime d) => '${shortDate(d)}/${d.year}';
@@ -26,11 +27,11 @@ class PromosAdminScreen extends ConsumerWidget {
     final list = ref.watch(adminPromosProvider);
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Codes promo')),
+      appBar: AppBar(title: Text(tr('Codes promo'))),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => editPromo(context, ref, null),
         icon: const Icon(Icons.add),
-        label: const Text('Nouveau code'),
+        label: Text(tr('Nouveau code')),
       ),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(adminPromosProvider),
@@ -38,8 +39,7 @@ class PromosAdminScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
           children: [
             Text(
-                'Le prix réduit est recalculé par le serveur au moment du paiement. Une utilisation est comptée '
-                'quand le paiement est confirmé par l’opérateur.',
+                tr('Le prix réduit est recalculé par le serveur au moment du paiement. Une utilisation est comptée quand le paiement est confirmé par l’opérateur.'),
                 style: theme.textTheme.bodySmall),
             const SizedBox(height: 8),
             ...list.when(
@@ -47,9 +47,9 @@ class PromosAdminScreen extends ConsumerWidget {
               error: (e, _) => [Text(adminErrorMessage(e))],
               data: (rows) => rows.isEmpty
                   ? [
-                      const Padding(
+                      Padding(
                           padding: EdgeInsets.all(16),
-                          child: Text('Aucun code pour l’instant.'))
+                          child: Text(tr('Aucun code pour l’instant.')))
                     ]
                   : [
                       for (final p in rows)
@@ -63,8 +63,9 @@ class PromosAdminScreen extends ConsumerWidget {
                                 '${p['code']} · −${asInt(p['percent_off'])} %'),
                             subtitle: Text(_summary(p)),
                             isThreeLine: true,
-                            trailing:
-                                Text(p['active'] == true ? 'Actif' : 'Inactif'),
+                            trailing: Text(p['active'] == true
+                                ? tr('Actif')
+                                : tr('Inactif')),
                             onTap: () => editPromo(context, ref, p),
                           ),
                         ),
@@ -86,9 +87,10 @@ class PromosAdminScreen extends ConsumerWidget {
       [
         promoScopes[p['applies_to']] ?? '${p['applies_to']}',
         if (plans.isNotEmpty) plans.join(', '),
-        if (ends != null) 'jusqu’au ${_day(ends)}',
+        if (ends != null) trf('jusqu’au {0}', [_day(ends)]),
       ].join(' · '),
-      '${asInt(p['uses'])} / $max utilisations · ${fcfa(asInt(p['discount_total_xof']))} de réduction',
+      trf('{0} / {1} utilisations · {2} de réduction',
+          [asInt(p['uses']), max, fcfa(asInt(p['discount_total_xof']))]),
     ].join('\n');
   }
 }
@@ -107,7 +109,7 @@ Future<void> editPromo(
   );
   if (saved == true) {
     ref.invalidate(adminPromosProvider);
-    if (context.mounted) showMessage(context, 'Code enregistré.');
+    if (context.mounted) showMessage(context, tr('Code enregistré.'));
   }
 }
 
@@ -172,11 +174,11 @@ class _PromoEditorState extends ConsumerState<_PromoEditor> {
     final maxText = _maxUses.text.trim();
     final maxUses = maxText.isEmpty ? null : int.tryParse(maxText);
     if (percent == null || percent < 1 || percent > 90) {
-      setState(() => _error = 'Réduction entre 1 et 90 %.');
+      setState(() => _error = tr('Réduction entre 1 et 90 %.'));
       return;
     }
     if (maxText.isNotEmpty && (maxUses == null || maxUses < 1)) {
-      setState(() => _error = 'Nombre d’utilisations invalide.');
+      setState(() => _error = tr('Nombre d’utilisations invalide.'));
       return;
     }
     setState(() {
@@ -222,8 +224,8 @@ class _PromoEditorState extends ConsumerState<_PromoEditor> {
           children: [
             Text(
                 editing
-                    ? 'Modifier ${widget.existing!['code']}'
-                    : 'Nouveau code',
+                    ? trf('Modifier {0}', [widget.existing!['code']])
+                    : tr('Nouveau code'),
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
             TextField(
@@ -234,15 +236,15 @@ class _PromoEditorState extends ConsumerState<_PromoEditor> {
                 FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9_-]')),
                 LengthLimitingTextInputFormatter(24),
               ],
-              decoration: const InputDecoration(
-                  labelText: 'Code', helperText: '3 à 24 caractères'),
+              decoration: InputDecoration(
+                  labelText: tr('Code'), helperText: tr('3 à 24 caractères')),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _description,
               maxLength: 200,
-              decoration: const InputDecoration(
-                  labelText: 'Description affichée (facultative)'),
+              decoration: InputDecoration(
+                  labelText: tr('Description affichée (facultative)')),
             ),
             Row(children: [
               Expanded(
@@ -250,7 +252,7 @@ class _PromoEditorState extends ConsumerState<_PromoEditor> {
                   controller: _percent,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(labelText: 'Réduction (%)'),
+                  decoration: InputDecoration(labelText: tr('Réduction (%)')),
                 ),
               ),
               const SizedBox(width: 12),
@@ -259,8 +261,9 @@ class _PromoEditorState extends ConsumerState<_PromoEditor> {
                   controller: _maxUses,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                      labelText: 'Utilisations max', hintText: 'illimité'),
+                  decoration: InputDecoration(
+                      labelText: tr('Utilisations max'),
+                      hintText: tr('illimité')),
                 ),
               ),
             ]),
@@ -275,7 +278,7 @@ class _PromoEditorState extends ConsumerState<_PromoEditor> {
             ),
             if (_scope != 'credits' && paidPlans.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text('Forfaits concernés (aucun = tous)',
+              Text(tr('Forfaits concernés (aucun = tous)'),
                   style: Theme.of(context).textTheme.bodySmall),
               Wrap(spacing: 8, children: [
                 for (final c in paidPlans)
@@ -292,20 +295,19 @@ class _PromoEditorState extends ConsumerState<_PromoEditor> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.event),
               title: Text(_ends == null
-                  ? 'Sans date de fin'
-                  : 'Valable jusqu’au ${_day(_ends!)}'),
+                  ? tr('Sans date de fin')
+                  : trf('Valable jusqu’au {0}', [_day(_ends!)])),
               trailing: _ends == null
-                  ? TextButton(
-                      onPressed: _pickEnd, child: const Text('Choisir'))
+                  ? TextButton(onPressed: _pickEnd, child: Text(tr('Choisir')))
                   : IconButton(
-                      tooltip: 'Retirer la date',
+                      tooltip: tr('Retirer la date'),
                       onPressed: () => setState(() => _ends = null),
                       icon: const Icon(Icons.close)),
               onTap: _pickEnd,
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Actif'),
+              title: Text(tr('Actif')),
               value: _active,
               onChanged: (v) => setState(() => _active = v),
             ),
@@ -318,7 +320,7 @@ class _PromoEditorState extends ConsumerState<_PromoEditor> {
               ),
             FilledButton(
               onPressed: _busy ? null : _save,
-              child: const Text('Enregistrer'),
+              child: Text(tr('Enregistrer')),
             ),
           ],
         ),
@@ -335,26 +337,31 @@ Future<void> recordRefund(
   final ok = await showDialog<bool>(
     context: context,
     builder: (c) => AlertDialog(
-      title: const Text('Enregistrer un remboursement'),
+      title: Text(tr('Enregistrer un remboursement')),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text(
-            '${fcfa(asInt(payment['amount_xof']))} · ${payment['transaction_id']}\n\n'
-            'Remboursez d’abord ce montant depuis le tableau de bord de l’agrégateur (${payment['provider'] == 'cinetpay' ? 'CinetPay' : 'LigdiCash'}). '
-            'Ici, ${payment['kind'] == 'subscription' ? 'le forfait payé est arrêté' : 'les crédits encore disponibles de ce pack sont retirés'}, '
-            'et l’opération est inscrite au journal. Cette action est définitive.'),
+        Text(trf(
+            '{0} · {1}\n\nRemboursez d’abord ce montant depuis le tableau de bord de l’agrégateur ({2}). Ici, {3}, et l’opération est inscrite au journal. Cette action est définitive.',
+            [
+              fcfa(asInt(payment['amount_xof'])),
+              payment['transaction_id'],
+              payment['provider'] == 'cinetpay' ? 'CinetPay' : 'LigdiCash',
+              payment['kind'] == 'subscription'
+                  ? tr('le forfait payé est arrêté')
+                  : tr('les crédits encore disponibles de ce pack sont retirés')
+            ])),
         const SizedBox(height: 8),
         TextField(
           controller: reason,
-          decoration: const InputDecoration(labelText: 'Motif (journalisé)'),
+          decoration: InputDecoration(labelText: tr('Motif (journalisé)')),
         ),
       ]),
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(c, false),
-            child: const Text('Annuler')),
+            child: Text(tr('Annuler'))),
         FilledButton(
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('Enregistrer')),
+            child: Text(tr('Enregistrer'))),
       ],
     ),
   );
@@ -363,7 +370,7 @@ Future<void> recordRefund(
   if (ok != true) return;
   if (r.isEmpty) {
     if (context.mounted) {
-      showMessage(context, 'Le motif est obligatoire.', error: true);
+      showMessage(context, tr('Le motif est obligatoire.'), error: true);
     }
     return;
   }
@@ -377,9 +384,12 @@ Future<void> recordRefund(
     showMessage(
         context,
         payment['kind'] == 'subscription'
-            ? 'Remboursement enregistré : forfait ${res['subscription'] ?? 'non trouvé'}.'
-            : 'Remboursement enregistré : ${asInt(res['credits_removed'])} crédits retirés'
-                '${used > 0 ? ' ($used déjà utilisés)' : ''}.');
+            ? trf('Remboursement enregistré : forfait {0}.',
+                [res['subscription'] ?? tr('non trouvé')])
+            : trf('Remboursement enregistré : {0} crédits retirés{1}.', [
+                asInt(res['credits_removed']),
+                used > 0 ? trf(' ({0} déjà utilisés)', [used]) : ''
+              ]));
   } catch (e) {
     if (context.mounted) {
       showMessage(context, adminErrorMessage(e), error: true);

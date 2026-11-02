@@ -14,6 +14,7 @@ import '../../simulator/presentation/stake_simulator_sheet.dart';
 import '../../system/system_providers.dart';
 import '../data/journal_repository.dart';
 import '../../help/help_screens.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Carnet de paris : les mises que l'utilisateur a déclarées, réglées automatiquement, avec son
 /// bilan réel par mois et le suivi de son budget. Aucun pari n'est pris par l'application.
@@ -28,11 +29,11 @@ class JournalScreen extends ConsumerWidget {
     final cur = currencyLabel(ref.watch(publicSettingsProvider).valueOrNull);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mon carnet de paris'),
+        title: Text(tr('Mon carnet de paris')),
         actions: [
           const HelpButton('carnet'),
           IconButton(
-            tooltip: 'Budget et plafond',
+            tooltip: tr('Budget et plafond'),
             icon: const Icon(Icons.shield_outlined),
             onPressed: () => context.push(AppRoutes.responsibleGaming),
           ),
@@ -48,7 +49,7 @@ class JournalScreen extends ConsumerWidget {
           error: (e, _) => ListView(children: [
             InfoMessage(
                 icon: Icons.cloud_off_outlined,
-                title: 'Carnet indisponible',
+                title: tr('Carnet indisponible'),
                 body: userMessageFor(e)),
           ]),
           data: (list) {
@@ -65,21 +66,23 @@ class JournalScreen extends ConsumerWidget {
                     budget: limits?.monthlyBudget,
                     currency: cur),
                 if (list.isEmpty)
-                  const InfoMessage(
+                  InfoMessage(
                     icon: Icons.menu_book_outlined,
-                    title: 'Votre carnet est vide',
-                    body:
-                        'Ouvrez un coupon, un match ou une analyse, touchez « Simuler une mise » puis '
-                        '« J’ai joué ce pari ». Le pari est réglé automatiquement après le match.',
+                    title: tr('Votre carnet est vide'),
+                    body: tr(
+                        'Ouvrez un coupon, un match ou une analyse, touchez « Simuler une mise » puis « J’ai joué ce pari ». Le pari est réglé automatiquement après le match.'),
                   )
                 else ...[
                   Card(
                     child: ListTile(
                       leading: const Icon(Icons.insights_outlined),
-                      title: const Text('Depuis le début'),
-                      subtitle: Text(
-                          '${all.count} paris · misé ${money(all.staked, currency: cur)} · '
-                          'retourné ${money(all.returned, currency: cur)}'),
+                      title: Text(tr('Depuis le début')),
+                      subtitle: Text(trf(
+                          '{0} paris · misé {1} · retourné {2}', [
+                        all.count,
+                        money(all.staked, currency: cur),
+                        money(all.returned, currency: cur)
+                      ])),
                       trailing: Text(signedMoney(all.net, currency: cur),
                           style: TextStyle(
                               fontWeight: FontWeight.w700,
@@ -100,9 +103,7 @@ class JournalScreen extends ConsumerWidget {
                 ],
                 const SizedBox(height: 16),
                 Text(
-                  'Carnet personnel : seules vos mises déclarées y figurent, réglées sur le score à 90 minutes '
-                  '(un match annulé compte pour 1,00). Coupon Pro IA ne prend aucun pari. '
-                  '18+ · Pariez de façon responsable.',
+                  tr('Carnet personnel : seules vos mises déclarées y figurent, réglées sur le score à 90 minutes (un match annulé compte pour 1,00). Coupon Pro IA ne prend aucun pari. 18+ · Pariez de façon responsable.'),
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   textAlign: TextAlign.center,
@@ -171,15 +172,19 @@ class _MonthCard extends StatelessWidget {
                     letterSpacing: 0.8)),
             const SizedBox(height: 10),
             Row(children: [
-              cell('Misé', money(totals.staked, currency: currency)),
-              cell('Retourné', money(totals.returned, currency: currency)),
-              cell('Net', signedMoney(totals.net, currency: currency),
+              cell(tr('Misé'), money(totals.staked, currency: currency)),
+              cell(tr('Retourné'), money(totals.returned, currency: currency)),
+              cell(tr('Net'), signedMoney(totals.net, currency: currency),
                   color: totals.net >= 0 ? scheme.primary : scheme.error),
             ]),
             if (totals.pending > 0) ...[
               const SizedBox(height: 8),
               Text(
-                  '${totals.pending} pari${totals.pending > 1 ? 's' : ''} en attente (${money(totals.pendingStake, currency: currency)} misés)',
+                  trf('{0} pari{1} en attente ({2} misés)', [
+                    totals.pending,
+                    totals.pending > 1 ? 's' : '',
+                    money(totals.pendingStake, currency: currency)
+                  ]),
                   style: theme.textTheme.bodySmall),
             ],
             if (ratio != null) ...[
@@ -195,8 +200,14 @@ class _MonthCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 ratio >= 1
-                    ? 'Budget du mois atteint (${money(budget!, currency: currency)}). Faire une pause est une bonne décision.'
-                    : 'Budget du mois : ${money(totals.staked, currency: currency)} sur ${money(budget!, currency: currency)} (${(ratio * 100).round()} %)',
+                    ? trf(
+                        'Budget du mois atteint ({0}). Faire une pause est une bonne décision.',
+                        [money(budget!, currency: currency)])
+                    : trf('Budget du mois : {0} sur {1} ({2} %)', [
+                        money(totals.staked, currency: currency),
+                        money(budget!, currency: currency),
+                        (ratio * 100).round()
+                      ]),
                 style: theme.textTheme.bodySmall?.copyWith(
                     color: ratio >= 0.8 ? barColor : null,
                     fontWeight: ratio >= 0.8 ? FontWeight.w600 : null),
@@ -208,7 +219,7 @@ class _MonthCard extends StatelessWidget {
                     alignment: Alignment.centerLeft, padding: EdgeInsets.zero),
                 onPressed: () => context.push(AppRoutes.responsibleGaming),
                 icon: const Icon(Icons.shield_outlined, size: 18),
-                label: const Text('Fixer un budget mensuel'),
+                label: Text(tr('Fixer un budget mensuel')),
               ),
             ],
           ],
@@ -230,10 +241,10 @@ class _EntryTile extends ConsumerWidget {
     final scheme = theme.colorScheme;
     final e = entry;
     final (icon, color, label) = switch (e.result) {
-      'won' => (Icons.check, scheme.primary, 'Passé'),
-      'lost' => (Icons.close, scheme.error, 'Perdu'),
-      'void' => (Icons.remove, scheme.outline, 'Annulé'),
-      _ => (Icons.schedule, scheme.onSurfaceVariant, 'En attente'),
+      'won' => (Icons.check, scheme.primary, tr('Passé')),
+      'lost' => (Icons.close, scheme.error, tr('Perdu')),
+      'void' => (Icons.remove, scheme.outline, tr('Annulé')),
+      _ => (Icons.schedule, scheme.onSurfaceVariant, tr('En attente')),
     };
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -246,9 +257,13 @@ class _EntryTile extends ConsumerWidget {
               backgroundColor: color.withValues(alpha: 0.14),
               child: Icon(icon, size: 18, color: color)),
         ),
-        title: Text(e.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(
-            'Mise ${money(e.stake, currency: currency)} · cote ${decimal(e.totalOdd)}\n${dateTimeLabel(e.placedAt)}'),
+        title: Text(trTitle(e.title),
+            maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text(trf('Mise {0} · cote {1}\n{2}', [
+          money(e.stake, currency: currency),
+          decimal(e.totalOdd),
+          dateTimeLabel(e.placedAt)
+        ])),
         isThreeLine: true,
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -261,7 +276,7 @@ class _EntryTile extends ConsumerWidget {
                 style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: e.settled ? color : scheme.onSurfaceVariant)),
-            Text(e.settled ? label : 'potentiel',
+            Text(e.settled ? label : tr('potentiel'),
                 style: theme.textTheme.labelSmall?.copyWith(color: color)),
           ],
         ),
@@ -280,16 +295,22 @@ class _EntryTile extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(e.title, style: Theme.of(sheet).textTheme.titleMedium),
+              Text(trTitle(e.title),
+                  style: Theme.of(sheet).textTheme.titleMedium),
               const SizedBox(height: 6),
               for (final l in e.legs)
                 Text(
                     '• ${l['match'] ?? ''}${(l['match'] ?? '') == '' ? '' : ' : '}${l['label'] ?? l['key']} (${decimal((l['odd'] as num).toDouble())})'),
               const SizedBox(height: 8),
-              Text(
-                  'Mise ${money(e.stake, currency: currency)} · cote obtenue ${decimal(e.totalOdd)} · '
-                  '${e.settled ? 'retour ${money(e.returned, currency: currency)}' : 'retour potentiel ${money(e.potential, currency: currency)}'}'),
-              if (e.note != null) Text('Note : ${e.note}'),
+              Text(trf('Mise {0} · cote obtenue {1} · {2}', [
+                money(e.stake, currency: currency),
+                decimal(e.totalOdd),
+                e.settled
+                    ? trf('retour {0}', [money(e.returned, currency: currency)])
+                    : trf('retour potentiel {0}',
+                        [money(e.potential, currency: currency)])
+              ])),
+              if (e.note != null) Text(trf('Note : {0}', [e.note])),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -297,27 +318,27 @@ class _EntryTile extends ConsumerWidget {
                   OutlinedButton.icon(
                     onPressed: () => Navigator.pop(sheet, 'edit'),
                     icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Corriger'),
+                    label: Text(tr('Corriger')),
                   ),
                   if (e.sourceType == 'coupon' && e.sourceId != null)
                     OutlinedButton.icon(
                       onPressed: () => Navigator.pop(sheet, 'open'),
                       icon: const Icon(Icons.open_in_new),
-                      label: const Text('Voir le coupon'),
+                      label: Text(tr('Voir le coupon')),
                     ),
                   if ((e.sourceType == 'match' || e.sourceType == 'analysis') &&
                       e.legs.isNotEmpty)
                     OutlinedButton.icon(
                       onPressed: () => Navigator.pop(sheet, 'match'),
                       icon: const Icon(Icons.open_in_new),
-                      label: const Text('Voir le match'),
+                      label: Text(tr('Voir le match')),
                     ),
                   TextButton.icon(
                     style: TextButton.styleFrom(
                         foregroundColor: Theme.of(sheet).colorScheme.error),
                     onPressed: () => Navigator.pop(sheet, 'delete'),
                     icon: const Icon(Icons.delete_outline),
-                    label: const Text('Supprimer'),
+                    label: Text(tr('Supprimer')),
                   ),
                 ],
               ),
@@ -352,15 +373,15 @@ class _EntryTile extends ConsumerWidget {
         final ok = await showDialog<bool>(
           context: context,
           builder: (d) => AlertDialog(
-            title: const Text('Supprimer ce pari du carnet ?'),
-            content: const Text('Il disparaîtra de votre bilan.'),
+            title: Text(tr('Supprimer ce pari du carnet ?')),
+            content: Text(tr('Il disparaîtra de votre bilan.')),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(d, false),
-                  child: const Text('Annuler')),
+                  child: Text(tr('Annuler'))),
               FilledButton(
                   onPressed: () => Navigator.pop(d, true),
-                  child: const Text('Supprimer')),
+                  child: Text(tr('Supprimer'))),
             ],
           ),
         );

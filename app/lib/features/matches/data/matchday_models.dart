@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 class LineupPlayer {
   const LineupPlayer({required this.name, this.number, this.pos});
@@ -77,29 +78,29 @@ class Absence {
 
 /// Motifs les plus fréquents du fournisseur, traduits ; sinon le texte d'origine.
 String absenceReason(String? raw) {
-  if (raw == null || raw.trim().isEmpty) return 'motif non précisé';
-  const exact = {
-    'injury': 'blessure',
-    'knee injury': 'blessure au genou',
-    'ankle injury': 'blessure à la cheville',
-    'hamstring injury': 'blessure aux ischio-jambiers',
-    'muscle injury': 'blessure musculaire',
-    'thigh injury': 'blessure à la cuisse',
-    'calf injury': 'blessure au mollet',
-    'groin injury': 'blessure à l’aine',
-    'back injury': 'blessure au dos',
-    'foot injury': 'blessure au pied',
-    'shoulder injury': 'blessure à l’épaule',
-    'head injury': 'blessure à la tête',
-    'knock': 'coup',
-    'illness': 'maladie',
-    'suspended': 'suspendu',
-    'red card': 'suspendu (carton rouge)',
-    'yellow cards': 'suspendu (cartons jaunes)',
-    'international duty': 'sélection nationale',
-    'personal reasons': 'raisons personnelles',
-    'lack of fitness': 'manque de condition physique',
-    'inactive': 'indisponible',
+  if (raw == null || raw.trim().isEmpty) return tr('motif non précisé');
+  final exact = {
+    'injury': tr('blessure'),
+    'knee injury': tr('blessure au genou'),
+    'ankle injury': tr('blessure à la cheville'),
+    'hamstring injury': tr('blessure aux ischio-jambiers'),
+    'muscle injury': tr('blessure musculaire'),
+    'thigh injury': tr('blessure à la cuisse'),
+    'calf injury': tr('blessure au mollet'),
+    'groin injury': tr('blessure à l’aine'),
+    'back injury': tr('blessure au dos'),
+    'foot injury': tr('blessure au pied'),
+    'shoulder injury': tr('blessure à l’épaule'),
+    'head injury': tr('blessure à la tête'),
+    'knock': tr('coup'),
+    'illness': tr('maladie'),
+    'suspended': tr('suspendu'),
+    'red card': tr('suspendu (carton rouge)'),
+    'yellow cards': tr('suspendu (cartons jaunes)'),
+    'international duty': tr('sélection nationale'),
+    'personal reasons': tr('raisons personnelles'),
+    'lack of fitness': tr('manque de condition physique'),
+    'inactive': tr('indisponible'),
   };
   return exact[raw.trim().toLowerCase()] ?? raw.trim();
 }

@@ -1,5 +1,6 @@
 import '../../matches/data/sports_format.dart';
 import 'coupon_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Onglet d'un coupon de la plateforme.
 /// - À jouer : aucun match n'a commencé ;
@@ -36,15 +37,15 @@ String scoreLine(SelectionMatch m) => m.homeGoals != null && m.awayGoals != null
 /// « Publié le 31/10/2026 à 09:00 » (vide si la date est inconnue).
 String publishedLine(Coupon c) {
   final t = c.publishedAt ?? c.publishAt;
-  return 'Publié le ${dateTimeLabel(t.toLocal())}';
+  return trf('Publié le {0}', [dateTimeLabel(t.toLocal())]);
 }
 
 /// « Payé le … » (gagné) ou « Terminé le … » (perdu, annulé) ; vide sans date.
 String settledLine(Coupon c) {
   final t = c.settledAt;
   if (t == null || c.result == null) return '';
-  final word = c.result == 'won' ? 'Payé' : 'Terminé';
-  return '$word le ${dateTimeLabel(t.toLocal())}';
+  final word = c.result == 'won' ? tr('Payé') : tr('Terminé');
+  return trf('{0} le {1}', [word, dateTimeLabel(t.toLocal())]);
 }
 
 /// « Raté : Chelsea 2–0 Manchester United · +1 », « Toutes validées », « Annulé ».
@@ -52,10 +53,12 @@ String resultDetail(Coupon c) {
   if (c.locked || c.selections.isEmpty) return '';
   final lost = c.selections.where((s) => s.result == 'lost').toList();
   return switch (c.result) {
-    'won' => 'Toutes les sélections validées',
-    'void' => 'Annulé (match reporté ou annulé)',
-    _ when lost.isNotEmpty =>
-      'Raté : ${scoreLine(lost.first.match)}${lost.length > 1 ? ' · +${lost.length - 1}' : ''}',
+    'won' => tr('Toutes les sélections validées'),
+    'void' => tr('Annulé (match reporté ou annulé)'),
+    _ when lost.isNotEmpty => trf('Raté : {0}{1}', [
+        scoreLine(lost.first.match),
+        lost.length > 1 ? ' · +${lost.length - 1}' : ''
+      ]),
     _ => '',
   };
 }
@@ -104,9 +107,10 @@ enum ToPlaySort {
   probabilityDesc('Probabilité la plus haute'),
   recent('Plus récents');
 
-  const ToPlaySort(this.label);
+  const ToPlaySort(this._label);
 
-  final String label;
+  final String _label;
+  String get label => tr(_label);
 
   int compare(Coupon a, Coupon b) => switch (this) {
         ToPlaySort.kickoff => a.firstKickoffAt.compareTo(b.firstKickoffAt),
@@ -125,9 +129,10 @@ enum ResultKind {
   lost('Perdus', 'lost'),
   voided('Annulés', 'void');
 
-  const ResultKind(this.label, this.result);
+  const ResultKind(this._label, this.result);
 
-  final String label;
+  final String _label;
+  String get label => tr(_label);
   final String? result;
 
   bool accepts(Coupon c) => result == null || c.result == result;
@@ -135,7 +140,11 @@ enum ResultKind {
 
 /// Période affichée dans « Résultats » (jours ; 0 = tout l'historique).
 /// Pas de clé nulle : un menu Flutter traite une valeur nulle comme une annulation.
-const resultPeriods = <int, String>{7: '7 jours', 30: '30 jours', 0: 'Tout'};
+final resultPeriods = <int, String>{
+  7: tr('7 jours'),
+  30: tr('30 jours'),
+  0: tr('Tout')
+};
 
 /// Les trois listes de l'écran, triées.
 ({List<Coupon> toPlay, List<Coupon> live}) splitActive(
@@ -174,18 +183,18 @@ List<Coupon> filterDecided(List<Coupon> decided, DateTime now,
   }
   if (last == null) {
     return c.publishedAt != null
-        ? (label: 'Publié', at: c.publishedAt!)
-        : (label: 'Créé', at: c.createdAt);
+        ? (label: tr('Publié'), at: c.publishedAt!)
+        : (label: tr('Créé'), at: c.createdAt);
   }
   final label = switch (last.toStatus) {
-    'published' => 'Publié',
+    'published' => tr('Publié'),
     'ready' => last.fromStatus == 'pending_review'
-        ? 'Validé · publication programmée'
-        : 'Prêt · publication programmée',
-    'pending_review' => 'Créé · à valider',
-    'rejected' => 'Rejeté',
-    'expired' => 'Expiré',
-    'withdrawn' => 'Retiré',
+        ? tr('Validé · publication programmée')
+        : tr('Prêt · publication programmée'),
+    'pending_review' => tr('Créé · à valider'),
+    'rejected' => tr('Rejeté'),
+    'expired' => tr('Expiré'),
+    'withdrawn' => tr('Retiré'),
     _ => last.toStatus,
   };
   return (label: label, at: last.at);

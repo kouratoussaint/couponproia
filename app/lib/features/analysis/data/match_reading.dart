@@ -5,6 +5,7 @@ import '../../matches/data/insights_models.dart';
 import '../../matches/data/sports_format.dart';
 import 'analysis_format.dart';
 import 'analysis_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Pronostic mis en avant : celui de l'IA s'il existe, sinon l'issue la plus probable du modèle.
 class MainPick {
@@ -114,12 +115,12 @@ String downsideText(MainPick pick, AnalysisFiche f, String home, String away) {
   final miss = 1 - pick.probability;
   final others = alternativesOf(pick.key, f, home, away);
   return [
-    '« $label » est estimé à ${pct(pick.probability)} : l’issue contraire reste possible '
-        '${frequencyLabel(miss)}, même quand l’analyse est juste.',
+    trf('« {0} » est estimé à {1} : l’issue contraire reste possible {2}, même quand l’analyse est juste.',
+        [label, pct(pick.probability), frequencyLabel(miss)]),
     if (others.isNotEmpty)
-      'Scénarios contraires selon le modèle : '
-          '${others.map((o) => '${o.$1} ${pct(o.$2)}').join(', ')}.',
-    'Ce sont des estimations : jouez uniquement ce que vous pouvez vous permettre de perdre.',
+      trf('Scénarios contraires selon le modèle : {0}.',
+          [others.map((o) => '${o.$1} ${pct(o.$2)}').join(', ')]),
+    tr('Ce sont des estimations : jouez uniquement ce que vous pouvez vous permettre de perdre.'),
   ].join(' ');
 }
 
@@ -137,9 +138,10 @@ class VerifiedFact {
       at == null ? source : '$source · ${shortDate(at!)} ${timeLabel(at!)}';
 }
 
-String _lowerFirst(String s) => s.startsWith('A ') || s.startsWith('Au ')
-    ? s[0].toLowerCase() + s.substring(1)
-    : s;
+String _lowerFirst(String s) =>
+    s.startsWith(tr('A ')) || s.startsWith(tr('Au '))
+        ? s[0].toLowerCase() + s.substring(1)
+        : s;
 
 String _ord(int rank) => rank == 1 ? '1er' : '${rank}e';
 String _plural(int n, String word) => '$n $word${n > 1 ? 's' : ''}';
@@ -159,45 +161,77 @@ List<VerifiedFact> buildFacts({
     final a = ins.standingOf(awayId);
     if (h != null && a != null) {
       facts.add(VerifiedFact(
-        title: 'Classement',
-        text:
-            '$home est ${_ord(h.rank)} avec ${h.points} points en ${h.played} matchs ; '
-            '$away est ${_ord(a.rank)} avec ${a.points} points en ${a.played} matchs.',
+        title: tr('Classement'),
+        text: trf(
+            '{0} est {1} avec {2} points en {3} matchs ; {4} est {5} avec {6} points en {7} matchs.',
+            [
+              home,
+              _ord(h.rank),
+              h.points,
+              h.played,
+              away,
+              _ord(a.rank),
+              a.points,
+              a.played
+            ]),
         source: 'API-Football',
         at: ins.standingsUpdatedAt,
       ));
     }
     if (ins.homeForm.isNotEmpty && ins.awayForm.isNotEmpty) {
       facts.add(VerifiedFact(
-        title: 'Forme récente',
-        text:
-            'Sur leurs derniers matchs : $home a pris ${formPoints(ins.homeForm)} points sur '
-            '${ins.homeForm.length * 3}, $away ${formPoints(ins.awayForm)} sur ${ins.awayForm.length * 3}.',
-        source: 'Résultats enregistrés',
+        title: tr('Forme récente'),
+        text: trf(
+            'Sur leurs derniers matchs : {0} a pris {1} points sur {2}, {3} {4} sur {5}.',
+            [
+              home,
+              formPoints(ins.homeForm),
+              ins.homeForm.length * 3,
+              away,
+              formPoints(ins.awayForm),
+              ins.awayForm.length * 3
+            ]),
+        source: tr('Résultats enregistrés'),
         at: ins.computedAt,
       ));
     }
     if (ins.homeAtHome.isNotEmpty && ins.awayAway.isNotEmpty) {
       facts.add(VerifiedFact(
-        title: 'À domicile et à l’extérieur',
-        text:
-            '$home : ${formPoints(ins.homeAtHome)} points sur ${ins.homeAtHome.length * 3} '
-            'lors de ses ${_plural(ins.homeAtHome.length, 'dernier')} matchs à domicile ; '
-            '$away : ${formPoints(ins.awayAway)} sur ${ins.awayAway.length * 3} à l’extérieur.',
-        source: 'Résultats enregistrés',
+        title: tr('À domicile et à l’extérieur'),
+        text: trf(
+            '{0} : {1} points sur {2} lors de ses {3} dernier{7} matchs à domicile ; {4} : {5} sur {6} à l’extérieur.',
+            [
+              home,
+              formPoints(ins.homeAtHome),
+              ins.homeAtHome.length * 3,
+              ins.homeAtHome.length,
+              away,
+              formPoints(ins.awayAway),
+              ins.awayAway.length * 3,
+              ins.homeAtHome.length > 1 ? 's' : '',
+            ]),
+        source: tr('Résultats enregistrés'),
         at: ins.computedAt,
       ));
     }
     final h2h = ins.h2h;
     if (h2h.count > 0) {
       facts.add(VerifiedFact(
-        title: 'Confrontations directes',
-        text: '${_plural(h2h.count, 'confrontation')}'
-            '${h2h.first == null ? '' : ' depuis ${h2h.first!.year}'} : '
-            '${_plural(h2h.homeWins, 'victoire')} de $home, ${_plural(h2h.draws, 'nul')}, '
-            '${_plural(h2h.awayWins, 'victoire')} de $away'
-            '${h2h.avgGoals == null ? '' : ', ${decimal(h2h.avgGoals!, 1)} buts par match en moyenne'}.',
-        source: 'Résultats enregistrés',
+        title: tr('Confrontations directes'),
+        text: trf('{0}{1} : {2} de {3}, {4}, {5} de {6}{7}.', [
+          _plural(h2h.count, tr('confrontation')),
+          h2h.first == null ? '' : trf(' depuis {0}', [h2h.first!.year]),
+          _plural(h2h.homeWins, tr('victoire')),
+          home,
+          _plural(h2h.draws, tr('nul')),
+          _plural(h2h.awayWins, tr('victoire')),
+          away,
+          h2h.avgGoals == null
+              ? ''
+              : trf(', {0} buts par match en moyenne',
+                  [decimal(h2h.avgGoals!, 1)])
+        ]),
+        source: tr('Résultats enregistrés'),
         at: ins.computedAt,
       ));
     }
@@ -207,9 +241,9 @@ List<VerifiedFact> buildFacts({
     ]) {
       if (streaks.isNotEmpty) {
         facts.add(VerifiedFact(
-          title: 'Série en cours',
+          title: tr('Série en cours'),
           text: '$team : ${_lowerFirst(streaks.first.label)}.',
-          source: 'Résultats enregistrés',
+          source: tr('Résultats enregistrés'),
           at: ins.computedAt,
         ));
       }
@@ -218,20 +252,24 @@ List<VerifiedFact> buildFacts({
   final a = analysis;
   if (a != null) {
     final f = a.fiche;
-    final source = 'Modèle Coupon Pro IA';
+    final source = tr('Modèle Coupon Pro IA');
     facts.add(VerifiedFact(
-      title: 'Buts attendus',
-      text:
-          'Le modèle attend ${decimal(f.expectedGoalsHome)} buts pour $home et '
-          '${decimal(f.expectedGoalsAway)} pour $away.',
+      title: tr('Buts attendus'),
+      text: trf('Le modèle attend {0} buts pour {1} et {2} pour {3}.', [
+        decimal(f.expectedGoalsHome),
+        home,
+        decimal(f.expectedGoalsAway),
+        away
+      ]),
       source: source,
       at: a.createdAt,
     ));
     final draw = f.p('1X2.DRAW');
     if (draw != null) {
       facts.add(VerifiedFact(
-        title: 'Le match nul',
-        text: 'Le nul est estimé à ${pct(draw)}, soit ${frequencyLabel(draw)}.',
+        title: tr('Le match nul'),
+        text: trf('Le nul est estimé à {0}, soit {1}.',
+            [pct(draw), frequencyLabel(draw)]),
         source: source,
         at: a.createdAt,
       ));
@@ -241,12 +279,16 @@ List<VerifiedFact> buildFacts({
         pick.impliedProbability != null &&
         pick.oddMedian != null) {
       facts.add(VerifiedFact(
-        title: 'Modèle et marché',
-        text:
-            'Pour « ${outcomeKeyLabel(pick.key, home, away)} », les cotes donnent '
-            '${pct(pick.impliedProbability!)} (cote ${decimal(pick.oddMedian!)}) et le modèle '
-            '${pct(pick.probability)}.',
-        source: 'Cotes médianes des bookmakers',
+        title: tr('Modèle et marché'),
+        text: trf(
+            'Pour « {0} », les cotes donnent {1} (cote {2}) et le modèle {3}.',
+            [
+              outcomeKeyLabel(pick.key, home, away),
+              pct(pick.impliedProbability!),
+              decimal(pick.oddMedian!),
+              pct(pick.probability)
+            ]),
+        source: tr('Cotes médianes des bookmakers'),
         at: f.marketCapturedAt,
       ));
     }

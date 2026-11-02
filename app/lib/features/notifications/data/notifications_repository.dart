@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 class AppNotification {
   const AppNotification({
@@ -109,56 +110,56 @@ class NotificationPrefs {
 }
 
 /// Types de notification réglables : (colonne, titre, description).
-const notificationKinds = [
+final notificationKinds = [
   (
     'notify_coupons',
-    'Nouveaux coupons',
-    'Quand un coupon de la plateforme que vous pouvez voir est publié'
+    tr('Nouveaux coupons'),
+    tr('Quand un coupon de la plateforme que vous pouvez voir est publié')
   ),
   (
     'notify_results',
-    'Résultats de mes coupons',
-    'Gagné, perdu ou annulé, dès le règlement'
+    tr('Résultats de mes coupons'),
+    tr('Gagné, perdu ou annulé, dès le règlement')
   ),
   (
     'notify_tipsters',
-    'Tipsters suivis',
-    'Quand un Tipster que vous suivez publie'
+    tr('Tipsters suivis'),
+    tr('Quand un Tipster que vous suivez publie')
   ),
   (
     'notify_matches',
-    'Rappels de match',
-    '30 minutes avant un match d’une équipe que vous suivez'
+    tr('Rappels de match'),
+    tr('30 minutes avant un match d’une équipe que vous suivez')
   ),
   (
     'notify_morning',
-    'Rendez-vous du matin',
-    'Vers 7 h 30 : matchs du jour et analyse offerte'
+    tr('Rendez-vous du matin'),
+    tr('Vers 7 h 30 : matchs du jour et analyse offerte')
   ),
   (
     'notify_analyses',
-    'Analyses de mes équipes',
-    'Quand le match d’une équipe que vous suivez vient d’être analysé'
+    tr('Analyses de mes équipes'),
+    tr('Quand le match d’une équipe que vous suivez vient d’être analysé')
   ),
   (
     'notify_bet_reminders',
-    'Rappel avant mes paris',
-    '15 minutes avant le premier match d’un pari noté dans votre carnet'
+    tr('Rappel avant mes paris'),
+    tr('15 minutes avant le premier match d’un pari noté dans votre carnet')
   ),
   (
     'notify_live',
-    'Scores en direct de mes paris',
-    'À chaque but sur un match de votre carnet ou d’un coupon dont vous suivez la cote'
+    tr('Scores en direct de mes paris'),
+    tr('À chaque but sur un match de votre carnet ou d’un coupon dont vous suivez la cote')
   ),
   (
     'notify_credits',
-    'Crédits IA et forfait',
-    'Crédits presque épuisés, forfait qui se termine (3 jours avant, la veille)'
+    tr('Crédits IA et forfait'),
+    tr('Crédits presque épuisés, forfait qui se termine (3 jours avant, la veille)')
   ),
   (
     'notify_news',
-    'Annonces et offres',
-    'Nouveautés de l’application et offres de l’équipe, rarement'
+    tr('Annonces et offres'),
+    tr('Nouveautés de l’application et offres de l’équipe, rarement')
   ),
 ];
 
@@ -182,7 +183,7 @@ class NotificationsRepository {
 
   String get _uid {
     final id = _client.auth.currentUser?.id;
-    if (id == null) throw AuthException('Session expirée');
+    if (id == null) throw AuthException(tr('Session expirée'));
     return id;
   }
 

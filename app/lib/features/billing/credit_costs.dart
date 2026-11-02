@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../assistant/data/assistant_models.dart';
 import '../system/system_providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 int _cost(Ref ref, String key) {
   final v = ref.watch(publicSettingsProvider).valueOrNull?[key];
@@ -25,7 +26,7 @@ final assistantCostProvider = Provider<int>((ref) {
 final labCostProvider = Provider<int>((ref) => _cost(ref, 'lab.credit_cost'));
 
 /// « 1 crédit », « 3 crédits ».
-String creditsLabel(int n) => '$n crédit${n > 1 ? 's' : ''}';
+String creditsLabel(int n) => trf('{0} crédit{1}', [n, n > 1 ? 's' : '']);
 
 /// Le compte paie-t-il en crédits les actions réservées au FREE (analyse, laboratoire) ?
 bool paysCreditsAsFree(Credits? c) =>

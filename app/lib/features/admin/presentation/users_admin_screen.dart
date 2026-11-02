@@ -11,14 +11,15 @@ import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/admin_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
-const roleLabels = {
-  'user': 'Utilisateur',
-  'subscriber': 'Abonné',
-  'tipster': 'Tipster',
-  'moderator': 'Modérateur',
-  'admin': 'Administrateur',
-  'super_admin': 'Super administrateur',
+final roleLabels = {
+  'user': tr('Utilisateur'),
+  'subscriber': tr('Abonné'),
+  'tipster': tr('Tipster'),
+  'moderator': tr('Modérateur'),
+  'admin': tr('Administrateur'),
+  'super_admin': tr('Super administrateur'),
 };
 
 String _date(String? iso) {
@@ -41,14 +42,14 @@ class _UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
   Widget build(BuildContext context) {
     final users = ref.watch(adminUsersProvider(_query));
     return Scaffold(
-      appBar: AppBar(title: const Text('Utilisateurs')),
+      appBar: AppBar(title: Text(tr('Utilisateurs'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
           TextField(
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
                 prefixIcon: Icon(Icons.search),
-                hintText: 'E-mail, nom ou identifiant'),
+                hintText: tr('E-mail, nom ou identifiant')),
             textInputAction: TextInputAction.search,
             onSubmitted: (v) => setState(() => _query = v.trim()),
           ),
@@ -58,9 +59,9 @@ class _UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
             error: (e, _) => [Text(adminErrorMessage(e))],
             data: (list) => list.isEmpty
                 ? [
-                    const Padding(
+                    Padding(
                         padding: EdgeInsets.all(16),
-                        child: Text('Aucun utilisateur trouvé.'))
+                        child: Text(tr('Aucun utilisateur trouvé.')))
                   ]
                 : [
                     for (final u in list)
@@ -70,7 +71,7 @@ class _UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
                               ? Icons.block
                               : Icons.person_outline),
                           title: Text(
-                              u['display_name'] as String? ?? '(sans nom)'),
+                              u['display_name'] as String? ?? tr('(sans nom)')),
                           subtitle: Text([
                             u['email'] as String? ?? '',
                             '${u['plan']} · ${(u['roles'] as List).where((r) => r != 'user').map((r) => roleLabels[r] ?? r).join(', ')}',
@@ -129,12 +130,12 @@ class UserAdminDetailScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Fiche utilisateur')),
+      appBar: AppBar(title: Text(tr('Fiche utilisateur'))),
       body: user.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.lock_outline,
-            title: 'Indisponible',
+            title: tr('Indisponible'),
             body: adminErrorMessage(e)),
         data: (u) {
           final roles = {for (final r in (u['roles'] as List)) r as String};
@@ -152,23 +153,34 @@ class UserAdminDetailScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(u['display_name'] as String? ?? '(sans nom)',
+                        Text(u['display_name'] as String? ?? tr('(sans nom)'),
                             style: theme.textTheme.titleLarge
                                 ?.copyWith(fontWeight: FontWeight.w800)),
                         SelectableText(u['email'] as String? ?? ''),
                         const SizedBox(height: 6),
                         Text(
-                            'Inscrit le ${_date(u['created_at'] as String?)} · dernière connexion ${_date(u['last_sign_in_at'] as String?)}',
+                            trf('Inscrit le {0} · dernière connexion {1}', [
+                              _date(u['created_at'] as String?),
+                              _date(u['last_sign_in_at'] as String?)
+                            ]),
                             style: theme.textTheme.bodySmall),
                         Text(
-                            'Forfait ${u['plan']} · crédits ${credits['unlimited'] == true ? 'illimités' : credits['total']}',
+                            trf('Forfait {0} · crédits {1}', [
+                              u['plan'],
+                              credits['unlimited'] == true
+                                  ? tr('illimités')
+                                  : credits['total']
+                            ]),
                             style: theme.textTheme.bodyMedium),
                         if (u['tipster'] != null)
                           Text(
-                              'Tipster @${asMap(u['tipster'])['handle']} (${asMap(u['tipster'])['status']})',
+                              trf('Tipster @{0} ({1})', [
+                                asMap(u['tipster'])['handle'],
+                                asMap(u['tipster'])['status']
+                              ]),
                               style: theme.textTheme.bodySmall),
                         if (u['suspended'] == true)
-                          Text('Compte suspendu',
+                          Text(tr('Compte suspendu'),
                               style: TextStyle(
                                   color: theme.colorScheme.error,
                                   fontWeight: FontWeight.w700)),
@@ -176,22 +188,22 @@ class UserAdminDetailScreen extends ConsumerWidget {
                           onPressed: () =>
                               Clipboard.setData(ClipboardData(text: userId)),
                           icon: const Icon(Icons.copy, size: 16),
-                          label: const Text('Copier l’identifiant'),
+                          label: Text(tr('Copier l’identifiant')),
                         ),
                       ],
                     ),
                   ),
                 ),
                 if (perms.contains('billing.manage')) ...[
-                  const SectionTitle('Forfait et crédits (sans paiement)'),
+                  SectionTitle(tr('Forfait et crédits (sans paiement)')),
                   Card(
                     child: Column(
                       children: [
                         ListTile(
                           leading: Icon(Icons.workspace_premium_outlined,
                               color: theme.colorScheme.primary),
-                          title: const Text('Attribuer un forfait'),
-                          subtitle: Text('Actuel : ${u['plan']}'),
+                          title: Text(tr('Attribuer un forfait')),
+                          subtitle: Text(trf('Actuel : {0}', [u['plan']])),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
                             final r = await _subscriptionDialog(context,
@@ -200,7 +212,8 @@ class UserAdminDetailScreen extends ConsumerWidget {
                               await run(
                                   () => repo.grantSubscription(
                                       userId, r.$1, r.$2, r.$3),
-                                  'Forfait ${r.$1.replaceAll('_', ' ')} attribué pour ${r.$2} mois.');
+                                  trf('Forfait {0} attribué pour {1} mois.',
+                                      [r.$1.replaceAll('_', ' '), r.$2]));
                             }
                           },
                         ),
@@ -209,9 +222,9 @@ class UserAdminDetailScreen extends ConsumerWidget {
                           ListTile(
                             leading: Icon(Icons.cancel_outlined,
                                 color: theme.colorScheme.error),
-                            title: const Text('Mettre fin au forfait'),
-                            subtitle: const Text(
-                                'Retour immédiat au forfait FREE ; crédits achetés conservés'),
+                            title: Text(tr('Mettre fin au forfait')),
+                            subtitle: Text(tr(
+                                'Retour immédiat au forfait FREE ; crédits achetés conservés')),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () async {
                               final reason = await _endSubscriptionDialog(
@@ -219,7 +232,7 @@ class UserAdminDetailScreen extends ConsumerWidget {
                               if (reason != null) {
                                 await run(
                                     () => repo.endSubscription(userId, reason),
-                                    'Forfait arrêté : l’utilisateur est au forfait FREE.');
+                                    tr('Forfait arrêté : l’utilisateur est au forfait FREE.'));
                               }
                             },
                           ),
@@ -228,10 +241,11 @@ class UserAdminDetailScreen extends ConsumerWidget {
                         ListTile(
                           leading: Icon(Icons.card_giftcard,
                               color: theme.colorScheme.primary),
-                          title: const Text('Offrir un pack de crédits'),
+                          title: Text(tr('Offrir un pack de crédits')),
                           subtitle: Text(pack == null
-                              ? 'Pack non configuré'
-                              : 'Pack : ${pack.$1} crédits (valeur ${fcfa(pack.$2)})'),
+                              ? tr('Pack non configuré')
+                              : trf('Pack : {0} crédits (valeur {1})',
+                                  [pack.$1, fcfa(pack.$2)])),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: pack == null
                               ? null
@@ -243,23 +257,28 @@ class UserAdminDetailScreen extends ConsumerWidget {
                                         () => repo
                                             .grantCreditPack(userId, r.$1, r.$2)
                                             .then((_) {}),
-                                        '${r.$1 * pack.$1} crédits offerts.');
+                                        trf('{0} crédits offerts.',
+                                            [r.$1 * pack.$1]));
                                   }
                                 },
                         ),
                         const Divider(height: 1),
                         ListTile(
                           leading: const Icon(Icons.bolt),
-                          title: const Text('Ajuster les crédits'),
-                          subtitle: Text(
-                              'Solde : ${credits['unlimited'] == true ? 'illimité' : credits['total']} · ajout ou retrait libre'),
+                          title: Text(tr('Ajuster les crédits')),
+                          subtitle: Text(trf(
+                              'Solde : {0} · ajout ou retrait libre', [
+                            credits['unlimited'] == true
+                                ? tr('illimité')
+                                : credits['total']
+                          ])),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
                             final r = await _creditsDialog(context);
                             if (r != null) {
                               await run(
                                   () => repo.adjustCredits(userId, r.$1, r.$2),
-                                  'Crédits ajustés.');
+                                  tr('Crédits ajustés.'));
                             }
                           },
                         ),
@@ -267,7 +286,7 @@ class UserAdminDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
-                const SectionTitle('Rôles'),
+                SectionTitle(tr('Rôles')),
                 Wrap(
                   spacing: 8,
                   runSpacing: 4,
@@ -280,11 +299,11 @@ class UserAdminDetailScreen extends ConsumerWidget {
                                 !perms.contains('admins.manage')
                             ? null
                             : (on) => run(() => repo.setRole(userId, r, on),
-                                on ? 'Rôle ajouté.' : 'Rôle retiré.'),
+                                on ? tr('Rôle ajouté.') : tr('Rôle retiré.')),
                       ),
                   ],
                 ),
-                const SectionTitle('Actions'),
+                SectionTitle(tr('Actions')),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -293,9 +312,9 @@ class UserAdminDetailScreen extends ConsumerWidget {
                         ? FilledButton.icon(
                             onPressed: () => run(
                                 () => repo.setSuspended(userId, false),
-                                'Compte réactivé.'),
+                                tr('Compte réactivé.')),
                             icon: const Icon(Icons.lock_open),
-                            label: const Text('Réactiver'),
+                            label: Text(tr('Réactiver')),
                           )
                         : FilledButton.icon(
                             style: FilledButton.styleFrom(
@@ -303,53 +322,62 @@ class UserAdminDetailScreen extends ConsumerWidget {
                             onPressed: () async {
                               if (await _confirm(
                                   context,
-                                  'Suspendre ce compte ?',
-                                  'La personne ne pourra plus utiliser ses droits ni publier.')) {
+                                  tr('Suspendre ce compte ?'),
+                                  tr('La personne ne pourra plus utiliser ses droits ni publier.'))) {
                                 await run(() => repo.setSuspended(userId, true),
-                                    'Compte suspendu.');
+                                    tr('Compte suspendu.'));
                               }
                             },
                             icon: const Icon(Icons.block),
-                            label: const Text('Suspendre'),
+                            label: Text(tr('Suspendre')),
                           ),
                   ],
                 ),
-                const SectionTitle('Activité'),
+                SectionTitle(tr('Activité')),
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(14),
                     child: Text([
-                      'Analyses (30 j) : ${asInt(activity['analyses_30d'])}',
-                      'Messages à l’assistant (30 j) : ${asInt(activity['assistant_messages_30d'])}',
-                      'Coupons enregistrés : ${asInt(activity['saved_coupons'])} · publiés : ${asInt(activity['published_coupons'])}',
-                      'Publications : ${asInt(activity['posts'])} · commentaires : ${asInt(activity['comments'])}',
-                      'Signalements le concernant : ${asInt(activity['reports_against'])}',
+                      trf('Analyses (30 j) : {0}',
+                          [asInt(activity['analyses_30d'])]),
+                      trf('Messages à l’assistant (30 j) : {0}',
+                          [asInt(activity['assistant_messages_30d'])]),
+                      trf('Coupons enregistrés : {0} · publiés : {1}', [
+                        asInt(activity['saved_coupons']),
+                        asInt(activity['published_coupons'])
+                      ]),
+                      trf('Publications : {0} · commentaires : {1}', [
+                        asInt(activity['posts']),
+                        asInt(activity['comments'])
+                      ]),
+                      trf('Signalements le concernant : {0}',
+                          [asInt(activity['reports_against'])]),
                     ].join('\n')),
                   ),
                 ),
                 _ListSection(
-                  title: 'Abonnements',
+                  title: tr('Abonnements'),
                   rows: [
                     for (final s in asList(u['subscriptions']))
                       '${s['plan']} · ${_date(s['start'] as String?)} → ${_date(s['end'] as String?)} (${s['source']})',
                   ],
                 ),
                 _ListSection(
-                  title: 'Paiements',
+                  title: tr('Paiements'),
                   rows: [
                     for (final p in asList(u['payments']))
                       '${_date(p['created_at'] as String?)} · ${fcfa(asInt(p['amount_xof']))} · ${p['kind']} · ${p['status']}',
                   ],
                 ),
                 _ListSection(
-                  title: 'Mouvements de crédits',
+                  title: tr('Mouvements de crédits'),
                   rows: [
                     for (final l in asList(u['ledger']))
                       '${_date(l['created_at'] as String?)} · ${asInt(l['delta']) >= 0 ? '+' : ''}${l['delta']} (${l['reason']}) → ${l['balance_after']}',
                   ],
                 ),
                 _ListSection(
-                  title: 'Journal',
+                  title: tr('Journal'),
                   rows: [
                     for (final a in asList(u['audit']))
                       '${_date(a['created_at'] as String?)} · ${a['action']}'
@@ -378,7 +406,7 @@ class _ListSection extends StatelessWidget {
           Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
-              child: Text(rows.isEmpty ? 'Aucun.' : rows.join('\n'),
+              child: Text(rows.isEmpty ? tr('Aucun.') : rows.join('\n'),
                   style: Theme.of(context)
                       .textTheme
                       .bodySmall
@@ -398,10 +426,10 @@ Future<bool> _confirm(BuildContext context, String title, String body) async =>
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
-              child: const Text('Annuler')),
+              child: Text(tr('Annuler'))),
           FilledButton(
               onPressed: () => Navigator.pop(c, true),
-              child: const Text('Confirmer')),
+              child: Text(tr('Confirmer'))),
         ],
       ),
     ) ??
@@ -413,26 +441,26 @@ Future<(int, String)?> _creditsDialog(BuildContext context) async {
   final ok = await showDialog<bool>(
     context: context,
     builder: (c) => AlertDialog(
-      title: const Text('Ajuster les crédits'),
+      title: Text(tr('Ajuster les crédits')),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
         TextField(
           controller: delta,
           keyboardType: const TextInputType.numberWithOptions(signed: true),
           decoration:
-              const InputDecoration(labelText: 'Variation (ex. 10 ou -5)'),
+              InputDecoration(labelText: tr('Variation (ex. 10 ou -5)')),
         ),
         const SizedBox(height: 8),
         TextField(
             controller: reason,
-            decoration: const InputDecoration(labelText: 'Motif (journalisé)')),
+            decoration: InputDecoration(labelText: tr('Motif (journalisé)'))),
       ]),
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(c, false),
-            child: const Text('Annuler')),
+            child: Text(tr('Annuler'))),
         FilledButton(
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('Valider')),
+            child: Text(tr('Valider'))),
       ],
     ),
   );
@@ -454,7 +482,7 @@ Future<(String, int, String)?> _subscriptionDialog(
     context: context,
     builder: (c) => StatefulBuilder(
       builder: (c, setState) => AlertDialog(
-        title: const Text('Attribuer un forfait'),
+        title: Text(tr('Attribuer un forfait')),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           DropdownButtonFormField<String>(
             initialValue: plan,
@@ -463,31 +491,30 @@ Future<(String, int, String)?> _subscriptionDialog(
                 DropdownMenuItem(value: p, child: Text(p.replaceAll('_', ' ')))
             ],
             onChanged: (v) => setState(() => plan = v ?? plan),
-            decoration: const InputDecoration(labelText: 'Forfait'),
+            decoration: InputDecoration(labelText: tr('Forfait')),
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<int>(
             initialValue: months,
             items: [
               for (final m in [1, 3, 6, 12])
-                DropdownMenuItem(value: m, child: Text('$m mois'))
+                DropdownMenuItem(value: m, child: Text(trf('{0} mois', [m])))
             ],
             onChanged: (v) => setState(() => months = v ?? months),
-            decoration: const InputDecoration(labelText: 'Durée'),
+            decoration: InputDecoration(labelText: tr('Durée')),
           ),
           const SizedBox(height: 8),
           TextField(
               controller: reason,
-              decoration:
-                  const InputDecoration(labelText: 'Motif (journalisé)')),
+              decoration: InputDecoration(labelText: tr('Motif (journalisé)'))),
         ]),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
-              child: const Text('Annuler')),
+              child: Text(tr('Annuler'))),
           FilledButton(
               onPressed: () => Navigator.pop(c, true),
-              child: const Text('Attribuer')),
+              child: Text(tr('Attribuer'))),
         ],
       ),
     ),
@@ -506,7 +533,7 @@ Future<(int, String)?> _packDialog(
     context: context,
     builder: (c) => StatefulBuilder(
       builder: (c, setState) => AlertDialog(
-        title: const Text('Offrir un pack de crédits'),
+        title: Text(tr('Offrir un pack de crédits')),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           Row(children: [
             IconButton(
@@ -520,27 +547,26 @@ Future<(int, String)?> _packDialog(
                 icon: const Icon(Icons.add)),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                  '${quantity * creditsPerPack} crédits\n(valeur ${fcfa(quantity * priceXof)})'),
+              child: Text(trf('{0} crédits\n(valeur {1})',
+                  [quantity * creditsPerPack, fcfa(quantity * priceXof)])),
             ),
           ]),
           const SizedBox(height: 8),
           TextField(
               controller: reason,
-              decoration:
-                  const InputDecoration(labelText: 'Motif (journalisé)')),
+              decoration: InputDecoration(labelText: tr('Motif (journalisé)'))),
           const SizedBox(height: 8),
           Text(
-              'Aucun paiement : les crédits sont ajoutés tout de suite et n’expirent pas.',
+              tr('Aucun paiement : les crédits sont ajoutés tout de suite et n’expirent pas.'),
               style: Theme.of(c).textTheme.bodySmall),
         ]),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
-              child: const Text('Annuler')),
+              child: Text(tr('Annuler'))),
           FilledButton(
               onPressed: () => Navigator.pop(c, true),
-              child: const Text('Offrir')),
+              child: Text(tr('Offrir'))),
         ],
       ),
     ),
@@ -550,7 +576,7 @@ Future<(int, String)?> _packDialog(
   if (ok != true) return null;
   if (r.isEmpty) {
     if (context.mounted) {
-      showMessage(context, 'Le motif est obligatoire.', error: true);
+      showMessage(context, tr('Le motif est obligatoire.'), error: true);
     }
     return null;
   }
@@ -571,26 +597,25 @@ Future<String?> _endSubscriptionDialog(
   final reason = await showDialog<String>(
     context: context,
     builder: (d) => AlertDialog(
-      title: Text('Mettre fin au forfait ${plan.replaceAll('_', ' ')} ?'),
+      title:
+          Text(trf('Mettre fin au forfait {0} ?', [plan.replaceAll('_', ' ')])),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-              'L’utilisateur repasse tout de suite au forfait FREE, prolongations comprises. Les crédits du '
-              'forfait sont remplacés par ceux du forfait FREE ; ses crédits achetés sont conservés. '
-              'Aucun remboursement n’est fait automatiquement.'),
+          Text(tr(
+              'L’utilisateur repasse tout de suite au forfait FREE, prolongations comprises. Les crédits du forfait sont remplacés par ceux du forfait FREE ; ses crédits achetés sont conservés. Aucun remboursement n’est fait automatiquement.')),
           const SizedBox(height: 8),
           TextField(
             controller: controller,
             decoration:
-                const InputDecoration(labelText: 'Motif (journal d’audit)'),
+                InputDecoration(labelText: tr('Motif (journal d’audit)')),
           ),
         ],
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(d), child: const Text('Annuler')),
+            onPressed: () => Navigator.pop(d), child: Text(tr('Annuler'))),
         FilledButton(
           style: FilledButton.styleFrom(
               backgroundColor: Theme.of(d).colorScheme.error),
@@ -598,7 +623,7 @@ Future<String?> _endSubscriptionDialog(
             final r = controller.text.trim();
             if (r.isNotEmpty) Navigator.pop(d, r);
           },
-          child: const Text('Mettre fin'),
+          child: Text(tr('Mettre fin')),
         ),
       ],
     ),

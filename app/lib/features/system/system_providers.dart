@@ -3,18 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Mentions affichées si la configuration distante est injoignable (hors ligne).
-const fallbackDisclaimers = [
-  'Les pronostics sont des estimations, pas des certitudes.',
-  'Les résultats sportifs sont incertains.',
-  'Les performances passées ne garantissent pas les performances futures.',
-  'Les probabilités affichées sont des estimations.',
-  'Les cotes peuvent changer à tout moment.',
-  'Les données peuvent être incomplètes.',
-  'Aucun gain n’est garanti.',
-  'Coupon Pro IA n’est pas un bookmaker : aucun pari n’est placé dans l’application.',
-  'Service réservé aux personnes majeures.',
+final fallbackDisclaimers = [
+  tr('Les pronostics sont des estimations, pas des certitudes.'),
+  tr('Les résultats sportifs sont incertains.'),
+  tr('Les performances passées ne garantissent pas les performances futures.'),
+  tr('Les probabilités affichées sont des estimations.'),
+  tr('Les cotes peuvent changer à tout moment.'),
+  tr('Les données peuvent être incomplètes.'),
+  tr('Aucun gain n’est garanti.'),
+  tr('Coupon Pro IA n’est pas un bookmaker : aucun pari n’est placé dans l’application.'),
+  tr('Service réservé aux personnes majeures.'),
 ];
 
 /// Interrupteurs des modules, pilotés depuis l'administration sans nouvel APK.

@@ -12,6 +12,7 @@ import '../../studio/data/studio_models.dart';
 import '../data/community_models.dart';
 import '../data/community_repository.dart';
 import 'community_widgets.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Créer ou modifier son profil Tipster.
 class TipsterEditScreen extends ConsumerWidget {
@@ -21,24 +22,23 @@ class TipsterEditScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final rights = ref.watch(communityRightsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Mon profil Tipster')),
+      appBar: AppBar(title: Text(tr('Mon profil Tipster'))),
       body: rights.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Indisponible',
+            title: tr('Indisponible'),
             body: userMessageFor(e)),
         data: (r) {
           if (r.profile == null && !r.canPublish) {
             return InfoMessage(
               icon: Icons.workspace_premium_outlined,
-              title: 'Devenir Tipster',
-              body:
-                  'Un profil Tipster public et la publication de coupons sont inclus dans les forfaits '
-                  'PRO TIPSTER et BUSINESS. Tout le monde peut suivre, réagir et commenter.',
+              title: tr('Devenir Tipster'),
+              body: tr(
+                  'Un profil Tipster public et la publication de coupons sont inclus dans les forfaits PRO TIPSTER et BUSINESS. Tout le monde peut suivre, réagir et commenter.'),
               action: FilledButton(
                 onPressed: () => context.push(AppRoutes.billing),
-                child: const Text('Voir les forfaits'),
+                child: Text(tr('Voir les forfaits')),
               ),
             );
           }
@@ -89,7 +89,7 @@ class _FormState extends ConsumerState<_Form> {
     try {
       final bytes = await file.readAsBytes();
       if (bytes.length > 1024 * 1024) {
-        throw const FormatException('Image trop lourde (1 Mo maximum).');
+        throw FormatException(tr('Image trop lourde (1 Mo maximum).'));
       }
       final path = await ref
           .read(communityRepositoryProvider)
@@ -111,8 +111,8 @@ class _FormState extends ConsumerState<_Form> {
     for (final t in [_handle.text, _name.text, _bio.text]) {
       final bad = forbiddenWordIn(t);
       if (bad != null) {
-        showMessage(
-            context, 'Texte refusé : « $bad ». Pas de promesse de résultat.',
+        showMessage(context,
+            trf('Texte refusé : « {0} ». Pas de promesse de résultat.', [bad]),
             error: true);
         return;
       }
@@ -131,8 +131,8 @@ class _FormState extends ConsumerState<_Form> {
       ref.invalidate(communityRightsProvider);
       ref.invalidate(tipsterProvider);
       if (mounted) {
-        showMessage(
-            context, _create ? 'Profil Tipster créé.' : 'Profil mis à jour.');
+        showMessage(context,
+            _create ? tr('Profil Tipster créé.') : tr('Profil mis à jour.'));
         context.pop();
       }
     } catch (e) {
@@ -165,7 +165,7 @@ class _FormState extends ConsumerState<_Form> {
                   right: 0,
                   bottom: 0,
                   child: IconButton.filledTonal(
-                    tooltip: 'Changer la photo',
+                    tooltip: tr('Changer la photo'),
                     onPressed: _busy ? null : _pickAvatar,
                     icon: const Icon(Icons.photo_camera_outlined, size: 18),
                   ),
@@ -177,15 +177,15 @@ class _FormState extends ConsumerState<_Form> {
           TextFormField(
             controller: _handle,
             maxLength: 20,
-            decoration: const InputDecoration(
-                labelText: 'Identifiant', prefixText: '@'),
+            decoration:
+                InputDecoration(labelText: tr('Identifiant'), prefixText: '@'),
             validator: validateHandle,
             onChanged: (_) => setState(() {}),
           ),
           TextFormField(
             controller: _name,
             maxLength: 40,
-            decoration: const InputDecoration(labelText: 'Nom affiché'),
+            decoration: InputDecoration(labelText: tr('Nom affiché')),
             validator: Validators.displayName,
             onChanged: (_) => setState(() {}),
           ),
@@ -195,19 +195,18 @@ class _FormState extends ConsumerState<_Form> {
             maxLines: 4,
             minLines: 2,
             decoration:
-                const InputDecoration(labelText: 'Présentation (facultatif)'),
+                InputDecoration(labelText: tr('Présentation (facultatif)')),
           ),
           const SizedBox(height: 8),
           Text(
-            'Vos statistiques sont calculées par Coupon Pro IA à partir des résultats réels de vos coupons '
-            'publiés : elles ne se saisissent pas et ne se modifient pas. Un coupon publié reste visible, '
-            'pertes comprises.',
+            tr('Vos statistiques sont calculées par Coupon Pro IA à partir des résultats réels de vos coupons publiés : elles ne se saisissent pas et ne se modifient pas. Un coupon publié reste visible, pertes comprises.'),
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
           FilledButton(
               onPressed: _busy ? null : _save,
-              child: Text(_create ? 'Créer mon profil' : 'Enregistrer')),
+              child:
+                  Text(_create ? tr('Créer mon profil') : tr('Enregistrer'))),
         ],
       ),
     );

@@ -8,19 +8,20 @@ import '../data/sports_format.dart';
 import '../data/sports_models.dart';
 import '../data/sports_repository.dart';
 import 'sports_widgets.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
-const _jobLabels = {
-  'daily': 'Calendriers, résultats et classements',
-  'odds': 'Cotes des 48 prochaines heures',
-  'live': 'Scores en direct',
+final _jobLabels = {
+  'daily': tr('Calendriers, résultats et classements'),
+  'odds': tr('Cotes des 48 prochaines heures'),
+  'live': tr('Scores en direct'),
 };
 
-const _statusLabels = {
-  'running': 'En cours',
-  'success': 'Réussie',
-  'partial': 'Partielle',
-  'failed': 'Échec',
-  'skipped': 'Ignorée',
+final _statusLabels = {
+  'running': tr('En cours'),
+  'success': tr('Réussie'),
+  'partial': tr('Partielle'),
+  'failed': tr('Échec'),
+  'skipped': tr('Ignorée'),
 };
 
 /// Administration des données sportives : consommation du quota, journal des
@@ -41,7 +42,7 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
       await ref.read(sportsRepositoryProvider).triggerSync(job);
       if (!mounted) return;
       showMessage(context,
-          'Synchronisation lancée. Le résultat apparaît dans le journal sous peu.');
+          tr('Synchronisation lancée. Le résultat apparaît dans le journal sous peu.'));
       await Future<void>.delayed(const Duration(seconds: 4));
       ref.invalidate(syncRunsProvider);
     } catch (e) {
@@ -58,10 +59,10 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!permissions.contains('sports.configure')) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Données sportives')),
-        body: const InfoMessage(
+        appBar: AppBar(title: Text(tr('Données sportives'))),
+        body: InfoMessage(
             icon: Icons.lock_outline,
-            title: 'Accès réservé aux administrateurs'),
+            title: tr('Accès réservé aux administrateurs')),
       );
     }
     final runs = ref.watch(syncRunsProvider);
@@ -69,10 +70,10 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Données sportives'),
+        title: Text(tr('Données sportives')),
         actions: [
           IconButton(
-            tooltip: 'Actualiser',
+            tooltip: tr('Actualiser'),
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.invalidate(syncRunsProvider),
           ),
@@ -82,7 +83,7 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Journal indisponible',
+            title: tr('Journal indisponible'),
             body: userMessageFor(e)),
         data: (list) {
           final today = dateOnly(DateTime.now());
@@ -106,16 +107,21 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Fournisseur : API-Football',
+                        Text(tr('Fournisseur : API-Football'),
                             style: theme.textTheme.titleMedium),
                         const SizedBox(height: 8),
-                        Text(
-                            'Requêtes aujourd’hui (UTC) : $usedToday${budget == null ? '' : ' / $budget autorisées'}'),
-                        Text(
-                            'Quota restant annoncé par le fournisseur : ${remaining ?? 'inconnu'}'),
+                        Text(trf('Requêtes aujourd’hui (UTC) : {0}{1}', [
+                          usedToday,
+                          budget == null
+                              ? ''
+                              : trf(' / {0} autorisées', [budget])
+                        ])),
+                        Text(trf(
+                            'Quota restant annoncé par le fournisseur : {0}',
+                            [remaining ?? 'inconnu'])),
                         const SizedBox(height: 8),
                         Text(
-                          'Planification : calendriers à 4 h, cotes à 7 h et 15 h, scores en direct toutes les 15 min.',
+                          tr('Planification : calendriers à 4 h, cotes à 7 h et 15 h, scores en direct toutes les 15 min.'),
                           style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant),
                         ),
@@ -123,7 +129,7 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
                     ),
                   ),
                 ),
-                const SectionTitle('Lancer maintenant'),
+                SectionTitle(tr('Lancer maintenant')),
                 for (final entry in _jobLabels.entries)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
@@ -139,11 +145,11 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
                       label: Text(entry.value),
                     ),
                   ),
-                const SectionTitle('Journal (20 derniers passages)'),
+                SectionTitle(tr('Journal (20 derniers passages)')),
                 if (list.isEmpty)
-                  const InfoMessage(
+                  InfoMessage(
                       icon: Icons.history,
-                      title: 'Aucune synchronisation pour l’instant'),
+                      title: tr('Aucune synchronisation pour l’instant')),
                 for (final r in list) _RunTile(run: r),
               ],
             ),
@@ -196,9 +202,13 @@ class _RunTile extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '${shortDate(run.startedAt)} à ${timeLabel(run.startedAt)}'
-              '${duration == null ? '' : ' · ${duration.inSeconds} s'}'
-              ' · ${run.requestsUsed} requête(s) · ${run.itemsUpserted} élément(s)',
+              trf('{0} à {1}{2} · {3} requête(s) · {4} élément(s)', [
+                shortDate(run.startedAt),
+                timeLabel(run.startedAt),
+                duration == null ? '' : trf(' · {0} s', [duration.inSeconds]),
+                run.requestsUsed,
+                run.itemsUpserted
+              ]),
               style: theme.textTheme.bodySmall,
             ),
             if (run.error != null) ...[

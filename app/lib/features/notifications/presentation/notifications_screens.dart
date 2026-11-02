@@ -12,6 +12,7 @@ import '../../community/data/community_models.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../data/notifications_repository.dart';
 import '../data/push_service.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 const _kindIcons = {
   'coupon': Icons.receipt_long_outlined,
@@ -38,7 +39,7 @@ class NotificationBell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final unread = ref.watch(unreadCountProvider).valueOrNull ?? 0;
     return IconButton(
-      tooltip: 'Notifications',
+      tooltip: tr('Notifications'),
       onPressed: () => context.push(AppRoutes.notifications),
       icon: Badge(
         isLabelVisible: unread > 0,
@@ -67,10 +68,10 @@ class NotificationsScreen extends ConsumerWidget {
     final now = DateTime.now();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text(tr('Notifications')),
         actions: [
           IconButton(
-            tooltip: 'Tout marquer comme lu',
+            tooltip: tr('Tout marquer comme lu'),
             onPressed: () async {
               await ref.read(notificationsRepositoryProvider).markRead();
               await _refresh(ref);
@@ -78,7 +79,7 @@ class NotificationsScreen extends ConsumerWidget {
             icon: const Icon(Icons.done_all),
           ),
           IconButton(
-            tooltip: 'Réglages',
+            tooltip: tr('Réglages'),
             onPressed: () => context.push(AppRoutes.notificationSettings),
             icon: const Icon(Icons.tune),
           ),
@@ -91,17 +92,16 @@ class NotificationsScreen extends ConsumerWidget {
           error: (e, _) => ListView(children: [
             InfoMessage(
                 icon: Icons.cloud_off_outlined,
-                title: 'Indisponible',
+                title: tr('Indisponible'),
                 body: userMessageFor(e))
           ]),
           data: (list) => list.isEmpty
-              ? ListView(children: const [
+              ? ListView(children: [
                   InfoMessage(
                     icon: Icons.notifications_none,
-                    title: 'Aucune notification',
-                    body:
-                        'Coupons publiés, résultats de vos coupons, publications des Tipsters suivis et '
-                        'rappels de match apparaîtront ici.',
+                    title: tr('Aucune notification'),
+                    body: tr(
+                        'Coupons publiés, résultats de vos coupons, publications des Tipsters suivis et rappels de match apparaîtront ici.'),
                   ),
                 ])
               : ListView(
@@ -172,9 +172,11 @@ class NotificationSettingsScreen extends ConsumerWidget {
     final prefs = ref.watch(notificationPrefsProvider);
     final push = ref.watch(pushServiceProvider);
     final pushBlocked = !push.available
-        ? 'Cet appareil ne peut pas recevoir les notifications de Coupon Pro IA. '
+        ? tr(
+            'Cet appareil ne peut pas recevoir les notifications de Coupon Pro IA. ')
         : push.permissionDenied
-            ? 'Les notifications sont bloquées dans les réglages du téléphone. '
+            ? tr(
+                'Les notifications sont bloquées dans les réglages du téléphone. ')
             : null;
 
     Future<void> set(Map<String, Object> values) async {
@@ -191,12 +193,12 @@ class NotificationSettingsScreen extends ConsumerWidget {
     String hour(int h) => '${h.toString().padLeft(2, '0')}:00';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Réglages des notifications')),
+      appBar: AppBar(title: Text(tr('Réglages des notifications'))),
       body: prefs.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Indisponible',
+            title: tr('Indisponible'),
             body: userMessageFor(e)),
         data: (p) => ListView(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
@@ -205,22 +207,22 @@ class NotificationSettingsScreen extends ConsumerWidget {
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.info_outline),
-                  title: const Text('Notifications dans l’app'),
-                  subtitle:
-                      Text('${pushBlocked}Elles restent visibles ici, dans la '
-                          'boîte de réception (cloche de l’accueil).'),
+                  title: Text(tr('Notifications dans l’app')),
+                  subtitle: Text(trf(
+                      '{0}Elles restent visibles ici, dans la boîte de réception (cloche de l’accueil).',
+                      [pushBlocked])),
                 ),
               ),
             Card(
               child: SwitchListTile(
-                title: const Text('Notifications sur le téléphone'),
-                subtitle: const Text(
-                    'Coupe toutes les alertes du téléphone ; la boîte de réception continue de se remplir.'),
+                title: Text(tr('Notifications sur le téléphone')),
+                subtitle: Text(tr(
+                    'Coupe toutes les alertes du téléphone ; la boîte de réception continue de se remplir.')),
                 value: p.enabled,
                 onChanged: (v) => set({'notifications_enabled': v}),
               ),
             ),
-            const SectionTitle('Ce que je reçois'),
+            SectionTitle(tr('Ce que je reçois')),
             Card(
               child: Column(
                 children: [
@@ -234,21 +236,25 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SectionTitle('Par e-mail'),
+            SectionTitle(tr('Par e-mail')),
             Card(
               child: SwitchListTile(
                 secondary: const Icon(Icons.mail_outline),
-                title: const Text('Rapport hebdomadaire par e-mail'),
-                subtitle: Text(
-                    'Le lundi matin : votre bilan de la semaine (Mes coupons, carnet de paris) et celui '
-                    'des coupons de la plateforme, pertes comprises.'
-                    '${ref.watch(currentUserProvider)?.email == null ? '' : ' Envoyé à ${ref.watch(currentUserProvider)!.email}.'}'),
+                title: Text(tr('Rapport hebdomadaire par e-mail')),
+                subtitle: Text(trf(
+                    'Le lundi matin : votre bilan de la semaine (Mes coupons, carnet de paris) et celui des coupons de la plateforme, pertes comprises.{0}',
+                    [
+                      ref.watch(currentUserProvider)?.email == null
+                          ? ''
+                          : trf(' Envoyé à {0}.',
+                              [ref.watch(currentUserProvider)!.email])
+                    ])),
                 value: p.weeklyEmail,
                 onChanged: (v) => set({'weekly_email': v}),
               ),
             ),
             if (p.coupons) ...[
-              const SectionTitle('Types de coupons notifiés'),
+              SectionTitle(tr('Types de coupons notifiés')),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -257,8 +263,9 @@ class NotificationSettingsScreen extends ConsumerWidget {
                     children: [
                       Text(
                           p.couponCategories.isEmpty
-                              ? 'Tous les types que votre forfait permet de lire.'
-                              : 'Seulement les types choisis.',
+                              ? tr(
+                                  'Tous les types que votre forfait permet de lire.')
+                              : tr('Seulement les types choisis.'),
                           style: theme.textTheme.bodySmall),
                       const SizedBox(height: 8),
                       Wrap(
@@ -266,7 +273,7 @@ class NotificationSettingsScreen extends ConsumerWidget {
                         runSpacing: 6,
                         children: [
                           FilterChip(
-                            label: const Text('Tous'),
+                            label: Text(tr('Tous')),
                             selected: p.couponCategories.isEmpty,
                             onSelected: (_) =>
                                 set({'coupon_categories': <String>[]}),
@@ -292,16 +299,15 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 ),
               ),
             ],
-            const SectionTitle('Heures calmes'),
+            SectionTitle(tr('Heures calmes')),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                        'Aucune notification sur le téléphone pendant cette plage : elles arrivent à la fin. '
-                        'Exceptions : scores en direct, rappels de vos paris et alertes de budget, utiles sur le moment.'),
+                    Text(tr(
+                        'Aucune notification sur le téléphone pendant cette plage : elles arrivent à la fin. Exceptions : scores en direct, rappels de vos paris et alertes de budget, utiles sur le moment.')),
                     const SizedBox(height: 12),
                     Wrap(
                       crossAxisAlignment: WrapCrossAlignment.center,
@@ -332,8 +338,9 @@ class NotificationSettingsScreen extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Text(
                       p.hasQuietHours
-                          ? 'Silence de ${hour(p.quietStart)} à ${hour(p.quietEnd)} (heure de votre profil).'
-                          : 'Pas d’heures calmes.',
+                          ? trf('Silence de {0} à {1} (heure de votre profil).',
+                              [hour(p.quietStart), hour(p.quietEnd)])
+                          : tr('Pas d’heures calmes.'),
                       style: theme.textTheme.bodySmall,
                     ),
                   ],

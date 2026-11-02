@@ -8,29 +8,42 @@ import '../../../core/widgets/form_widgets.dart';
 import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Segments d'utilisateurs : (code, libellé, description).
-const campaignSegments = [
-  ('all', 'Tous les utilisateurs', 'Comptes actifs (non suspendus)'),
-  ('free', 'Sans forfait payant', 'Forfait FREE aujourd’hui'),
-  ('paying', 'Forfait payant en cours', 'STARTER, PRO TIPSTER, BUSINESS'),
-  ('expiring', 'Forfait qui se termine', 'Dans les 7 jours, sans prolongation'),
-  ('expired', 'Forfait terminé récemment', 'Depuis moins de 30 jours'),
-  ('never_paid', 'N’ont jamais payé', 'Aucun achat réussi'),
-  ('inactive_7d', 'Inactifs depuis 7 jours', 'Inscrits depuis plus de 7 jours'),
+final campaignSegments = [
+  ('all', tr('Tous les utilisateurs'), tr('Comptes actifs (non suspendus)')),
+  ('free', tr('Sans forfait payant'), tr('Forfait FREE aujourd’hui')),
+  (
+    'paying',
+    tr('Forfait payant en cours'),
+    tr('STARTER, PRO TIPSTER, BUSINESS')
+  ),
+  (
+    'expiring',
+    tr('Forfait qui se termine'),
+    tr('Dans les 7 jours, sans prolongation')
+  ),
+  ('expired', tr('Forfait terminé récemment'), tr('Depuis moins de 30 jours')),
+  ('never_paid', tr('N’ont jamais payé'), tr('Aucun achat réussi')),
+  (
+    'inactive_7d',
+    tr('Inactifs depuis 7 jours'),
+    tr('Inscrits depuis plus de 7 jours')
+  ),
 ];
 
 /// Écrans accessibles depuis une notification ciblée : (chemin, libellé).
-const campaignRoutes = [
-  ('/accueil', 'Accueil'),
-  ('/coupons', 'Coupons'),
-  ('/matchs', 'Matchs'),
-  ('/assistant', 'Assistant IA'),
-  ('/abonnement', 'Abonnement et crédits'),
-  ('/carnet', 'Carnet de paris'),
-  ('/performances', 'Performances'),
-  ('/communaute', 'Communauté'),
-  ('/laboratoire', 'Laboratoire'),
+final campaignRoutes = [
+  ('/accueil', tr('Accueil')),
+  ('/coupons', tr('Coupons')),
+  ('/matchs', tr('Matchs')),
+  ('/assistant', tr('Assistant IA')),
+  ('/abonnement', tr('Abonnement et crédits')),
+  ('/carnet', tr('Carnet de paris')),
+  ('/performances', tr('Performances')),
+  ('/communaute', tr('Communauté')),
+  ('/laboratoire', tr('Laboratoire')),
 ];
 
 final campaignAudienceProvider =
@@ -85,10 +98,13 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
 
   String? get _problem {
     final t = _title.text.trim(), b = _body.text.trim();
-    if (t.length < 3 || t.length > 80) return 'Titre : 3 à 80 caractères.';
-    if (b.length < 3 || b.length > 300) return 'Message : 3 à 300 caractères.';
+    if (t.length < 3 || t.length > 80) return tr('Titre : 3 à 80 caractères.');
+    if (b.length < 3 || b.length > 300) {
+      return tr('Message : 3 à 300 caractères.');
+    }
     if (hasForbiddenWords('$t $b')) {
-      return 'Mot interdit (sûr, garanti, assuré, gain, sans risque, 100 %…).';
+      return tr(
+          'Mot interdit (sûr, garanti, assuré, gain, sans risque, 100 %…).');
     }
     return null;
   }
@@ -97,17 +113,17 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (d) => AlertDialog(
-        title: const Text('Envoyer la notification ?'),
-        content: Text(
-            '$audience utilisateur${audience > 1 ? 's' : ''} la recevront (sauf ceux qui ont coupé « Annonces et offres »). '
-            'Trois envois par 24 heures au plus.'),
+        title: Text(tr('Envoyer la notification ?')),
+        content: Text(trf(
+            '{0} utilisateur{1} la recevront (sauf ceux qui ont coupé « Annonces et offres »). Trois envois par 24 heures au plus.',
+            [audience, audience > 1 ? 's' : ''])),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(d, false),
-              child: const Text('Annuler')),
+              child: Text(tr('Annuler'))),
           FilledButton(
               onPressed: () => Navigator.pop(d, true),
-              child: const Text('Envoyer')),
+              child: Text(tr('Envoyer'))),
         ],
       ),
     );
@@ -126,7 +142,8 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
       if (mounted) {
         _title.clear();
         _body.clear();
-        showMessage(context, 'Notification envoyée à $n utilisateur(s).');
+        showMessage(
+            context, trf('Notification envoyée à {0} utilisateur(s).', [n]));
       }
     } on PostgrestException catch (e) {
       if (mounted) showMessage(context, e.message, error: true);
@@ -143,10 +160,10 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!perms.contains('campaigns.send')) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Notifications ciblées')),
-        body: const InfoMessage(
+        appBar: AppBar(title: Text(tr('Notifications ciblées'))),
+        body: InfoMessage(
             icon: Icons.lock_outline,
-            title: 'Écran réservé au super administrateur'),
+            title: tr('Écran réservé au super administrateur')),
       );
     }
     final theme = Theme.of(context);
@@ -154,11 +171,11 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
     final history = ref.watch(campaignsProvider);
     final problem = _problem;
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications ciblées')),
+      appBar: AppBar(title: Text(tr('Notifications ciblées'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
-          const SectionTitle('Destinataires'),
+          SectionTitle(tr('Destinataires')),
           Card(
             child: RadioGroup<String>(
               groupValue: _segment,
@@ -180,18 +197,18 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             child: Text(
                 audience.when(
-                    loading: () => 'Calcul de l’audience…',
+                    loading: () => tr('Calcul de l’audience…'),
                     error: (e, _) => userMessageFor(e),
-                    data: (n) =>
-                        'Audience : $n utilisateur${n > 1 ? 's' : ''}'),
+                    data: (n) => trf('Audience : {0} utilisateur{1}',
+                        [n, n > 1 ? 's' : ''])),
                 style: theme.textTheme.titleSmall),
           ),
-          const SectionTitle('Message'),
+          SectionTitle(tr('Message')),
           TextField(
             controller: _title,
             maxLength: 80,
-            decoration: const InputDecoration(
-                labelText: 'Titre', border: OutlineInputBorder()),
+            decoration: InputDecoration(
+                labelText: tr('Titre'), border: OutlineInputBorder()),
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 8),
@@ -199,14 +216,14 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
             controller: _body,
             maxLength: 300,
             maxLines: 3,
-            decoration: const InputDecoration(
-                labelText: 'Message', border: OutlineInputBorder()),
+            decoration: InputDecoration(
+                labelText: tr('Message'), border: OutlineInputBorder()),
             onChanged: (_) => setState(() {}),
           ),
           DropdownButtonFormField<String>(
             initialValue: _route,
-            decoration: const InputDecoration(
-                labelText: 'Écran ouvert au toucher',
+            decoration: InputDecoration(
+                labelText: tr('Écran ouvert au toucher'),
                 border: OutlineInputBorder()),
             items: [
               for (final (path, label) in campaignRoutes)
@@ -238,30 +255,38 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
                 ? null
                 : () => _send(audience.valueOrNull!),
             icon: const Icon(Icons.send_outlined),
-            label: const Text('Envoyer'),
+            label: Text(tr('Envoyer')),
           ),
           const SizedBox(height: 6),
           Text(
-              'Reçue dans la boîte de l’app et sur le téléphone (heures calmes respectées), sauf pour les utilisateurs '
-              'qui ont coupé « Annonces et offres ». Chaque envoi est inscrit au journal d’audit.',
+              tr('Reçue dans la boîte de l’app et sur le téléphone (heures calmes respectées), sauf pour les utilisateurs qui ont coupé « Annonces et offres ». Chaque envoi est inscrit au journal d’audit.'),
               style: theme.textTheme.bodySmall),
-          const SectionTitle('Derniers envois'),
+          SectionTitle(tr('Derniers envois')),
           ...history.when(
             loading: () => [const LinearProgressIndicator()],
             error: (e, _) => [Text(userMessageFor(e))],
             data: (list) => list.isEmpty
-                ? [const Text('Aucun envoi pour le moment.')]
+                ? [Text(tr('Aucun envoi pour le moment.'))]
                 : [
                     for (final c in list)
                       Card(
                         child: ListTile(
                           title: Text('${c['title']}'),
-                          subtitle: Text(
-                              '${c['body']}\n${campaignSegments.firstWhere((s) => s.$1 == c['segment'], orElse: () => (
-                                    c['segment'] as String,
-                                    c['segment'] as String,
-                                    ''
-                                  )).$2} · ${c['audience']} destinataires · ${_when(DateTime.parse(c['created_at'] as String).toLocal())}'),
+                          subtitle:
+                              Text(trf('{0}\n{1} · {2} destinataires · {3}', [
+                            c['body'],
+                            campaignSegments
+                                .firstWhere((s) => s.$1 == c['segment'],
+                                    orElse: () => (
+                                          c['segment'] as String,
+                                          c['segment'] as String,
+                                          ''
+                                        ))
+                                .$2,
+                            c['audience'],
+                            _when(DateTime.parse(c['created_at'] as String)
+                                .toLocal())
+                          ])),
                           isThreeLine: true,
                         ),
                       ),
@@ -272,5 +297,6 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
     );
   }
 
-  static String _when(DateTime d) => '${shortDate(d)} à ${timeLabel(d)}';
+  static String _when(DateTime d) =>
+      trf('{0} à {1}', [shortDate(d), timeLabel(d)]);
 }

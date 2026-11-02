@@ -21,6 +21,7 @@ import '../data/coupon_watch.dart';
 import 'bookmaker_actions.dart';
 import 'coupon_actions.dart';
 import 'coupon_widgets.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Fiche d'un coupon : sélections avec cote publiée (conservée) et cote actuelle,
 /// justification de chaque pronostic, analyse générale, fiabilité, source, historique.
@@ -34,7 +35,8 @@ class CouponDetailScreen extends ConsumerWidget {
     final coupon = ref.watch(couponProvider(couponId));
     return Scaffold(
       appBar: AppBar(
-        title: Text(categoryLabels[coupon.valueOrNull?.category] ?? 'Coupon'),
+        title:
+            Text(categoryLabels[coupon.valueOrNull?.category] ?? tr('Coupon')),
         actions: [
           if (coupon.valueOrNull case final c?
               when c.status == 'published' &&
@@ -44,7 +46,7 @@ class CouponDetailScreen extends ConsumerWidget {
           if (coupon.valueOrNull case final c?
               when !c.locked && !c.isWithdrawn && c.selections.isNotEmpty)
             IconButton(
-              tooltip: 'Partager',
+              tooltip: tr('Partager'),
               icon: const Icon(Icons.share_outlined),
               onPressed: () => SharePlus.instance.share(ShareParams(
                   text: couponShareText(c,
@@ -53,7 +55,7 @@ class CouponDetailScreen extends ConsumerWidget {
           if (coupon.valueOrNull case final c?
               when !c.locked && !c.isWithdrawn && c.selections.isNotEmpty)
             IconButton(
-              tooltip: 'Créer un visuel',
+              tooltip: tr('Créer un visuel'),
               icon: const Icon(Icons.palette_outlined),
               onPressed: () =>
                   context.push(AppRoutes.studioFor('platform', c.id)),
@@ -64,11 +66,11 @@ class CouponDetailScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Coupon indisponible',
+            title: tr('Coupon indisponible'),
             body: userMessageFor(e)),
         data: (c) => c == null
-            ? const InfoMessage(
-                icon: Icons.help_outline, title: 'Coupon introuvable')
+            ? InfoMessage(
+                icon: Icons.help_outline, title: tr('Coupon introuvable'))
             : RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(couponProvider(couponId));
@@ -108,8 +110,8 @@ class _CouponBody extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Text(
-                'Coupon retiré par la plateforme${c.statusNote == null ? '' : ' : ${c.statusNote}'}. '
-                'Son contenu d’origine reste affiché pour la transparence.',
+                trf('Coupon retiré par la plateforme{0}. Son contenu d’origine reste affiché pour la transparence.',
+                    [c.statusNote == null ? '' : ' : ${c.statusNote}']),
                 style: TextStyle(color: theme.colorScheme.onErrorContainer),
               ),
             ),
@@ -119,14 +121,20 @@ class _CouponBody extends ConsumerWidget {
             child: ListTile(
               leading: ResultBadge(result: c.result, odd: c.settledOdd),
               title: Text(c.result == 'won'
-                  ? 'Coupon gagnant${c.settledOdd != null && c.settledOdd != c.totalOdd ? ' (cote réglée ${decimal(c.settledOdd!)} après annulation d’une sélection)' : ''}'
+                  ? trf('Coupon gagnant{0}', [
+                      c.settledOdd != null && c.settledOdd != c.totalOdd
+                          ? trf(
+                              ' (cote réglée {0} après annulation d’une sélection)',
+                              [decimal(c.settledOdd!)])
+                          : ''
+                    ])
                   : c.result == 'lost'
-                      ? 'Coupon perdant'
-                      : 'Coupon annulé (toutes les sélections annulées)'),
+                      ? tr('Coupon perdant')
+                      : tr('Coupon annulé (toutes les sélections annulées)')),
               subtitle: c.settledAt == null
                   ? null
-                  : Text(
-                      'Réglé le ${shortDate(c.settledAt!)} à ${timeLabel(c.settledAt!)}, sur le score à 90 minutes'),
+                  : Text(trf('Réglé le {0} à {1}, sur le score à 90 minutes',
+                      [shortDate(c.settledAt!), timeLabel(c.settledAt!)])),
             ),
           ),
         Card(
@@ -138,8 +146,8 @@ class _CouponBody extends ConsumerWidget {
                 Row(
                   children: [
                     Expanded(
-                        child:
-                            Text(c.title, style: theme.textTheme.titleLarge)),
+                        child: Text(trTitle(c.title),
+                            style: theme.textTheme.titleLarge)),
                   ],
                 ),
                 if (c.description.isNotEmpty) ...[
@@ -153,7 +161,8 @@ class _CouponBody extends ConsumerWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Cote totale', style: theme.textTheme.labelMedium),
+                        Text(tr('Cote totale'),
+                            style: theme.textTheme.labelMedium),
                         Text(decimal(c.totalOdd),
                             style: theme.textTheme.headlineMedium
                                 ?.copyWith(color: theme.colorScheme.primary)),
@@ -164,7 +173,7 @@ class _CouponBody extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Probabilité estimée (modèle)',
+                          Text(tr('Probabilité estimée (modèle)'),
                               style: theme.textTheme.labelMedium),
                           Text(pct(c.combinedProbability),
                               style: theme.textTheme.titleLarge),
@@ -180,7 +189,7 @@ class _CouponBody extends ConsumerWidget {
                   children: [
                     RiskBadge(risk: c.riskLevel),
                     if (!c.locked)
-                      Text('${c.selections.length} sélections',
+                      Text(trf('{0} sélections', [c.selections.length]),
                           style: theme.textTheme.labelMedium),
                   ],
                 ),
@@ -192,7 +201,7 @@ class _CouponBody extends ConsumerWidget {
             ),
           ),
         ),
-        const SectionTitle('Sélections'),
+        SectionTitle(tr('Sélections')),
         if (c.locked) LockedCouponNotice(lastKickoffAt: c.lastKickoffAt),
         if (!c.locked && c.result == null)
           _OddsMoveBanner(coupon: c, current: current),
@@ -207,7 +216,7 @@ class _CouponBody extends ConsumerWidget {
               title: c.title, totalOdd: c.totalOdd, selections: c.selections),
         ],
         if (c.summary.isNotEmpty) ...[
-          const SectionTitle('Analyse générale'),
+          SectionTitle(tr('Analyse générale')),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -217,7 +226,7 @@ class _CouponBody extends ConsumerWidget {
                   Text(c.summary, style: theme.textTheme.bodyMedium),
                   if (c.vigilance.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    Text('Points de vigilance',
+                    Text(tr('Points de vigilance'),
                         style: theme.textTheme.labelLarge),
                     for (final v in c.vigilance)
                       Padding(
@@ -239,7 +248,7 @@ class _CouponBody extends ConsumerWidget {
           ),
         ],
         if (c.history.isNotEmpty) ...[
-          const SectionTitle('Historique'),
+          SectionTitle(tr('Historique')),
           Card(
             child: Column(
               children: [
@@ -266,7 +275,7 @@ class _CouponBody extends ConsumerWidget {
           OutlinedButton.icon(
             onPressed: () => context.push(AppRoutes.couponEditFor(c.id)),
             icon: const Icon(Icons.edit_outlined),
-            label: const Text('Modifier ce coupon (super administrateur)'),
+            label: Text(tr('Modifier ce coupon (super administrateur)')),
           ),
         ],
         if (perms.contains('coupons.edit') && c.isWithdrawn) ...[
@@ -290,7 +299,7 @@ class _CouponBody extends ConsumerWidget {
               }
             },
             icon: const Icon(Icons.copy_all_outlined),
-            label: const Text('Dupliquer et modifier (correction)'),
+            label: Text(tr('Dupliquer et modifier (correction)')),
           ),
         ],
         if (canManage && c.status == 'published') ...[
@@ -298,7 +307,7 @@ class _CouponBody extends ConsumerWidget {
           OutlinedButton.icon(
             onPressed: () => withdrawCoupon(context, ref, c),
             icon: const Icon(Icons.remove_circle_outline),
-            label: const Text('Retirer ce coupon (administrateur)'),
+            label: Text(tr('Retirer ce coupon (administrateur)')),
           ),
         ],
         if (canDelete && c.isWithdrawn) ...[
@@ -313,16 +322,20 @@ class _CouponBody extends ConsumerWidget {
               }
             },
             icon: const Icon(Icons.delete_forever_outlined),
-            label: const Text('Supprimer définitivement (administrateur)'),
+            label: Text(tr('Supprimer définitivement (administrateur)')),
           ),
         ],
         const SizedBox(height: 16),
         Text(
           [
             if (c.summaryFromAi)
-              'Analyse rédigée par l’IA à partir de données vérifiées',
+              tr('Analyse rédigée par l’IA à partir de données vérifiées'),
             if (c.publishedAt != null)
-              'publié le ${shortDate(c.publishedAt!)}/${c.publishedAt!.year} à ${timeLabel(c.publishedAt!)}',
+              trf('publié le {0}/{1} à {2}', [
+                shortDate(c.publishedAt!),
+                c.publishedAt!.year,
+                timeLabel(c.publishedAt!)
+              ]),
           ].join(' · '),
           style: muted,
           textAlign: TextAlign.center,
@@ -330,16 +343,14 @@ class _CouponBody extends ConsumerWidget {
         if (perms.contains('ai.providers'))
           SuperAdminNote(
             text: [
-              'moteur ${c.engineVersion}',
-              'source ${c.dataSource}',
-              if (c.aiModel != null) 'IA ${c.aiModel}',
+              trf('moteur {0}', [c.engineVersion]),
+              trf('source {0}', [c.dataSource]),
+              if (c.aiModel != null) trf('IA {0}', [c.aiModel]),
             ].join(' · '),
           ),
         const SizedBox(height: 4),
         Text(
-          'Probabilité combinée = produit des probabilités du modèle, matchs supposés indépendants. '
-          'Les cotes publiées sont conservées ; la cote actuelle est affichée à part. '
-          'Ce sont des estimations : aucun gain n’est garanti. Pariez de façon responsable.',
+          tr('Probabilité combinée = produit des probabilités du modèle, matchs supposés indépendants. Les cotes publiées sont conservées ; la cote actuelle est affichée à part. Ce sont des estimations : aucun gain n’est garanti. Pariez de façon responsable.'),
           style: muted,
           textAlign: TextAlign.center,
         ),
@@ -389,7 +400,7 @@ class _WatchButton extends ConsumerWidget {
     final watched = ref.watch(couponWatchedProvider(couponId)).valueOrNull;
     if (watched == null) return const SizedBox.shrink();
     return IconButton(
-      tooltip: watched ? 'Ne plus suivre la cote' : 'Suivre la cote',
+      tooltip: watched ? tr('Ne plus suivre la cote') : tr('Suivre la cote'),
       icon: Icon(watched
           ? Icons.notifications_active
           : Icons.notifications_none_outlined),
@@ -400,8 +411,9 @@ class _WatchButton extends ConsumerWidget {
             showMessage(
                 context,
                 on
-                    ? 'Vous serez prévenu si une cote bouge fortement avant le match.'
-                    : 'Vous ne suivez plus la cote de ce coupon.');
+                    ? tr(
+                        'Vous serez prévenu si une cote bouge fortement avant le match.')
+                    : tr('Vous ne suivez plus la cote de ce coupon.'));
           }
         } catch (e) {
           if (context.mounted) {
@@ -438,11 +450,13 @@ class _OddsMoveBanner extends ConsumerWidget {
       child: ListTile(
         leading:
             Icon(down ? Icons.trending_down : Icons.trending_up, color: color),
-        title: Text(
-            'Cote totale actuelle ${decimal(now)} (${down ? '−' : '+'}${(move.abs() * 100).round()} %)'),
+        title: Text(trf('Cote totale actuelle {0} ({1}{2} %)',
+            [decimal(now), down ? '−' : '+', (move.abs() * 100).round()])),
         subtitle: Text(down
-            ? 'Le marché y croit davantage depuis la publication : le retour potentiel diminue.'
-            : 'Le marché y croit moins depuis la publication (absence, composition ?) : vérifiez avant de jouer.'),
+            ? tr(
+                'Le marché y croit davantage depuis la publication : le retour potentiel diminue.')
+            : tr(
+                'Le marché y croit moins depuis la publication (absence, composition ?) : vérifiez avant de jouer.')),
       ),
     );
   }

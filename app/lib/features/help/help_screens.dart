@@ -7,6 +7,7 @@ import '../matches/presentation/sports_widgets.dart';
 import '../billing/credit_costs.dart';
 import '../profile/presentation/responsible_gaming_screen.dart';
 import 'help_content.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Centre d'aide : recherche, articles par thème, contact du support.
 class HelpScreen extends ConsumerStatefulWidget {
@@ -36,7 +37,7 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
           onTap: () => context.push(AppRoutes.helpArticleFor(a.id)),
         );
     return Scaffold(
-      appBar: AppBar(title: const Text('Aide et questions fréquentes')),
+      appBar: AppBar(title: Text(tr('Aide et questions fréquentes'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
@@ -46,12 +47,12 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
               isDense: true,
-              hintText: 'Rechercher : crédits, coupon du jour, widget…',
+              hintText: tr('Rechercher : crédits, coupon du jour, widget…'),
               prefixIcon: const Icon(Icons.search),
               suffixIcon: q.isEmpty
                   ? null
                   : IconButton(
-                      tooltip: 'Effacer',
+                      tooltip: tr('Effacer'),
                       icon: const Icon(Icons.close),
                       onPressed: () => setState(_search.clear)),
             ),
@@ -59,11 +60,11 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
           const SizedBox(height: 8),
           if (q.length >= 2) ...[
             if (found.isEmpty)
-              const InfoMessage(
+              InfoMessage(
                 icon: Icons.search_off,
-                title: 'Aucun article',
-                body:
-                    'Essayez un autre mot, ou écrivez-nous : nous répondons à chaque message.',
+                title: tr('Aucun article'),
+                body: tr(
+                    'Essayez un autre mot, ou écrivez-nous : nous répondons à chaque message.'),
               )
             else
               Card(
@@ -91,7 +92,7 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
           OutlinedButton.icon(
             onPressed: () => contactSupport(context, ref),
             icon: const Icon(Icons.support_agent),
-            label: const Text('Contacter le support'),
+            label: Text(tr('Contacter le support')),
           ),
         ],
       ),
@@ -111,9 +112,9 @@ class HelpArticleScreen extends ConsumerWidget {
     final a = helpArticle(id);
     if (a == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Aide')),
-        body: const InfoMessage(
-            icon: Icons.help_outline, title: 'Article introuvable'),
+        appBar: AppBar(title: Text(tr('Aide'))),
+        body: InfoMessage(
+            icon: Icons.help_outline, title: tr('Article introuvable')),
       );
     }
     String fill(String t) => fillCosts(t,
@@ -169,7 +170,7 @@ class HelpArticleScreen extends ConsumerWidget {
           ],
           if (related.isNotEmpty) ...[
             const SizedBox(height: 20),
-            Text('Dans le même thème',
+            Text(tr('Dans le même thème'),
                 style: theme.textTheme.titleSmall
                     ?.copyWith(fontWeight: FontWeight.w800)),
             for (final r in related)
@@ -195,7 +196,7 @@ class HelpButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IconButton(
-        tooltip: 'Aide',
+        tooltip: tr('Aide'),
         icon: const Icon(Icons.help_outline),
         onPressed: () => context.push(AppRoutes.helpArticleFor(articleId)),
       );

@@ -16,18 +16,19 @@ import '../data/coupon_phase.dart';
 import '../data/coupon_repository.dart';
 import 'coupon_edit_screen.dart' show confirmAiOverride;
 import 'coupon_widgets.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
-const _triggerLabels = {
-  'schedule': 'Programmée',
-  'continuous': 'Continue',
-  'manual': 'Manuelle'
+final _triggerLabels = {
+  'schedule': tr('Programmée'),
+  'continuous': tr('Continue'),
+  'manual': tr('Manuelle')
 };
-const _runStatusLabels = {
-  'running': 'En cours',
-  'success': 'Réussie',
-  'partial': 'Partielle',
-  'refused': 'Refus motivé',
-  'failed': 'Échec technique',
+final _runStatusLabels = {
+  'running': tr('En cours'),
+  'success': tr('Réussie'),
+  'partial': tr('Partielle'),
+  'refused': tr('Refus motivé'),
+  'failed': tr('Échec technique'),
 };
 
 /// Administration minimale des générations : profils, génération à la demande,
@@ -64,9 +65,12 @@ class _GenerationsAdminScreenState
         showMessage(
           context,
           run == null
-              ? 'Génération non lancée.'
-              : '${_runStatusLabels[run['status']] ?? run['status']} : ${run['coupons']} coupon(s)'
-                  '${reasons.isEmpty ? '' : '\n$reasons'}',
+              ? tr('Génération non lancée.')
+              : trf('{0} : {1} coupon(s){2}', [
+                  _runStatusLabels[run['status']] ?? run['status'],
+                  run['coupons'],
+                  reasons.isEmpty ? '' : '\n$reasons'
+                ]),
           error: run?['status'] == 'failed',
         );
       }
@@ -86,7 +90,9 @@ class _GenerationsAdminScreenState
     try {
       await ref.read(couponRepositoryProvider).updateProfile(p.id, patch);
       ref.invalidate(couponProfilesProvider);
-      if (mounted) showMessage(context, 'Profil « ${p.name} » mis à jour.');
+      if (mounted) {
+        showMessage(context, trf('Profil « {0} » mis à jour.', [p.name]));
+      }
     } catch (e) {
       if (mounted) showMessage(context, userMessageFor(e), error: true);
     }
@@ -100,8 +106,8 @@ class _GenerationsAdminScreenState
         showMessage(
             context,
             approve
-                ? 'Coupon validé : il sera publié à son heure.'
-                : 'Coupon rejeté.');
+                ? tr('Coupon validé : il sera publié à son heure.')
+                : tr('Coupon rejeté.'));
       }
     } catch (e) {
       if (mounted) showMessage(context, userMessageFor(e), error: true);
@@ -114,18 +120,22 @@ class _GenerationsAdminScreenState
             await showDialog<bool>(
               context: context,
               builder: (d) => AlertDialog(
-                title: const Text('Publier maintenant ?'),
-                content: Text(
-                    '« ${c.title} » sera visible tout de suite${c.status == 'pending_review' ? ' (il est aussi validé)' : ''}. '
-                    'Un dernier contrôle vérifie que chaque match est toujours programmé. Une fois publié, '
-                    'le coupon ne peut plus être modifié.'),
+                title: Text(tr('Publier maintenant ?')),
+                content: Text(trf(
+                    '« {0} » sera visible tout de suite{1}. Un dernier contrôle vérifie que chaque match est toujours programmé. Une fois publié, le coupon ne peut plus être modifié.',
+                    [
+                      c.title,
+                      c.status == 'pending_review'
+                          ? tr(' (il est aussi validé)')
+                          : ''
+                    ])),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(d, false),
-                      child: const Text('Annuler')),
+                      child: Text(tr('Annuler'))),
                   FilledButton(
                       onPressed: () => Navigator.pop(d, true),
-                      child: const Text('Publier')),
+                      child: Text(tr('Publier'))),
                 ],
               ),
             );
@@ -134,11 +144,11 @@ class _GenerationsAdminScreenState
     try {
       await ref.read(couponRepositoryProvider).publishNow(c.id, force: force);
       _refresh();
-      if (mounted) showMessage(context, 'Coupon publié.');
+      if (mounted) showMessage(context, tr('Coupon publié.'));
     } on CouponAiConflict catch (e) {
       if (mounted) setState(() => _publishing = null);
       if (mounted &&
-          await confirmAiOverride(context, e.items, 'Publier quand même')) {
+          await confirmAiOverride(context, e.items, tr('Publier quand même'))) {
         await _publishNow(c, force: true);
       }
     } catch (e) {
@@ -159,20 +169,20 @@ class _GenerationsAdminScreenState
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!permissions.contains('generation.manage')) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Coupons et générations')),
-        body: const InfoMessage(
+        appBar: AppBar(title: Text(tr('Coupons et générations'))),
+        body: InfoMessage(
             icon: Icons.lock_outline,
-            title: 'Accès réservé aux administrateurs'),
+            title: tr('Accès réservé aux administrateurs')),
       );
     }
     final profiles = ref.watch(couponProfilesProvider);
     final history = ref.watch(couponHistoryProvider);
     final canPublish = permissions.contains('coupons.publish');
-    const filters = {
-      'all': 'Tous',
-      'pending_review': 'À valider',
-      'ready': 'Programmés',
-      'published': 'Publiés',
+    final filters = {
+      'all': tr('Tous'),
+      'pending_review': tr('À valider'),
+      'ready': tr('Programmés'),
+      'published': tr('Publiés'),
     };
     final runs = ref.watch(generationRunsProvider);
     final flags =
@@ -180,10 +190,10 @@ class _GenerationsAdminScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Coupons et générations'),
+        title: Text(tr('Coupons et générations')),
         actions: [
           IconButton(
-              tooltip: 'Actualiser',
+              tooltip: tr('Actualiser'),
               icon: const Icon(Icons.refresh),
               onPressed: _refresh)
         ],
@@ -194,13 +204,19 @@ class _GenerationsAdminScreenState
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
           children: [
             Text(
-              'Le moteur se réveille toutes les 15 minutes : il génère les créneaux échus (heure de '
-              'Ouagadougou), puis publie les coupons prêts après un dernier contrôle. '
-              'Génération programmée : ${flags['auto_generation_scheduled'] == true ? 'active' : 'coupée'} · '
-              'continue : ${flags['auto_generation_continuous'] == true ? 'active' : 'coupée'}.',
+              trf(
+                  'Le moteur se réveille toutes les 15 minutes : il génère les créneaux échus (heure de Ouagadougou), puis publie les coupons prêts après un dernier contrôle. Génération programmée : {0} · continue : {1}.',
+                  [
+                    flags['auto_generation_scheduled'] == true
+                        ? 'active'
+                        : tr('coupée'),
+                    flags['auto_generation_continuous'] == true
+                        ? 'active'
+                        : tr('coupée')
+                  ]),
               style: theme.textTheme.bodySmall,
             ),
-            const SectionTitle('Profils de génération'),
+            SectionTitle(tr('Profils de génération')),
             profiles.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text(userMessageFor(e)),
@@ -228,8 +244,8 @@ class _GenerationsAdminScreenState
                 ],
               ),
             ),
-            const SectionTitle('Historique des coupons'),
-            Text('Du plus récent au plus ancien selon la dernière action.',
+            SectionTitle(tr('Historique des coupons')),
+            Text(tr('Du plus récent au plus ancien selon la dernière action.'),
                 style: theme.textTheme.bodySmall),
             const SizedBox(height: 6),
             Wrap(spacing: 8, children: [
@@ -250,7 +266,7 @@ class _GenerationsAdminScreenState
                     if (_historyFilter == 'all' || c.status == _historyFilter) c
                 ];
                 if (list.isEmpty) {
-                  return Text('Aucun coupon.',
+                  return Text(tr('Aucun coupon.'),
                       style: theme.textTheme.bodyMedium);
                 }
                 final now = DateTime.now();
@@ -279,19 +295,21 @@ class _GenerationsAdminScreenState
                                 children: [
                                   if (c.status == 'ready')
                                     Text(
-                                        'Publication prévue ${couponDateLabel(c.publishAt, now)}',
+                                        trf('Publication prévue {0}', [
+                                          couponDateLabel(c.publishAt, now)
+                                        ]),
                                         style: theme.textTheme.labelSmall),
                                   if (c.status == 'pending_review') ...[
                                     TextButton.icon(
                                       onPressed: () => _review(c, false),
                                       icon: Icon(Icons.close,
                                           color: theme.colorScheme.error),
-                                      label: const Text('Rejeter'),
+                                      label: Text(tr('Rejeter')),
                                     ),
                                     OutlinedButton.icon(
                                       onPressed: () => _review(c, true),
                                       icon: const Icon(Icons.check),
-                                      label: const Text('Valider'),
+                                      label: Text(tr('Valider')),
                                     ),
                                   ],
                                   if (permissions.contains('coupons.edit'))
@@ -300,7 +318,7 @@ class _GenerationsAdminScreenState
                                           .push(AppRoutes.couponEditFor(c.id))
                                           .then((_) => _refresh()),
                                       icon: const Icon(Icons.edit_outlined),
-                                      label: const Text('Modifier'),
+                                      label: Text(tr('Modifier')),
                                     ),
                                   if (canPublish)
                                     FilledButton.icon(
@@ -314,7 +332,7 @@ class _GenerationsAdminScreenState
                                               child: CircularProgressIndicator(
                                                   strokeWidth: 2))
                                           : const Icon(Icons.send_outlined),
-                                      label: const Text('Publier maintenant'),
+                                      label: Text(tr('Publier maintenant')),
                                     ),
                                 ],
                               ),
@@ -325,12 +343,12 @@ class _GenerationsAdminScreenState
                 );
               },
             ),
-            const SectionTitle('Journal des générations'),
+            SectionTitle(tr('Journal des générations')),
             runs.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text(userMessageFor(e)),
               data: (list) => list.isEmpty
-                  ? Text('Aucune génération pour l’instant.',
+                  ? Text(tr('Aucune génération pour l’instant.'),
                       style: theme.textTheme.bodyMedium)
                   : Card(
                       child: Column(
@@ -381,19 +399,30 @@ class _ProfileCard extends StatelessWidget {
             Text(
               [
                 p.mode == 'scheduled'
-                    ? 'Programmé ${p.generateTimes.join(', ')} (+${p.publishDelayMinutes} min)'
-                    : 'Continu',
+                    ? trf('Programmé {0} (+{1} min)',
+                        [p.generateTimes.join(', '), p.publishDelayMinutes])
+                    : tr('Continue'),
                 p.publishMode == 'auto'
-                    ? 'publication automatique'
-                    : 'validation humaine',
+                    ? tr('publication automatique')
+                    : tr('validation humaine'),
               ].join(' · '),
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 4),
             Text(
-              '${c['min_selections'] ?? '?'} à ${c['max_selections'] ?? '?'} sélections · cote ${n('min_total_odd')} à ${n('max_total_odd')} · '
-              'modèle ≥ ${c['min_model_probability'] is num ? pct((c['min_model_probability'] as num).toDouble()) : '?'} · '
-              'marchés ${(c['markets'] as List?)?.join(', ') ?? '?'} · fenêtre ${c['window_hours'] ?? '?'} h',
+              trf(
+                  '{0} à {1} sélections · cote {2} à {3} · modèle ≥ {4} · marchés {5} · fenêtre {6} h',
+                  [
+                    c['min_selections'] ?? '?',
+                    c['max_selections'] ?? '?',
+                    n('min_total_odd'),
+                    n('max_total_odd'),
+                    c['min_model_probability'] is num
+                        ? pct((c['min_model_probability'] as num).toDouble())
+                        : '?',
+                    (c['markets'] as List?)?.join(', ') ?? '?',
+                    c['window_hours'] ?? '?'
+                  ]),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -404,7 +433,7 @@ class _ProfileCard extends StatelessWidget {
                 TextButton.icon(
                     onPressed: onEdit,
                     icon: const Icon(Icons.tune),
-                    label: const Text('Réglages')),
+                    label: Text(tr('Réglages'))),
                 const SizedBox(width: 8),
                 FilledButton.tonalIcon(
                   onPressed: onGenerate,
@@ -414,7 +443,7 @@ class _ProfileCard extends StatelessWidget {
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.play_arrow),
-                  label: const Text('Générer maintenant'),
+                  label: Text(tr('Générer maintenant')),
                 ),
               ],
             ),
@@ -446,7 +475,12 @@ class _RunTile extends StatelessWidget {
           '${r.profileName} · ${_triggerLabels[r.trigger] ?? r.trigger}${r.slotKey == null ? '' : ' ${r.slotKey}'}'),
       subtitle: Text(
         [
-          '${shortDate(r.startedAt)} ${timeLabel(r.startedAt)} · ${r.candidates} candidat(s) · ${r.couponsCreated} coupon(s)',
+          trf('{0} {1} · {2} candidat(s) · {3} coupon(s)', [
+            shortDate(r.startedAt),
+            timeLabel(r.startedAt),
+            r.candidates,
+            r.couponsCreated
+          ]),
           ...r.reasons,
         ].join('\n'),
       ),
@@ -518,8 +552,8 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     final timeOk = RegExp(r'^([01]\d|2[0-3]):[0-5]\d$');
     if (widget.profile.mode == 'scheduled' &&
         (times.isEmpty || times.any((t) => !timeOk.hasMatch(t)))) {
-      setState(() => _error =
-          'Heures au format HH:MM, séparées par des virgules (ex. 07:00, 13:00).');
+      setState(() => _error = tr(
+          'Heures au format HH:MM, séparées par des virgules (ex. 07:00, 13:00).'));
       return;
     }
     final values = [
@@ -532,12 +566,13 @@ class _ProfileEditorState extends State<_ProfileEditor> {
       _window
     ].map(_num).toList();
     if (values.any((v) => v == null)) {
-      setState(() => _error = 'Tous les champs numériques sont obligatoires.');
+      setState(
+          () => _error = tr('Tous les champs numériques sont obligatoires.'));
       return;
     }
     if (values[1]! > values[2]! || values[3]! > values[4]!) {
-      setState(
-          () => _error = 'Le minimum doit être inférieur ou égal au maximum.');
+      setState(() =>
+          _error = tr('Le minimum doit être inférieur ou égal au maximum.'));
       return;
     }
     Navigator.pop(context, <String, dynamic>{
@@ -584,22 +619,22 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Réglages · ${widget.profile.name}',
+            Text(trf('Réglages · {0}', [widget.profile.name]),
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 14),
             if (widget.profile.mode == 'scheduled')
-              field(_times, 'Heures de génération (ex. 07:00, 13:00)',
+              field(_times, tr('Heures de génération (ex. 07:00, 13:00)'),
                   numeric: false),
-            field(_delay, 'Délai avant publication (minutes)'),
-            pair(field(_minSel, 'Sélections min.'),
-                field(_maxSel, 'Sélections max.')),
-            pair(field(_minOdd, 'Cote totale min.'),
-                field(_maxOdd, 'Cote totale max.')),
-            pair(field(_minProb, 'Probabilité modèle min. (%)'),
-                field(_window, 'Fenêtre de matchs (h)')),
+            field(_delay, tr('Délai avant publication (minutes)')),
+            pair(field(_minSel, tr('Sélections min.')),
+                field(_maxSel, tr('Sélections max.'))),
+            pair(field(_minOdd, tr('Cote totale min.')),
+                field(_maxOdd, tr('Cote totale max.'))),
+            pair(field(_minProb, tr('Probabilité modèle min. (%)')),
+                field(_window, tr('Fenêtre de matchs (h)'))),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Validation humaine avant publication'),
+              title: Text(tr('Validation humaine avant publication')),
               value: _review,
               onChanged: (v) => setState(() => _review = v),
             ),
@@ -610,7 +645,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                     style:
                         TextStyle(color: Theme.of(context).colorScheme.error)),
               ),
-            FilledButton(onPressed: _save, child: const Text('Enregistrer')),
+            FilledButton(onPressed: _save, child: Text(tr('Enregistrer'))),
           ],
         ),
       ),

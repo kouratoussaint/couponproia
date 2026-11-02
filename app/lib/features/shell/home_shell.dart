@@ -14,6 +14,7 @@ import '../system/update_prompt.dart';
 import 'app_drawer.dart';
 import 'live_scope.dart';
 import '../widget/home_widget_sync.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Coque de l'app : menu latéral, barre à cinq onglets (Accueil, Matchs, Coupons,
 /// Assistant IA, Profil) et balayage gauche / droite entre les onglets.
@@ -91,8 +92,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     }
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(
-        content: Text('Appuyez encore sur Retour pour quitter'),
+      ..showSnackBar(SnackBar(
+        content: Text(tr('Appuyez encore sur Retour pour quitter')),
         duration: Duration(seconds: 2),
       ));
   }
@@ -114,7 +115,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 action: route == null
                     ? null
                     : SnackBarAction(
-                        label: 'Voir', onPressed: () => context.push(route)),
+                        label: tr('Voir'),
+                        onPressed: () => context.push(route)),
               ));
           },
         );
@@ -187,31 +189,31 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           child: NavigationBar(
             selectedIndex: widget.navigationShell.currentIndex,
             onDestinationSelected: _selectTab,
-            destinations: const [
+            destinations: [
               NavigationDestination(
                 icon: Icon(Icons.home_outlined),
                 selectedIcon: Icon(Icons.home),
-                label: 'Accueil',
+                label: tr('Accueil'),
               ),
               NavigationDestination(
                 icon: Icon(Icons.sports_soccer_outlined),
                 selectedIcon: Icon(Icons.sports_soccer),
-                label: 'Matchs',
+                label: tr('Matchs'),
               ),
               NavigationDestination(
                 icon: Icon(Icons.receipt_long_outlined),
                 selectedIcon: Icon(Icons.receipt_long),
-                label: 'Coupons',
+                label: tr('Coupons'),
               ),
               NavigationDestination(
                 icon: Icon(Icons.smart_toy_outlined),
                 selectedIcon: Icon(Icons.smart_toy),
-                label: 'Assistant IA',
+                label: tr('Assistant IA'),
               ),
               NavigationDestination(
                 icon: Icon(Icons.person_outline),
                 selectedIcon: Icon(Icons.person),
-                label: 'Profil',
+                label: tr('Profil'),
               ),
             ],
           ),

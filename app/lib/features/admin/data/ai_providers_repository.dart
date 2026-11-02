@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers.dart';
 import 'admin_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Rôle d'un fournisseur d'IA dans l'ordre d'appel.
 enum AiRole {
@@ -11,8 +12,9 @@ enum AiRole {
   fallback2('Secours 2'),
   disabled('Désactivée');
 
-  const AiRole(this.label);
-  final String label;
+  const AiRole(this._label);
+  final String _label;
+  String get label => tr(_label);
 
   static AiRole parse(String? v) => switch (v) {
         'primary' => AiRole.primary,
@@ -215,12 +217,12 @@ class AiProvidersRepository {
     } on FunctionException catch (e) {
       final d = asMap(e.details);
       throw AiProvidersException(switch (d['error']) {
-        'forbidden' => 'Écran réservé au super administrateur.',
-        'provider_not_configured' =>
-          'Clé absente : ajoutez-la dans les secrets avant d’utiliser cette IA.',
-        'invalid_roles' => '${d['message'] ?? 'Choix invalide.'}',
-        'model_missing' => 'Choisissez d’abord un modèle.',
-        _ => 'Action impossible pour le moment.',
+        'forbidden' => tr('Écran réservé au super administrateur.'),
+        'provider_not_configured' => tr(
+            'Clé absente : ajoutez-la dans les secrets avant d’utiliser cette IA.'),
+        'invalid_roles' => '${d['message'] ?? tr('Choix invalide.')}',
+        'model_missing' => tr('Choisissez d’abord un modèle.'),
+        _ => tr('Action impossible pour le moment.'),
       });
     }
   }

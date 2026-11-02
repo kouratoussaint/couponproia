@@ -1,6 +1,7 @@
 // Simulateur de mise : calculs purs (aucun pari n'est placé, aucune donnée n'est inventée).
 // Les cotes viennent des coupons, des analyses ou des relevés ; la probabilité est celle du
 // modèle quand elle existe, jamais une valeur fabriquée.
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Une sélection simulée.
 class SimLeg {
@@ -142,7 +143,7 @@ String money(num amount, {String currency = 'FCFA'}) {
   final s = amount.abs().round().toString();
   final b = StringBuffer();
   for (var i = 0; i < s.length; i++) {
-    if (i > 0 && (s.length - i) % 3 == 0) b.write(' ');
+    if (i > 0 && (s.length - i) % 3 == 0) b.write(thousandsSeparator);
     b.write(s[i]);
   }
   final sign = negative ? '−' : '';

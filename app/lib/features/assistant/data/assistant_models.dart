@@ -2,6 +2,7 @@
 library;
 
 import '../../coupons/data/coupon_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 int _i(Object? v) => (v as num?)?.toInt() ?? 0;
 double _d(Object? v) => (v as num).toDouble();
@@ -34,8 +35,9 @@ class Credits {
   final int extraCredits;
   final bool unlimited;
 
-  String get label =>
-      unlimited ? 'Illimité (équipe)' : '$total crédit${total > 1 ? 's' : ''}';
+  String get label => unlimited
+      ? tr('Illimité (équipe)')
+      : trf('{0} crédit{1}', [total, total > 1 ? 's' : '']);
 }
 
 class Conversation {
@@ -254,9 +256,10 @@ String couponShareText(String title, double totalOdd,
   final lines = [
     title,
     for (final s in selections)
-      '• ${s.match.home} – ${s.match.away} : ${label(s)} @ ${s.odd.toStringAsFixed(2).replaceAll('.', ',')}',
-    'Cote totale : ${totalOdd.toStringAsFixed(2).replaceAll('.', ',')}',
-    'Estimations de Coupon Pro IA, sans garantie de gain. Pariez de façon responsable.',
+      '• ${s.match.home} – ${s.match.away} : ${label(s)} @ ${s.odd.toStringAsFixed(2).replaceAll('.', decimalSeparator)}',
+    trf('Cote totale : {0}',
+        [totalOdd.toStringAsFixed(2).replaceAll('.', decimalSeparator)]),
+    tr('Estimations de Coupon Pro IA, sans garantie de gain. Pariez de façon responsable.'),
   ];
   return lines.join('\n');
 }

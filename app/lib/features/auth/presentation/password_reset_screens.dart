@@ -8,6 +8,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/validators.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../data/auth_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Étape 1 : demander un code de réinitialisation.
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
@@ -46,9 +47,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthScaffold(
-      title: 'Mot de passe oublié',
-      subtitle:
-          'Indiquez votre adresse e-mail : vous recevrez un code pour choisir un nouveau mot de passe.',
+      title: tr('Mot de passe oublié'),
+      subtitle: tr(
+          'Indiquez votre adresse e-mail : vous recevrez un code pour choisir un nouveau mot de passe.'),
       showBack: true,
       child: Form(
         key: _formKey,
@@ -60,15 +61,15 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [AutofillHints.email],
               validator: Validators.email,
-              decoration: const InputDecoration(
-                labelText: 'Adresse e-mail',
+              decoration: InputDecoration(
+                labelText: tr('Adresse e-mail'),
                 prefixIcon: Icon(Icons.alternate_email),
               ),
               onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 24),
             BusyButton(
-                label: 'Recevoir un code', busy: _busy, onPressed: _submit),
+                label: tr('Recevoir un code'), busy: _busy, onPressed: _submit),
           ],
         ),
       ),
@@ -112,7 +113,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             newPassword: _password.text,
           );
       if (!mounted) return;
-      showMessage(context, 'Mot de passe modifié. Vous êtes connecté.');
+      showMessage(context, tr('Mot de passe modifié. Vous êtes connecté.'));
       context.go(AppRoutes.home);
     } catch (e) {
       if (mounted) showMessage(context, userMessageFor(e), error: true);
@@ -125,10 +126,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   Widget build(BuildContext context) {
     final missingEmail = widget.email.isEmpty;
     return AuthScaffold(
-      title: 'Nouveau mot de passe',
+      title: tr('Nouveau mot de passe'),
       subtitle: missingEmail
-          ? 'Adresse inconnue : recommencez depuis « Mot de passe oublié ».'
-          : 'Code envoyé à ${widget.email}. Il expire dans une heure.',
+          ? tr('Adresse inconnue : recommencez depuis « Mot de passe oublié ».')
+          : trf('Code envoyé à {0}. Il expire dans une heure.', [widget.email]),
       child: AutofillGroup(
         child: Form(
           key: _formKey,
@@ -145,15 +146,15 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   LengthLimitingTextInputFormatter(6)
                 ],
                 validator: Validators.otpCode,
-                decoration: const InputDecoration(
-                  labelText: 'Code reçu par e-mail',
+                decoration: InputDecoration(
+                  labelText: tr('Code reçu par e-mail'),
                   prefixIcon: Icon(Icons.pin_outlined),
                 ),
               ),
               const SizedBox(height: 16),
               PasswordField(
                 controller: _password,
-                label: 'Nouveau mot de passe',
+                label: tr('Nouveau mot de passe'),
                 validator: Validators.password,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.newPassword],
@@ -161,21 +162,21 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               const SizedBox(height: 16),
               PasswordField(
                 controller: _confirm,
-                label: 'Confirmer',
+                label: tr('Confirmer'),
                 autofillHints: const [AutofillHints.newPassword],
                 validator: (v) => v != _password.text
-                    ? 'Les mots de passe ne correspondent pas.'
+                    ? tr('Les mots de passe ne correspondent pas.')
                     : null,
                 onSubmitted: (_) => _submit(),
               ),
               const SizedBox(height: 24),
               BusyButton(
-                  label: 'Enregistrer',
+                  label: tr('Enregistrer'),
                   busy: _busy,
                   onPressed: missingEmail ? null : _submit),
               TextButton(
                 onPressed: () => context.go(AppRoutes.signIn),
-                child: const Text('Retour à la connexion'),
+                child: Text(tr('Retour à la connexion')),
               ),
             ],
           ),

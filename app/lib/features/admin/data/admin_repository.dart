@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 Map<String, dynamic> asMap(Object? v) =>
     v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{};
@@ -12,14 +13,14 @@ int asInt(Object? v) => (v as num?)?.toInt() ?? 0;
 /// Message lisible pour une erreur d'administration (le serveur décide toujours).
 String adminErrorMessage(Object e) {
   if (e is PostgrestException) {
-    if (e.code == '42501') return 'Permission refusée.';
+    if (e.code == '42501') return tr('Permission refusée.');
     if (e.code == '22023' || e.code == 'P0002') return e.message;
     // Code affiché pour permettre le diagnostic à partir d'une capture d'écran.
     if (e.code != null) {
-      return 'Action impossible pour le moment (code ${e.code}).';
+      return trf('Action impossible pour le moment (code {0}).', [e.code]);
     }
   }
-  return 'Action impossible pour le moment.';
+  return tr('Action impossible pour le moment.');
 }
 
 class AdminSetting {

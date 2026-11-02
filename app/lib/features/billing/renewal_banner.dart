@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/brand_colors.dart';
 import '../matches/data/sports_format.dart';
 import 'billing_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Accueil : forfait qui se termine (3 jours) ou vient de se terminer, avec « Renouveler ».
 class RenewalBanner extends ConsumerWidget {
@@ -28,15 +29,16 @@ class RenewalBanner extends ConsumerWidget {
           leading:
               Icon(r.ended ? Icons.event_busy : Icons.schedule, color: color),
           title: Text(r.ended
-              ? 'Votre forfait $plan a pris fin'
-              : 'Votre forfait $plan se termine le ${shortDate(r.periodEnd)}'),
+              ? trf('Votre forfait {0} a pris fin', [plan])
+              : trf('Votre forfait {0} se termine le {1}',
+                  [plan, shortDate(r.periodEnd)])),
           subtitle: Text(r.ended
-              ? 'Renouvelez pour retrouver tous les coupons et analyses.'
-              : 'Renouvelez en un geste : la durée s’ajoute à la fin.'),
+              ? tr('Renouvelez pour retrouver tous les coupons et analyses.')
+              : tr('Renouvelez en un geste : la durée s’ajoute à la fin.')),
           trailing: FilledButton(
             style: FilledButton.styleFrom(backgroundColor: color),
             onPressed: () => context.push(r.route),
-            child: const Text('Renouveler'),
+            child: Text(tr('Renouveler')),
           ),
         ),
       ),

@@ -7,6 +7,7 @@ import '../../lab/data/lab_repository.dart';
 import '../../matches/data/sports_models.dart';
 import '../data/stake_math.dart';
 import 'stake_simulator_sheet.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 SimLeg _legOf(CouponSelection s, {double? current}) => SimLeg(
       matchId: s.match.id,
@@ -81,8 +82,8 @@ List<SimInput> oddsBoardSims(MatchSummary m, List<OddsLine> odds,
 
 /// Coupon en construction (laboratoire) : cotes indicatives.
 SimInput manualSim(List<ManualPick> picks) => SimInput(
-      title:
-          'Mon coupon (${picks.length} sélection${picks.length > 1 ? 's' : ''})',
+      title: trf('Mon coupon ({0} sélection{1})',
+          [picks.length, picks.length > 1 ? 's' : '']),
       sourceType: 'lab',
       legs: [
         for (final p in picks)
@@ -116,7 +117,7 @@ class SimulateButton extends StatelessWidget {
     }
 
     const icon = Icon(Icons.calculate_outlined);
-    const label = Text('Simuler une mise');
+    final label = Text(tr('Simuler une mise'));
     return filled
         ? FilledButton.icon(onPressed: open, icon: icon, label: label)
         : OutlinedButton.icon(onPressed: open, icon: icon, label: label);

@@ -25,6 +25,7 @@ import '../data/assistant_models.dart';
 import '../../system/system_providers.dart';
 import '../data/assistant_repository.dart';
 import '../data/my_coupons_view.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Mes coupons : coupons enregistrés depuis l'assistant ou le laboratoire.
 /// Bandeau « Mon bilan », coupons en cours d'abord, puis coupons terminés par jour.
@@ -46,32 +47,32 @@ class _MyCouponsScreenState extends ConsumerState<MyCouponsScreen> {
   Widget build(BuildContext context) {
     final coupons = ref.watch(savedCouponsProvider);
     return Scaffold(
-      appBar: widget.embedded ? null : AppBar(title: const Text('Mes coupons')),
+      appBar: widget.embedded ? null : AppBar(title: Text(tr('Mes coupons'))),
       floatingActionButton: coupons.valueOrNull?.isNotEmpty ?? false
           ? FloatingActionButton.extended(
               heroTag: 'my-coupons-create',
               onPressed: () => showCreateCouponChoice(context),
               icon: const Icon(Icons.add),
-              label: const Text('Créer un coupon'),
+              label: Text(tr('Créer un coupon')),
             )
           : null,
       body: coupons.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Indisponible',
+            title: tr('Indisponible'),
             body: userMessageFor(e)),
         data: (list) {
           if (list.isEmpty) {
             return InfoMessage(
               icon: Icons.bookmarks_outlined,
-              title: 'Aucun coupon enregistré',
-              body:
-                  'Demandez un coupon à l’assistant ou composez-le dans le laboratoire, puis enregistrez-le.',
+              title: tr('Aucun coupon enregistré'),
+              body: tr(
+                  'Demandez un coupon à l’assistant ou composez-le dans le laboratoire, puis enregistrez-le.'),
               action: FilledButton.icon(
                 onPressed: () => showCreateCouponChoice(context),
                 icon: const Icon(Icons.add),
-                label: const Text('Créer un coupon'),
+                label: Text(tr('Créer un coupon')),
               ),
             );
           }
@@ -95,15 +96,17 @@ class _MyCouponsScreenState extends ConsumerState<MyCouponsScreen> {
                     onChanged: (v) => setState(() => _filter = v)),
                 const SizedBox(height: 4),
                 if (shown.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.all(16),
-                    child: Text('Aucun coupon pour ce filtre.'),
+                    child: Text(tr('Aucun coupon pour ce filtre.')),
                   ),
                 if (inProgress.isNotEmpty) ...[
                   _DayTitle(
-                      label: 'En cours',
-                      detail:
-                          '${inProgress.length} coupon${inProgress.length > 1 ? 's' : ''}'),
+                      label: tr('En cours'),
+                      detail: trf('{0} coupon{1}', [
+                        inProgress.length,
+                        inProgress.length > 1 ? 's' : ''
+                      ])),
                   for (final c in inProgress) MyCouponTile(coupon: c),
                 ],
                 for (final (day, items) in decidedByDay(shown)) ...[
@@ -113,10 +116,13 @@ class _MyCouponsScreenState extends ConsumerState<MyCouponsScreen> {
                       return l.contains('/') ? l : '$l ${shortDate(day)}';
                     }(),
                     detail: [
-                      '${items.where((c) => c.result == 'won').length} gagné(s)',
-                      '${items.where((c) => c.result == 'lost').length} perdu(s)',
+                      trf('{0} gagné(s)',
+                          [items.where((c) => c.result == 'won').length]),
+                      trf('{0} perdu(s)',
+                          [items.where((c) => c.result == 'lost').length]),
                       if (items.any((c) => c.result == 'void'))
-                        '${items.where((c) => c.result == 'void').length} annulé(s)',
+                        trf('{0} annulé(s)',
+                            [items.where((c) => c.result == 'void').length]),
                     ].join(' · '),
                   ),
                   for (final c in items) MyCouponTile(coupon: c),
@@ -161,23 +167,31 @@ class MyCouponsSummaryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Mon bilan',
+            Text(tr('Mon bilan'),
                 style: theme.textTheme.titleSmall
                     ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
             Row(children: [
-              stat('${s.total}', 'coupons'),
-              stat('${s.won}', s.won > 1 ? 'gagnés' : 'gagné', scheme.primary),
-              stat('${s.lost}', s.lost > 1 ? 'perdus' : 'perdu', scheme.error),
+              stat('${s.total}', tr('coupons')),
+              stat('${s.won}', s.won > 1 ? tr('gagnés') : tr('gagné'),
+                  scheme.primary),
+              stat('${s.lost}', s.lost > 1 ? tr('perdus') : tr('perdu'),
+                  scheme.error),
               stat(s.successRate == null ? '–' : pct(s.successRate!),
-                  'réussite'),
+                  tr('réussite')),
               stat(s.averageOdd == null ? '–' : decimal(s.averageOdd!),
-                  'cote moyenne'),
+                  tr('cote moyenne')),
             ]),
             const SizedBox(height: 6),
             Text(
-              '${s.inProgress} en cours${s.voided > 0 ? ' · ${s.voided} annulé(s), hors réussite' : ''}. '
-              'Pertes comprises ; les résultats passés ne préjugent pas des suivants.',
+              trf(
+                  '{0} en cours{1}. Pertes comprises ; les résultats passés ne préjugent pas des suivants.',
+                  [
+                    s.inProgress,
+                    s.voided > 0
+                        ? trf(' · {0} annulé(s), hors réussite', [s.voided])
+                        : ''
+                  ]),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: scheme.onSurfaceVariant),
             ),
@@ -230,10 +244,10 @@ class MyCouponTile extends ConsumerWidget {
     final scheme = theme.colorScheme;
     final c = coupon;
     final (icon, color, label) = switch (c.result) {
-      'won' => (Icons.check, scheme.primary, 'Gagné'),
-      'lost' => (Icons.close, scheme.error, 'Perdu'),
-      'void' => (Icons.remove, scheme.outline, 'Annulé'),
-      _ => (Icons.schedule, scheme.onSurfaceVariant, 'En cours'),
+      'won' => (Icons.check, scheme.primary, tr('Gagné')),
+      'lost' => (Icons.close, scheme.error, tr('Perdu')),
+      'void' => (Icons.remove, scheme.outline, tr('Annulé')),
+      _ => (Icons.schedule, scheme.onSurfaceVariant, tr('En cours')),
     };
     final muted =
         theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant);
@@ -279,8 +293,10 @@ class MyCouponTile extends ConsumerWidget {
                           style: muted),
                     Text(myCouponDateLine(c), style: muted),
                     Text(
-                        'Probabilité estimée ${pct(c.combinedProbability)}'
-                        '${c.isPublished ? ' · publié' : ''}',
+                        trf('Probabilité estimée {0}{1}', [
+                          pct(c.combinedProbability),
+                          c.isPublished ? tr(' · publié') : ''
+                        ]),
                         style: muted),
                   ],
                 ),
@@ -304,7 +320,7 @@ class MyCouponTile extends ConsumerWidget {
                 ],
               ),
               IconButton(
-                tooltip: 'Actions',
+                tooltip: tr('Actions'),
                 icon: const Icon(Icons.more_vert),
                 onPressed: actions,
               ),
@@ -327,8 +343,8 @@ Future<void> showCreateCouponChoice(BuildContext context) =>
           children: [
             ListTile(
               leading: const Icon(Icons.smart_toy_outlined),
-              title: const Text('Avec l’assistant'),
-              subtitle: const Text('Décrivez le coupon voulu, l’IA le compose'),
+              title: Text(tr('Avec l’assistant')),
+              subtitle: Text(tr('Décrivez le coupon voulu, l’IA le compose')),
               onTap: () {
                 Navigator.pop(sheet);
                 _openAssistantTab(context, 0, AppRoutes.assistant);
@@ -336,8 +352,8 @@ Future<void> showCreateCouponChoice(BuildContext context) =>
             ),
             ListTile(
               leading: const Icon(Icons.science_outlined),
-              title: const Text('Dans le laboratoire'),
-              subtitle: const Text('Choisissez vous-même chaque sélection'),
+              title: Text(tr('Dans le laboratoire')),
+              subtitle: Text(tr('Choisissez vous-même chaque sélection')),
               onTap: () {
                 Navigator.pop(sheet);
                 _openAssistantTab(context, 2, AppRoutes.assistantLab);
@@ -378,37 +394,38 @@ Future<void> showMyCouponActions(
             ),
             ListTile(
               leading: const Icon(Icons.science_outlined),
-              title: const Text('Ouvrir dans le laboratoire'),
+              title: Text(tr('Ouvrir dans le laboratoire')),
               subtitle: Text(labCost > 0
-                  ? 'Analyser, optimiser, simuler : ${creditsLabel(labCost)} par calcul'
-                  : 'Analyser, optimiser, simuler'),
+                  ? trf('Analyser, optimiser, simuler : {0} par calcul',
+                      [creditsLabel(labCost)])
+                  : tr('Analyser, optimiser, simuler')),
               onTap: () => Navigator.pop(sheet, 'lab'),
             ),
             ListTile(
               leading: const Icon(Icons.calculate_outlined),
-              title: const Text('Simuler une mise'),
+              title: Text(tr('Simuler une mise')),
               onTap: () => Navigator.pop(sheet, 'simulate'),
             ),
             ListTile(
               leading: const Icon(Icons.menu_book_outlined),
-              title: const Text('Noter dans mon carnet'),
+              title: Text(tr('Noter dans mon carnet')),
               onTap: () => Navigator.pop(sheet, 'journal'),
             ),
             ListTile(
               leading: const Icon(Icons.copy),
-              title: const Text('Partager (copier le coupon)'),
+              title: Text(tr('Partager (copier le coupon)')),
               onTap: () => Navigator.pop(sheet, 'share'),
             ),
             if (!c.isPublished) ...[
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
-                title: const Text('Renommer'),
+                title: Text(tr('Renommer')),
                 onTap: () => Navigator.pop(sheet, 'rename'),
               ),
               ListTile(
                 leading: Icon(Icons.delete_outline,
                     color: Theme.of(sheet).colorScheme.error),
-                title: Text('Supprimer',
+                title: Text(tr('Supprimer'),
                     style: TextStyle(color: Theme.of(sheet).colorScheme.error)),
                 onTap: () => Navigator.pop(sheet, 'delete'),
               ),
@@ -431,7 +448,7 @@ Future<void> showMyCouponActions(
           text: couponShareText(displayTitle(c), c.totalOdd, c.selections,
               (s) => outcomeKeyLabel(s.key, s.match.home, s.match.away))));
       if (context.mounted) {
-        showMessage(context, 'Coupon copié : collez-le où vous voulez.');
+        showMessage(context, tr('Coupon copié : collez-le où vous voulez.'));
       }
     case 'rename':
       await _rename(context, ref, c);
@@ -457,7 +474,7 @@ Future<void> _noteInJournal(
   );
   if (saved != true || !context.mounted) return;
   ref.invalidate(journalProvider);
-  showMessage(context, 'Pari noté dans votre carnet.');
+  showMessage(context, tr('Pari noté dans votre carnet.'));
 }
 
 Future<void> _rename(BuildContext context, WidgetRef ref, UserCoupon c) async {
@@ -465,19 +482,19 @@ Future<void> _rename(BuildContext context, WidgetRef ref, UserCoupon c) async {
   final name = await showDialog<String>(
     context: context,
     builder: (d) => AlertDialog(
-      title: const Text('Renommer le coupon'),
+      title: Text(tr('Renommer le coupon')),
       content: TextField(
         controller: controller,
         autofocus: true,
         maxLength: 80,
-        decoration: const InputDecoration(labelText: 'Nom du coupon'),
+        decoration: InputDecoration(labelText: tr('Nom du coupon')),
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(d), child: const Text('Annuler')),
+            onPressed: () => Navigator.pop(d), child: Text(tr('Annuler'))),
         FilledButton(
             onPressed: () => Navigator.pop(d, controller.text.trim()),
-            child: const Text('Enregistrer')),
+            child: Text(tr('Enregistrer'))),
       ],
     ),
   );
@@ -485,7 +502,8 @@ Future<void> _rename(BuildContext context, WidgetRef ref, UserCoupon c) async {
   if (name == null || name.isEmpty || !context.mounted) return;
   final bad = forbiddenWordIn(name);
   if (bad != null) {
-    showMessage(context, 'Nom refusé : « $bad ». Pas de promesse de résultat.',
+    showMessage(context,
+        trf('Nom refusé : « {0} ». Pas de promesse de résultat.', [bad]),
         error: true);
     return;
   }
@@ -502,16 +520,17 @@ Future<void> _delete(BuildContext context, WidgetRef ref, UserCoupon c) async {
   final ok = await showDialog<bool>(
     context: context,
     builder: (d) => AlertDialog(
-      title: const Text('Supprimer ce coupon ?'),
-      content: Text('« ${displayTitle(c)} » sera effacé de Mes coupons.'),
+      title: Text(tr('Supprimer ce coupon ?')),
+      content:
+          Text(trf('« {0} » sera effacé de Mes coupons.', [displayTitle(c)])),
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(d, false),
-            child: const Text('Annuler')),
+            child: Text(tr('Annuler'))),
         FilledButton(
             style: solidButtonStyle(d, SolidTone.red),
             onPressed: () => Navigator.pop(d, true),
-            child: const Text('Supprimer')),
+            child: Text(tr('Supprimer'))),
       ],
     ),
   );
@@ -538,11 +557,11 @@ class MyCouponDetailScreen extends ConsumerWidget {
         ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mon coupon'),
+        title: Text(tr('Mon coupon')),
         actions: [
           if (coupon.valueOrNull case final c? when c.selections.isNotEmpty)
             IconButton(
-              tooltip: 'Créer un visuel',
+              tooltip: tr('Créer un visuel'),
               icon: const Icon(Icons.palette_outlined),
               onPressed: () => context.push(AppRoutes.studioFor('user', c.id)),
             ),
@@ -552,11 +571,11 @@ class MyCouponDetailScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Indisponible',
+            title: tr('Indisponible'),
             body: userMessageFor(e)),
         data: (c) => c == null
-            ? const InfoMessage(
-                icon: Icons.help_outline, title: 'Coupon introuvable')
+            ? InfoMessage(
+                icon: Icons.help_outline, title: tr('Coupon introuvable'))
             : ListView(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
                 children: [
@@ -569,12 +588,17 @@ class MyCouponDetailScreen extends ConsumerWidget {
                           Text(displayTitle(c),
                               style: theme.textTheme.titleLarge),
                           const SizedBox(height: 8),
-                          Text('Cote totale ${decimal(c.totalOdd)}',
+                          Text(trf('Cote totale {0}', [decimal(c.totalOdd)]),
                               style: theme.textTheme.titleMedium
                                   ?.copyWith(color: theme.colorScheme.primary)),
-                          Text(
-                              'Probabilité estimée par le modèle : ${pct(c.combinedProbability)}'
-                              '${c.impliedProbability == null ? '' : ' (marché : ${pct(c.impliedProbability!)})'}'),
+                          Text(trf(
+                              'Probabilité estimée par le modèle : {0}{1}', [
+                            pct(c.combinedProbability),
+                            c.impliedProbability == null
+                                ? ''
+                                : trf(' (marché : {0})',
+                                    [pct(c.impliedProbability!)])
+                          ])),
                           const SizedBox(height: 8),
                           RiskBadge(risk: c.riskLevel),
                         ],
@@ -585,10 +609,10 @@ class MyCouponDetailScreen extends ConsumerWidget {
                     Padding(
                         padding: const EdgeInsets.all(6),
                         child: Text('⚠ $w', style: muted)),
-                  const SectionTitle('Sélections'),
+                  SectionTitle(tr('Sélections')),
                   for (final s in c.selections) SelectionCard(selection: s),
                   if (c.summary.isNotEmpty) ...[
-                    const SectionTitle('Analyse'),
+                    SectionTitle(tr('Analyse')),
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -619,7 +643,7 @@ class MyCouponDetailScreen extends ConsumerWidget {
                         FilledButton.icon(
                           onPressed: () => _publish(context, ref, c.id),
                           icon: const Icon(Icons.public),
-                          label: const Text('Publier sur mon profil Tipster'),
+                          label: Text(tr('Publier sur mon profil Tipster')),
                         ),
                       if (!c.isSaved)
                         FilledButton.icon(
@@ -631,12 +655,12 @@ class MyCouponDetailScreen extends ConsumerWidget {
                             ref.invalidate(savedCouponsProvider);
                           },
                           icon: const Icon(Icons.bookmark_add_outlined),
-                          label: const Text('Enregistrer'),
+                          label: Text(tr('Enregistrer')),
                         ),
                       OutlinedButton.icon(
                         onPressed: () => context.push(AppRoutes.labFor(c.id)),
                         icon: const Icon(Icons.science_outlined),
-                        label: const Text('Laboratoire'),
+                        label: Text(tr('Laboratoire')),
                       ),
                       OutlinedButton.icon(
                         onPressed: () async {
@@ -650,18 +674,18 @@ class MyCouponDetailScreen extends ConsumerWidget {
                           ));
                           if (context.mounted) {
                             showMessage(context,
-                                'Coupon copié : collez-le où vous voulez.');
+                                tr('Coupon copié : collez-le où vous voulez.'));
                           }
                         },
                         icon: const Icon(Icons.copy),
-                        label: const Text('Copier pour partager'),
+                        label: Text(tr('Copier pour partager')),
                       ),
                       SimulateButton(choices: () => [userCouponSim(c)]),
                       FilledButton.tonalIcon(
                         onPressed: () => copyForBookmaker(
                             context, ref, c.title, c.totalOdd, c.selections),
                         icon: const Icon(Icons.content_paste_go_outlined),
-                        label: const Text('Copier pour mon bookmaker'),
+                        label: Text(tr('Copier pour mon bookmaker')),
                       ),
                       if (!c.isPublished)
                         TextButton.icon(
@@ -680,14 +704,14 @@ class MyCouponDetailScreen extends ConsumerWidget {
                             }
                           },
                           icon: const Icon(Icons.delete_outline),
-                          label: const Text('Supprimer'),
+                          label: Text(tr('Supprimer')),
                         ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '${myCouponDateLine(c)}. '
-                    'Cotes relevées au moment de la création : elles ont pu changer. Estimations, sans garantie de gain.',
+                    trf('{0}. Cotes relevées au moment de la création : elles ont pu changer. Estimations, sans garantie de gain.',
+                        [myCouponDateLine(c)]),
                     style: muted,
                     textAlign: TextAlign.center,
                   ),
@@ -696,7 +720,7 @@ class MyCouponDetailScreen extends ConsumerWidget {
                           .valueOrNull
                           ?.contains('ai.providers') ??
                       false)
-                    SuperAdminNote(text: 'moteur ${c.engineVersion}'),
+                    SuperAdminNote(text: trf('moteur {0}', [c.engineVersion])),
                 ],
               ),
       ),
@@ -711,33 +735,31 @@ Future<void> _publish(
   final ok = await showDialog<bool>(
     context: context,
     builder: (c) => AlertDialog(
-      title: const Text('Publier ce coupon ?'),
+      title: Text(tr('Publier ce coupon ?')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-              'Il apparaîtra sur votre profil Tipster et dans le fil de vos abonnés. '
-              'Une fois publié, il ne peut plus être modifié ni supprimé : son résultat comptera '
-              'dans vos statistiques, qu’il soit gagné ou perdu.'),
+          Text(tr(
+              'Il apparaîtra sur votre profil Tipster et dans le fil de vos abonnés. Une fois publié, il ne peut plus être modifié ni supprimé : son résultat comptera dans vos statistiques, qu’il soit gagné ou perdu.')),
           const SizedBox(height: 12),
           TextField(
             controller: comment,
             maxLength: 500,
             maxLines: 3,
             minLines: 1,
-            decoration: const InputDecoration(
-                labelText: 'Votre commentaire (facultatif)'),
+            decoration: InputDecoration(
+                labelText: tr('Votre commentaire (facultatif)')),
           ),
         ],
       ),
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(c, false),
-            child: const Text('Annuler')),
+            child: Text(tr('Annuler'))),
         FilledButton(
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('Publier')),
+            child: Text(tr('Publier'))),
       ],
     ),
   );
@@ -745,8 +767,8 @@ Future<void> _publish(
     final bad = forbiddenWordIn(comment.text);
     if (bad != null) {
       if (context.mounted) {
-        showMessage(
-            context, 'Texte refusé : « $bad ». Pas de promesse de résultat.',
+        showMessage(context,
+            trf('Texte refusé : « {0} ». Pas de promesse de résultat.', [bad]),
             error: true);
       }
     } else {
@@ -758,7 +780,7 @@ Future<void> _publish(
         ref.invalidate(savedCouponsProvider);
         ref.invalidate(feedProvider);
         if (context.mounted) {
-          showMessage(context, 'Coupon publié sur votre profil Tipster.');
+          showMessage(context, tr('Coupon publié sur votre profil Tipster.'));
         }
       } catch (e) {
         if (context.mounted) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_logo.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Mise en page commune aux écrans d'authentification.
 class AuthScaffold extends StatelessWidget {
@@ -89,10 +90,10 @@ class _PasswordFieldState extends State<PasswordField> {
       onFieldSubmitted: widget.onSubmitted,
       autofillHints: widget.autofillHints,
       decoration: InputDecoration(
-        labelText: widget.label,
+        labelText: tr(widget.label),
         prefixIcon: const Icon(Icons.lock_outline),
         suffixIcon: IconButton(
-          tooltip: _obscure ? 'Afficher' : 'Masquer',
+          tooltip: _obscure ? tr('Afficher') : tr('Masquer'),
           icon: Icon(_obscure
               ? Icons.visibility_outlined
               : Icons.visibility_off_outlined),

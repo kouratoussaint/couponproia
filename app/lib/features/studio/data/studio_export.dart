@@ -9,6 +9,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 
 import 'studio_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Fichier produit sur le téléphone.
 class StudioFile {
@@ -57,7 +58,7 @@ StudioFile encodeStudioFile(Uint8List png,
 /// Une page au format du visuel (1 px = 0,75 pt, soit 96 ppp).
 Future<StudioFile> encodeStudioPdf(Uint8List png,
     {required StudioFormat format, required String baseName}) async {
-  final doc = pw.Document(title: baseName, creator: 'Coupon Pro IA');
+  final doc = pw.Document(title: baseName, creator: tr('Coupon Pro IA'));
   final pageFormat = PdfPageFormat(format.width * 0.75, format.height * 0.75);
   doc.addPage(pw.Page(
     pageFormat: pageFormat,
@@ -84,7 +85,7 @@ Future<bool> saveStudioImage(StudioFile file) async {
     return false;
   }
   await Gal.putImageBytes(file.bytes,
-      album: 'Coupon Pro IA', name: file.name.split('.').first);
+      album: tr('Coupon Pro IA'), name: file.name.split('.').first);
   return true;
 }
 

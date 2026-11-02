@@ -11,6 +11,7 @@ import '../../analysis/data/analysis_format.dart';
 import '../../journal/data/journal_repository.dart';
 import '../../system/system_providers.dart';
 import '../data/stake_math.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Ouvre le simulateur de mise. Plusieurs [choices] : l'utilisateur choisit l'issue à simuler
 /// (fiche match) ; une seule : coupon, pronostic d'une analyse.
@@ -104,7 +105,7 @@ class _StakeSimulatorSheetState extends ConsumerState<StakeSimulatorSheet> {
             Icon(Icons.calculate_outlined, color: scheme.primary),
             const SizedBox(width: 8),
             Expanded(
-              child: Text('Simulateur de mise',
+              child: Text(tr('Simulateur de mise'),
                   style: theme.textTheme.titleLarge
                       ?.copyWith(fontWeight: FontWeight.w700)),
             ),
@@ -114,7 +115,7 @@ class _StakeSimulatorSheetState extends ConsumerState<StakeSimulatorSheet> {
         Text(input.title, style: theme.textTheme.titleSmall),
         if (widget.choices.length > 1) ...[
           const SizedBox(height: 10),
-          Text('Issue à simuler', style: theme.textTheme.labelLarge),
+          Text(tr('Issue à simuler'), style: theme.textTheme.labelLarge),
           const SizedBox(height: 6),
           Wrap(
             spacing: 6,
@@ -141,7 +142,7 @@ class _StakeSimulatorSheetState extends ConsumerState<StakeSimulatorSheet> {
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
-            labelText: 'Mise',
+            labelText: tr('Mise'),
             suffixText: cur,
             border: const OutlineInputBorder(),
           ),
@@ -169,8 +170,9 @@ class _StakeSimulatorSheetState extends ConsumerState<StakeSimulatorSheet> {
             child: _Banner(
               icon: Icons.front_hand_outlined,
               color: BrandColors.orange,
-              text:
-                  'Au-dessus de votre plafond par pari (${m(limit)}). Gardez la mise que vous aviez prévue.',
+              text: trf(
+                  'Au-dessus de votre plafond par pari ({0}). Gardez la mise que vous aviez prévue.',
+                  [m(limit)]),
             ),
           ),
         const SizedBox(height: 14),
@@ -181,25 +183,28 @@ class _StakeSimulatorSheetState extends ConsumerState<StakeSimulatorSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Retour potentiel si tout passe',
+                Text(tr('Retour potentiel si tout passe'),
                     style: theme.textTheme.labelLarge),
                 Text(m(out.payout),
                     key: const Key('sim-payout'),
                     style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.w800, color: scheme.primary)),
-                Text('${m(_stake)} × cote ${decimal(odd)}', style: muted),
+                Text(trf('{0} × cote {1}', [m(_stake), decimal(odd)]),
+                    style: muted),
                 const Divider(height: 20),
-                _Line('Résultat net si tout passe',
+                _Line(tr('Résultat net si tout passe'),
                     signedMoney(out.net, currency: cur),
                     color: scheme.primary),
                 _Line(
                     input.legs.length > 1
-                        ? 'Si une seule sélection échoue'
-                        : 'Si le pronostic échoue',
+                        ? tr('Si une seule sélection échoue')
+                        : tr('Si le pronostic échoue'),
                     signedMoney(-_stake, currency: cur),
                     color: scheme.error),
                 if (out.withholding > 0)
-                  _Line('Prélèvement estimé de l’opérateur (${decimal(tax)} %)',
+                  _Line(
+                      trf('Prélèvement estimé de l’opérateur ({0} %)',
+                          [decimal(tax)]),
                       '−${m(out.withholding)}'),
               ],
             ),
@@ -211,10 +216,14 @@ class _StakeSimulatorSheetState extends ConsumerState<StakeSimulatorSheet> {
               leading: Icon(
                   current < odd ? Icons.trending_down : Icons.trending_up,
                   color: current < odd ? scheme.error : scheme.primary),
-              title: Text('Avec la cote actuelle ${decimal(current)}'),
-              subtitle: Text(
-                  'Retour potentiel ${m(simulate(_stake, current, withholdingPercent: tax).payout)} '
-                  '(cote publiée ${decimal(odd)}). Les cotes changent jusqu’au coup d’envoi.'),
+              title: Text(trf('Avec la cote actuelle {0}', [decimal(current)])),
+              subtitle: Text(trf(
+                  'Retour potentiel {0} (cote publiée {1}). Les cotes changent jusqu’au coup d’envoi.',
+                  [
+                    m(simulate(_stake, current, withholdingPercent: tax)
+                        .payout),
+                    decimal(odd)
+                  ])),
             ),
           ),
         if (p != null) ...[
@@ -225,18 +234,27 @@ class _StakeSimulatorSheetState extends ConsumerState<StakeSimulatorSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Lecture du modèle', style: theme.textTheme.labelLarge),
+                  Text(tr('Lecture du modèle'),
+                      style: theme.textTheme.labelLarge),
                   const SizedBox(height: 4),
-                  Text(
-                      'Probabilité estimée ${pct(p)} : sur 100 ${input.legs.length > 1 ? 'coupons' : 'paris'} '
-                      'comparables, environ ${(p * 100).round()} passeraient selon le modèle.'),
+                  Text(trf(
+                      'Probabilité estimée {0} : sur 100 {1} comparables, environ {2} passeraient selon le modèle.',
+                      [
+                        pct(p),
+                        input.legs.length > 1 ? tr('coupons') : tr('paris'),
+                        (p * 100).round()
+                      ])),
                   const SizedBox(height: 4),
                   Builder(builder: (context) {
                     final ev =
                         expectedValue(_stake, odd, p, withholdingPercent: tax);
                     return Text(
-                        'Valeur moyenne estimée de cette mise : ${signedMoney(ev, currency: cur)}. '
-                        '${ev < 0 ? 'Sur la durée, l’opérateur garde sa marge.' : 'Estimation positive, pas une promesse.'}',
+                        trf('Valeur moyenne estimée de cette mise : {0}. {1}', [
+                          signedMoney(ev, currency: cur),
+                          ev < 0
+                              ? tr('Sur la durée, l’opérateur garde sa marge.')
+                              : tr('Estimation positive, pas une promesse.')
+                        ]),
                         style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: ev < 0 ? scheme.error : scheme.primary));
@@ -247,7 +265,7 @@ class _StakeSimulatorSheetState extends ConsumerState<StakeSimulatorSheet> {
           ),
         ],
         const SizedBox(height: 8),
-        Text('Comparer plusieurs mises', style: theme.textTheme.titleSmall),
+        Text(tr('Comparer plusieurs mises'), style: theme.textTheme.titleSmall),
         const SizedBox(height: 6),
         Card(
           child: Padding(
@@ -260,11 +278,11 @@ class _StakeSimulatorSheetState extends ConsumerState<StakeSimulatorSheet> {
               },
               children: [
                 TableRow(children: [
-                  Text('Mise', style: theme.textTheme.labelMedium),
-                  Text('Retour',
+                  Text(tr('Mise'), style: theme.textTheme.labelMedium),
+                  Text(tr('Retour'),
                       style: theme.textTheme.labelMedium,
                       textAlign: TextAlign.end),
-                  Text('Net',
+                  Text(tr('Net'),
                       style: theme.textTheme.labelMedium,
                       textAlign: TextAlign.end),
                 ]),
@@ -302,14 +320,15 @@ class _StakeSimulatorSheetState extends ConsumerState<StakeSimulatorSheet> {
           Card(
             child: ExpansionTile(
               leading: const Icon(Icons.event_busy_outlined),
-              title: const Text('Si un match est annulé ou reporté'),
-              subtitle: const Text('La sélection compte alors pour 1,00'),
+              title: Text(tr('Si un match est annulé ou reporté')),
+              subtitle: Text(tr('La sélection compte alors pour 1,00')),
               children: [
                 for (final (i, l) in input.legs.indexed)
                   ListTile(
                     dense: true,
                     title: Text(l.matchLabel),
-                    subtitle: Text('Cote ${decimal(input.oddWithoutLeg(i))}'),
+                    subtitle: Text(
+                        trf('Cote {0}', [decimal(input.oddWithoutLeg(i))])),
                     trailing: Text(m(simulate(_stake, input.oddWithoutLeg(i),
                             withholdingPercent: tax)
                         .payout)),
@@ -323,7 +342,7 @@ class _StakeSimulatorSheetState extends ConsumerState<StakeSimulatorSheet> {
           FilledButton.icon(
             onPressed: () => _addToJournal(input, cur),
             icon: const Icon(Icons.menu_book_outlined),
-            label: const Text('J’ai joué ce pari : le noter dans mon carnet'),
+            label: Text(tr('J’ai joué ce pari : le noter dans mon carnet')),
           ),
         if (limits != null && limits.stakeLimit == null)
           TextButton.icon(
@@ -332,12 +351,11 @@ class _StakeSimulatorSheetState extends ConsumerState<StakeSimulatorSheet> {
               context.push(AppRoutes.responsibleGaming);
             },
             icon: const Icon(Icons.shield_outlined),
-            label: const Text('Fixer un plafond par pari et un budget mensuel'),
+            label: Text(tr('Fixer un plafond par pari et un budget mensuel')),
           ),
         const SizedBox(height: 8),
         Text(
-          'Simulation indicative : retour = mise × cote, si toutes les sélections passent. '
-          'Coupon Pro IA ne prend aucun pari. 18+ · Pariez de façon responsable.',
+          tr('Simulation indicative : retour = mise × cote, si toutes les sélections passent. Coupon Pro IA ne prend aucun pari. 18+ · Pariez de façon responsable.'),
           style: muted,
           textAlign: TextAlign.center,
         ),
@@ -363,9 +381,9 @@ class _StakeSimulatorSheetState extends ConsumerState<StakeSimulatorSheet> {
     Navigator.pop(context);
     final messenger = rootMessengerKey.currentState;
     messenger?.showSnackBar(SnackBar(
-      content: const Text('Pari noté dans votre carnet.'),
+      content: Text(tr('Pari noté dans votre carnet.')),
       action: SnackBarAction(
-          label: 'Voir', onPressed: () => router.push(AppRoutes.journal)),
+          label: tr('Voir'), onPressed: () => router.push(AppRoutes.journal)),
     ));
   }
 }
@@ -397,7 +415,7 @@ class JournalEntryDialog extends StatefulWidget {
 class _JournalEntryDialogState extends State<JournalEntryDialog> {
   late final _stake = TextEditingController(text: '${widget.stake}');
   late final _odd = TextEditingController(
-      text: widget.odd.toStringAsFixed(2).replaceAll('.', ','));
+      text: widget.odd.toStringAsFixed(2).replaceAll('.', decimalSeparator));
   late final _note = TextEditingController(text: widget.note ?? '');
   String? _error;
   bool _saving = false;
@@ -413,9 +431,9 @@ class _JournalEntryDialogState extends State<JournalEntryDialog> {
   Future<void> _save() async {
     final stake = parseStake(_stake.text);
     final odd = double.tryParse(_odd.text.trim().replaceAll(',', '.'));
-    if (stake == null) return setState(() => _error = 'Mise invalide.');
+    if (stake == null) return setState(() => _error = tr('Mise invalide.'));
     if (odd == null || odd < 1.01 || odd > 1000000) {
-      return setState(() => _error = 'Cote invalide (au moins 1,01).');
+      return setState(() => _error = tr('Cote invalide (au moins 1,01).'));
     }
     setState(() {
       _saving = true;
@@ -431,7 +449,7 @@ class _JournalEntryDialogState extends State<JournalEntryDialog> {
           _saving = false;
           _error = e is JournalException
               ? e.message
-              : 'Enregistrement impossible pour le moment.';
+              : tr('Enregistrement impossible pour le moment.');
         });
       }
     }
@@ -439,8 +457,9 @@ class _JournalEntryDialogState extends State<JournalEntryDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title:
-            Text(widget.editing ? 'Corriger le pari' : 'Noter dans mon carnet'),
+        title: Text(widget.editing
+            ? tr('Corriger le pari')
+            : tr('Noter dans mon carnet')),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -453,29 +472,28 @@ class _JournalEntryDialogState extends State<JournalEntryDialog> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: InputDecoration(
-                    labelText: 'Mise jouée', suffixText: widget.currency),
+                    labelText: tr('Mise jouée'), suffixText: widget.currency),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _odd,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                    labelText: 'Cote obtenue chez votre opérateur'),
+                decoration: InputDecoration(
+                    labelText: tr('Cote obtenue chez votre opérateur')),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _note,
                 maxLength: 200,
-                decoration:
-                    const InputDecoration(labelText: 'Note (facultatif)'),
+                decoration: InputDecoration(labelText: tr('Note (facultatif)')),
               ),
               if (_error != null)
                 Text(_error!,
                     style:
                         TextStyle(color: Theme.of(context).colorScheme.error)),
               Text(
-                'Le carnet est personnel : réglé automatiquement sur le score à 90 minutes.',
+                tr('Le carnet est personnel : réglé automatiquement sur le score à 90 minutes.'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -484,10 +502,10 @@ class _JournalEntryDialogState extends State<JournalEntryDialog> {
         actions: [
           TextButton(
               onPressed: _saving ? null : () => Navigator.pop(context, false),
-              child: const Text('Annuler')),
+              child: Text(tr('Annuler'))),
           FilledButton(
               onPressed: _saving ? null : _save,
-              child: Text(widget.editing ? 'Enregistrer' : 'Noter')),
+              child: Text(widget.editing ? tr('Enregistrer') : tr('Noter'))),
         ],
       );
 }

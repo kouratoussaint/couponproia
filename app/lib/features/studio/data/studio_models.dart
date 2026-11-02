@@ -4,6 +4,7 @@ import 'dart:ui';
 import '../../analysis/data/analysis_format.dart';
 import '../../assistant/data/assistant_models.dart';
 import '../../coupons/data/coupon_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Formats d'export (pixels).
 enum StudioFormat {
@@ -12,9 +13,10 @@ enum StudioFormat {
   story('Story', 'story', 1080, 1920),
   landscape('Paysage', 'landscape', 1920, 1080);
 
-  const StudioFormat(this.label, this.code, this.width, this.height);
+  const StudioFormat(this._label, this.code, this.width, this.height);
 
-  final String label;
+  final String _label;
+  String get label => tr(_label);
   final String code;
   final double width;
   final double height;
@@ -282,5 +284,5 @@ class StudioOptions {
   final Uint8List? cover;
 }
 
-const studioDisclaimer =
-    'Estimations, aucun gain garanti. Interdit aux moins de 18 ans. Pariez de façon responsable.';
+final studioDisclaimer = tr(
+    'Estimations, aucun gain garanti. Interdit aux moins de 18 ans. Pariez de façon responsable.');

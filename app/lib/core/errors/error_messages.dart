@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
-const _networkHints = [
+final _networkHints = [
   'socketexception',
   'failed host lookup',
   'network',
@@ -20,54 +21,57 @@ String userMessageFor(Object error) {
   if (error is AuthException) {
     switch (error.code) {
       case 'invalid_credentials':
-        return 'E-mail ou mot de passe incorrect.';
+        return tr('E-mail ou mot de passe incorrect.');
       case 'email_not_confirmed':
-        return 'Confirmez d’abord votre adresse e-mail avec le code reçu.';
+        return tr('Confirmez d’abord votre adresse e-mail avec le code reçu.');
       case 'user_already_exists':
       case 'email_exists':
-        return 'Un compte existe déjà avec cette adresse e-mail. Connectez-vous.';
+        return tr(
+            'Un compte existe déjà avec cette adresse e-mail. Connectez-vous.');
       case 'weak_password':
-        return 'Mot de passe trop faible : au moins 8 caractères, avec lettres et chiffres.';
+        return tr(
+            'Mot de passe trop faible : au moins 8 caractères, avec lettres et chiffres.');
       case 'same_password':
-        return 'Choisissez un mot de passe différent de l’actuel.';
+        return tr('Choisissez un mot de passe différent de l’actuel.');
       case 'otp_expired':
-        return 'Code invalide ou expiré. Demandez un nouveau code.';
+        return tr('Code invalide ou expiré. Demandez un nouveau code.');
       case 'over_email_send_rate_limit':
       case 'over_request_rate_limit':
-        return 'Trop de tentatives. Patientez quelques minutes avant de réessayer.';
+        return tr(
+            'Trop de tentatives. Patientez quelques minutes avant de réessayer.');
       case 'signup_disabled':
-        return 'Les inscriptions sont momentanément fermées.';
+        return tr('Les inscriptions sont momentanément fermées.');
       case 'user_banned':
-        return 'Ce compte est suspendu. Contactez le support.';
+        return tr('Ce compte est suspendu. Contactez le support.');
     }
     final message = error.message.toLowerCase();
     if (message.contains('invalid login')) {
-      return 'E-mail ou mot de passe incorrect.';
+      return tr('E-mail ou mot de passe incorrect.');
     }
     if (message.contains('not confirmed')) {
-      return 'Confirmez d’abord votre adresse e-mail avec le code reçu.';
+      return tr('Confirmez d’abord votre adresse e-mail avec le code reçu.');
     }
     if (message.contains('expired') ||
         (message.contains('invalid') && message.contains('token'))) {
-      return 'Code invalide ou expiré. Demandez un nouveau code.';
+      return tr('Code invalide ou expiré. Demandez un nouveau code.');
     }
     if (_looksLikeNetwork(message)) {
-      return 'Connexion internet indisponible. Réessayez.';
+      return tr('Connexion internet indisponible. Réessayez.');
     }
-    return 'L’authentification a échoué. Réessayez.';
+    return tr('L’authentification a échoué. Réessayez.');
   }
   if (error is PostgrestException) {
-    if (error.code == '42501') return 'Action non autorisée.';
+    if (error.code == '42501') return tr('Action non autorisée.');
     if (_looksLikeNetwork(error.message)) {
-      return 'Connexion internet indisponible. Réessayez.';
+      return tr('Connexion internet indisponible. Réessayez.');
     }
-    return 'Le serveur a refusé la demande. Réessayez plus tard.';
+    return tr('Le serveur a refusé la demande. Réessayez plus tard.');
   }
   if (error is FunctionException) {
-    return 'Le serveur n’a pas pu traiter la demande. Réessayez plus tard.';
+    return tr('Le serveur n’a pas pu traiter la demande. Réessayez plus tard.');
   }
   if (_looksLikeNetwork(error.toString())) {
-    return 'Connexion internet indisponible. Réessayez.';
+    return tr('Connexion internet indisponible. Réessayez.');
   }
-  return 'Une erreur inattendue est survenue. Réessayez.';
+  return tr('Une erreur inattendue est survenue. Réessayez.');
 }

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers.dart';
 import 'analysis_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 // Le fournisseur et le modèle d'IA ne sont pas lisibles par les utilisateurs :
 // le super administrateur les obtient avec [AnalysisRepository.tech].
@@ -24,26 +25,28 @@ String analysisErrorMessage(int status, Object? details) {
   final body = details is Map ? details : const {};
   switch (body['error']) {
     case 'daily_limit':
-      return 'Limite atteinte : ${body['limit'] ?? 20} nouvelles analyses par jour. '
-          'Vos analyses déjà obtenues restent consultables.';
+      return trf(
+          'Limite atteinte : {0} nouvelles analyses par jour. Vos analyses déjà obtenues restent consultables.',
+          [body['limit'] ?? 20]);
     case 'feature_disabled':
-      return 'L’analyse IA est momentanément désactivée.';
+      return tr('L’analyse IA est momentanément désactivée.');
     case 'match_not_analyzable':
-      return 'Ce match est reporté ou annulé : pas d’analyse possible.';
+      return tr('Ce match est reporté ou annulé : pas d’analyse possible.');
     case 'match_not_found':
-      return 'Match introuvable.';
+      return tr('Match introuvable.');
     case 'forbidden':
-      return 'Action réservée aux administrateurs.';
+      return tr('Action réservée aux administrateurs.');
     case 'unauthorized':
-      return 'Session expirée : reconnectez-vous.';
+      return tr('Session expirée : reconnectez-vous.');
     case 'credits_required':
-      return 'Il vous faut ${body['cost'] ?? 1} crédit IA pour cette analyse. Achetez un pack de crédits '
-          '(sans abonnement) ou choisissez un forfait dans Abonnement et crédits.';
+      return trf(
+          'Il vous faut {0} crédit IA pour cette analyse. Achetez un pack de crédits (sans abonnement) ou choisissez un forfait dans Abonnement et crédits.',
+          [body['cost'] ?? 1]);
     case 'subscription_required':
-      return 'Analyse réservée aux comptes avec un forfait payant ou des crédits IA. '
-          'L’analyse offerte du jour reste gratuite.';
+      return tr(
+          'Analyse réservée aux comptes avec un forfait payant ou des crédits IA. L’analyse offerte du jour reste gratuite.');
   }
-  return 'L’analyse n’a pas pu être réalisée. Réessayez dans un instant.';
+  return tr('L’analyse n’a pas pu être réalisée. Réessayez dans un instant.');
 }
 
 class AnalysisRepository {

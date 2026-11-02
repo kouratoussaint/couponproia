@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers.dart';
 import '../../simulator/data/stake_math.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Une ligne du carnet de paris (mise déclarée par l'utilisateur ; aucun pari n'est pris ici).
 class JournalEntry {
@@ -123,19 +124,19 @@ class JournalTotals {
 String monthKey(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}';
 
-const _months = [
+final _months = [
   'janvier',
-  'février',
+  tr('février'),
   'mars',
   'avril',
   'mai',
   'juin',
   'juillet',
-  'août',
+  tr('août'),
   'septembre',
   'octobre',
   'novembre',
-  'décembre'
+  tr('décembre')
 ];
 
 String monthLabel(String key) {
@@ -246,7 +247,7 @@ class JournalRepository {
 
   Future<void> saveLimits(StakeLimits l) async {
     final user = _client.auth.currentUser;
-    if (user == null) throw const JournalException('Session expirée');
+    if (user == null) throw JournalException(tr('Session expirée'));
     await _client.from('user_preferences').update({
       'stake_limit': l.stakeLimit,
       'monthly_budget': l.monthlyBudget,
@@ -255,8 +256,8 @@ class JournalRepository {
 
   static String _message(PostgrestException e) => switch (e.code) {
         '22023' || '54000' || 'P0002' => e.message,
-        '42501' => 'Connectez-vous pour tenir votre carnet.',
-        _ => 'Enregistrement impossible pour le moment.',
+        '42501' => tr('Connectez-vous pour tenir votre carnet.'),
+        _ => tr('Enregistrement impossible pour le moment.'),
       };
 }
 

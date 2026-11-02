@@ -13,6 +13,7 @@ import 'payment_providers_card.dart';
 import '../data/admin_repository.dart';
 import 'promos_admin_screen.dart';
 import 'users_admin_screen.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 String _when(String? iso) {
   if (iso == null) return '–';
@@ -28,18 +29,18 @@ class FlagsAdminScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final flags = ref.watch(adminFlagsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Modules')),
+      appBar: AppBar(title: Text(tr('Modules'))),
       body: flags.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.lock_outline,
-            title: 'Indisponible',
+            title: tr('Indisponible'),
             body: adminErrorMessage(e)),
         data: (list) => ListView(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
           children: [
             Text(
-                'Chaque changement s’applique tout de suite à toutes les apps et est inscrit au journal.',
+                tr('Chaque changement s’applique tout de suite à toutes les apps et est inscrit au journal.'),
                 style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 8),
             for (final f in list)
@@ -53,16 +54,16 @@ class FlagsAdminScreen extends ConsumerWidget {
                       final ok = await showDialog<bool>(
                         context: context,
                         builder: (c) => AlertDialog(
-                          title: const Text('Activer la maintenance ?'),
-                          content: const Text(
-                              'Tous les utilisateurs (hors administrateurs) verront l’écran de maintenance.'),
+                          title: Text(tr('Activer la maintenance ?')),
+                          content: Text(tr(
+                              'Tous les utilisateurs (hors administrateurs) verront l’écran de maintenance.')),
                           actions: [
                             TextButton(
                                 onPressed: () => Navigator.pop(c, false),
-                                child: const Text('Annuler')),
+                                child: Text(tr('Annuler'))),
                             FilledButton(
                                 onPressed: () => Navigator.pop(c, true),
-                                child: const Text('Activer')),
+                                child: Text(tr('Activer'))),
                           ],
                         ),
                       );
@@ -95,20 +96,20 @@ class SettingsAdminScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(adminSettingsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Réglages et forfaits')),
+      appBar: AppBar(title: Text(tr('Réglages et forfaits'))),
       body: settings.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.lock_outline,
-            title: 'Indisponible',
+            title: tr('Indisponible'),
             body: adminErrorMessage(e)),
         data: (list) {
           final plans = list.where((s) => s.key == 'pricing.plans').firstOrNull;
-          const costs = {
-            'analysis.credit_cost': 'Analyse de match (forfait FREE)',
-            'lab.credit_cost': 'Calcul du laboratoire (forfait FREE)',
+          final costs = {
+            'analysis.credit_cost': tr('Analyse de match (forfait FREE)'),
+            'lab.credit_cost': tr('Calcul du laboratoire (forfait FREE)'),
             'assistant.cost_per_action':
-                'Action de l’assistant (tous forfaits)',
+                tr('Action de l’assistant (tous forfaits)'),
           };
           final costSettings = [
             for (final k in costs.keys)
@@ -118,15 +119,19 @@ class SettingsAdminScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
             children: [
               if (plans != null) ...[
-                const SectionTitle('Forfaits'),
+                SectionTitle(tr('Forfaits')),
                 for (final (i, p) in (plans.value as List).indexed)
                   Card(
                     child: ListTile(
                       title: Text(asMap(p)['name'] as String? ?? ''),
                       subtitle: Text([
                         fcfa(asInt(asMap(p)['monthly_xof'])),
-                        '${asMap(p)['ai_credits']} crédits / mois',
-                        '${asMap(asMap(p)['features'])['match_analyses_per_day'] ?? '–'} analyses / jour',
+                        trf('{0} crédits / mois', [asMap(p)['ai_credits']]),
+                        trf('{0} analyses / jour', [
+                          asMap(asMap(p)['features'])[
+                                  'match_analyses_per_day'] ??
+                              '–'
+                        ]),
                       ].join(' · ')),
                       trailing: const Icon(Icons.edit_outlined),
                       onTap: () =>
@@ -135,7 +140,7 @@ class SettingsAdminScreen extends ConsumerWidget {
                   ),
               ],
               if (costSettings.isNotEmpty) ...[
-                const SectionTitle('Coûts en crédits'),
+                SectionTitle(tr('Coûts en crédits')),
                 for (final c in costSettings)
                   Card(
                     child: ListTile(
@@ -143,13 +148,16 @@ class SettingsAdminScreen extends ConsumerWidget {
                       title: Text(costs[c.key]!),
                       subtitle: Text(c.key),
                       trailing: Text(
-                          '${c.value} crédit${(c.value is num && (c.value as num) > 1) ? 's' : ''}',
+                          trf('{0} crédit{1}', [
+                            c.value,
+                            (c.value is num && (c.value as num) > 1) ? 's' : ''
+                          ]),
                           style: Theme.of(context).textTheme.titleSmall),
                       onTap: () => _editSetting(context, ref, c),
                     ),
                   ),
               ],
-              const SectionTitle('Tous les réglages'),
+              SectionTitle(tr('Tous les réglages')),
               for (final s in list)
                 Card(
                   child: ListTile(
@@ -181,7 +189,7 @@ class SettingsAdminScreen extends ConsumerWidget {
       await ref.read(adminRepositoryProvider).setSetting(key, value);
       ref.invalidate(adminSettingsProvider);
       ref.invalidate(publicSettingsProvider);
-      if (context.mounted) showMessage(context, 'Réglage enregistré.');
+      if (context.mounted) showMessage(context, tr('Réglage enregistré.'));
     } catch (e) {
       if (context.mounted) {
         showMessage(context, adminErrorMessage(e), error: true);
@@ -214,7 +222,7 @@ class SettingsAdminScreen extends ConsumerWidget {
                     SwitchListTile(
                         value: boolValue,
                         onChanged: (v) => setState(() => boolValue = v),
-                        title: const Text('Activé'))
+                        title: Text(tr('Activé')))
                   else
                     TextField(
                       controller: ctrl,
@@ -230,8 +238,7 @@ class SettingsAdminScreen extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(c),
-                child: const Text('Annuler')),
+                onPressed: () => Navigator.pop(c), child: Text(tr('Annuler'))),
             FilledButton(
               onPressed: () {
                 try {
@@ -256,11 +263,12 @@ class SettingsAdminScreen extends ConsumerWidget {
                     Navigator.pop(c, jsonDecode(ctrl.text));
                   }
                 } catch (_) {
-                  showMessage(c, 'Valeur invalide (nombre ou JSON attendu).',
+                  showMessage(
+                      c, tr('Valeur invalide (nombre ou JSON attendu).'),
                       error: true);
                 }
               },
-              child: const Text('Enregistrer'),
+              child: Text(tr('Enregistrer')),
             ),
           ],
         ),
@@ -286,7 +294,7 @@ class SettingsAdminScreen extends ConsumerWidget {
       context: context,
       builder: (c) => StatefulBuilder(
         builder: (c, setState) => AlertDialog(
-          title: Text('Forfait ${plan['name']}'),
+          title: Text(trf('Forfait {0}', [plan['name']])),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               TextField(
@@ -294,8 +302,8 @@ class SettingsAdminScreen extends ConsumerWidget {
                 enabled: plan['code'] != 'FREE',
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                    labelText: 'Prix mensuel (FCFA, multiple de 5)'),
+                decoration: InputDecoration(
+                    labelText: tr('Prix mensuel (FCFA, multiple de 5)')),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -303,42 +311,42 @@ class SettingsAdminScreen extends ConsumerWidget {
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration:
-                    const InputDecoration(labelText: 'Crédits IA par mois'),
+                    InputDecoration(labelText: tr('Crédits IA par mois')),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: analyses,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                    labelText: 'Analyses de match par jour'),
+                decoration: InputDecoration(
+                    labelText: tr('Analyses de match par jour')),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Coupons visibles à tout moment'),
-                subtitle: const Text(
-                    'Sinon : coupons et résultats visibles après les matchs'),
+                title: Text(tr('Coupons visibles à tout moment')),
+                subtitle: Text(tr(
+                    'Sinon : coupons et résultats visibles après les matchs')),
                 value: allCoupons,
                 onChanged: (v) => setState(() => allCoupons = v),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Profil Tipster et publication'),
+                title: Text(tr('Profil Tipster et publication')),
                 value: tipster,
                 onChanged: (v) => setState(() => tipster = v),
               ),
               Text(
-                  'Le studio et les autres avantages se règlent dans « Tous les réglages » (pricing.plans).',
+                  tr('Le studio et les autres avantages se règlent dans « Tous les réglages » (pricing.plans).'),
                   style: Theme.of(c).textTheme.bodySmall),
             ]),
           ),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(c, false),
-                child: const Text('Annuler')),
+                child: Text(tr('Annuler'))),
             FilledButton(
                 onPressed: () => Navigator.pop(c, true),
-                child: const Text('Enregistrer')),
+                child: Text(tr('Enregistrer'))),
           ],
         ),
       ),
@@ -370,12 +378,12 @@ class SettingsAdminScreen extends ConsumerWidget {
   }
 }
 
-const _paymentStatus = {
-  'succeeded': 'Confirmés',
-  'pending': 'En attente',
-  'failed': 'Échoués',
-  'cancelled': 'Abandonnés',
-  'refunded': 'Remboursés'
+final _paymentStatus = {
+  'succeeded': tr('Confirmés'),
+  'pending': tr('En attente'),
+  'failed': tr('Échoués'),
+  'cancelled': tr('Abandonnés'),
+  'refunded': tr('Remboursés')
 };
 
 class PaymentsAdminScreen extends ConsumerStatefulWidget {
@@ -398,14 +406,14 @@ class _PaymentsAdminScreenState extends ConsumerState<PaymentsAdminScreen> {
           if (p['user_id'] != null)
             ListTile(
               leading: const Icon(Icons.person_outline),
-              title: const Text('Fiche de l’utilisateur'),
+              title: Text(tr('Fiche de l’utilisateur')),
               onTap: () => Navigator.pop(c, 'user'),
             ),
           if (p['status'] == 'succeeded')
             ListTile(
               leading: const Icon(Icons.undo),
-              title: const Text('Enregistrer un remboursement'),
-              subtitle: const Text('Après remboursement chez l’agrégateur'),
+              title: Text(tr('Enregistrer un remboursement')),
+              subtitle: Text(tr('Après remboursement chez l’agrégateur')),
               onTap: () => Navigator.pop(c, 'refund'),
             ),
         ]),
@@ -420,7 +428,7 @@ class _PaymentsAdminScreenState extends ConsumerState<PaymentsAdminScreen> {
   Widget build(BuildContext context) {
     final list = ref.watch(adminPaymentsProvider(_status));
     return Scaffold(
-      appBar: AppBar(title: const Text('Paiements')),
+      appBar: AppBar(title: Text(tr('Paiements'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
@@ -428,7 +436,7 @@ class _PaymentsAdminScreenState extends ConsumerState<PaymentsAdminScreen> {
           const SizedBox(height: 8),
           Wrap(spacing: 8, children: [
             ChoiceChip(
-                label: const Text('Tous'),
+                label: Text(tr('Tous')),
                 selected: _status == null,
                 onSelected: (_) => setState(() => _status = null)),
             for (final e in _paymentStatus.entries)
@@ -439,31 +447,39 @@ class _PaymentsAdminScreenState extends ConsumerState<PaymentsAdminScreen> {
           ]),
           const SizedBox(height: 8),
           Text(
-              'Remboursement : rendre l’argent depuis le tableau de bord de l’agrégateur du paiement (LigdiCash ou CinetPay), puis toucher le paiement '
-              'confirmé ici pour l’enregistrer (les droits accordés sont retirés).',
+              tr('Remboursement : rendre l’argent depuis le tableau de bord de l’agrégateur du paiement (LigdiCash ou CinetPay), puis toucher le paiement confirmé ici pour l’enregistrer (les droits accordés sont retirés).'),
               style: Theme.of(context).textTheme.bodySmall),
           ...list.when(
             loading: () => [const LinearProgressIndicator()],
             error: (e, _) => [Text(adminErrorMessage(e))],
             data: (rows) => rows.isEmpty
                 ? [
-                    const Padding(
+                    Padding(
                         padding: EdgeInsets.all(16),
-                        child: Text('Aucun paiement.'))
+                        child: Text(tr('Aucun paiement.')))
                   ]
                 : [
                     for (final p in rows)
                       Card(
                         child: ListTile(
                           title: Text(
-                              '${fcfa(asInt(p['amount_xof']))} · ${p['kind'] == 'subscription' ? 'Forfait ${p['plan']} (${p['period']})' : '${p['credits']} crédits'}'),
+                              '${fcfa(asInt(p['amount_xof']))} · ${p['kind'] == 'subscription' ? trf('Forfait {0} ({1})', [
+                                      p['plan'],
+                                      p['period']
+                                    ]) : trf('{0} crédits', [p['credits']])}'),
                           subtitle: Text([
                             '${p['email'] ?? ''}',
                             '${_when(p['created_at'] as String?)} · ${p['transaction_id']}${p['provider'] == null ? '' : ' · ${p['provider'] == 'ligdicash' ? 'LigdiCash' : 'CinetPay'}'}',
                             if (p['promo_code'] != null)
-                              'Code ${p['promo_code']} (−${fcfa(asInt(p['discount_xof']))})',
+                              trf('Code {0} (−{1})', [
+                                p['promo_code'],
+                                fcfa(asInt(p['discount_xof']))
+                              ]),
                             if (p['refund_reason'] != null)
-                              'Remboursé le ${_when(p['refunded_at'] as String?)} : ${p['refund_reason']}',
+                              trf('Remboursé le {0} : {1}', [
+                                _when(p['refunded_at'] as String?),
+                                p['refund_reason']
+                              ]),
                           ].join('\n')),
                           isThreeLine: true,
                           trailing: Text(
@@ -489,13 +505,13 @@ class AuditAdminScreen extends ConsumerStatefulWidget {
 class _AuditAdminScreenState extends ConsumerState<AuditAdminScreen> {
   String? _filter;
 
-  static const _filters = {
-    'users.': 'Utilisateurs',
-    'settings.': 'Réglages',
-    'flag': 'Modules',
-    'moderation.': 'Modération',
-    'payment.': 'Paiements',
-    'coupon': 'Coupons',
+  static final _filters = {
+    'users.': tr('Utilisateurs'),
+    'settings.': tr('Réglages'),
+    'flag': tr('Modules'),
+    'moderation.': tr('Modération'),
+    'payment.': tr('Paiements'),
+    'coupon': tr('Coupons'),
   };
 
   @override
@@ -503,13 +519,13 @@ class _AuditAdminScreenState extends ConsumerState<AuditAdminScreen> {
     final theme = Theme.of(context);
     final list = ref.watch(adminAuditProvider(_filter));
     return Scaffold(
-      appBar: AppBar(title: const Text('Journal d’audit')),
+      appBar: AppBar(title: Text(tr('Journal d’audit'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
           Wrap(spacing: 8, runSpacing: 4, children: [
             ChoiceChip(
-                label: const Text('Tout'),
+                label: Text(tr('Tout')),
                 selected: _filter == null,
                 onSelected: (_) => setState(() => _filter = null)),
             for (final e in _filters.entries)
@@ -524,9 +540,9 @@ class _AuditAdminScreenState extends ConsumerState<AuditAdminScreen> {
             error: (e, _) => [Text(adminErrorMessage(e))],
             data: (rows) => rows.isEmpty
                 ? [
-                    const Padding(
+                    Padding(
                         padding: EdgeInsets.all(16),
-                        child: Text('Aucune entrée.'))
+                        child: Text(tr('Aucune entrée.')))
                   ]
                 : [
                     for (final a in rows)

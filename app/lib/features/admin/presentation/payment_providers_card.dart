@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../data/admin_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Agrégateur de paiement tel que vu par le serveur (jamais les clés).
 class PaymentProviderInfo {
@@ -80,20 +81,27 @@ class _PaymentProvidersCardState extends ConsumerState<PaymentProvidersCard> {
               ? Icons.check_circle_outline
               : Icons.error_outline),
           title: Text(d['ok'] == true
-              ? '$label répond : clés valides'
-              : '$label refuse la facture de test'),
+              ? trf('{0} répond : clés valides', [label])
+              : trf('{0} refuse la facture de test', [label])),
           content: Text(d['ok'] == true
-              ? 'Facture de test de 100 FCFA créée en ${((asInt(d['latency_ms'])) / 1000).toStringAsFixed(1).replaceAll('.', ',')} s, '
-                  'jamais présentée à un client. Pour un essai complet, achetez le plus petit pack depuis l’application.'
-              : 'Réponse : ${d['message'] ?? 'inconnue'}. Vérifiez les clés et l’activation du projet chez $label.'),
+              ? trf(
+                  'Facture de test de 100 FCFA créée en {0} s, jamais présentée à un client. Pour un essai complet, achetez le plus petit pack depuis l’application.',
+                  [
+                      ((asInt(d['latency_ms'])) / 1000)
+                          .toStringAsFixed(1)
+                          .replaceAll('.', decimalSeparator)
+                    ])
+              : trf(
+                  'Réponse : {0}. Vérifiez les clés et l’activation du projet chez {1}.',
+                  [d['message'] ?? 'inconnue', label])),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(c), child: const Text('Fermer'))
+                onPressed: () => Navigator.pop(c), child: Text(tr('Fermer')))
           ],
         ),
       );
     } catch (e) {
-      if (mounted) showMessage(context, 'Test impossible pour le moment.');
+      if (mounted) showMessage(context, tr('Test impossible pour le moment.'));
     } finally {
       if (mounted) setState(() => _testing = false);
     }
@@ -110,8 +118,8 @@ class _PaymentProvidersCardState extends ConsumerState<PaymentProvidersCard> {
         child: async.when(
           loading: () => const LinearProgressIndicator(),
           error: (e, _) => Text(e is FunctionException
-              ? 'Agrégateurs indisponibles (code ${e.status}).'
-              : 'Agrégateurs indisponibles pour le moment.'),
+              ? trf('Agrégateurs indisponibles (code {0}).', [e.status])
+              : tr('Agrégateurs indisponibles pour le moment.')),
           data: (s) {
             final all = [
               ...s.order,
@@ -131,14 +139,20 @@ class _PaymentProvidersCardState extends ConsumerState<PaymentProvidersCard> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Agrégateurs de paiement',
+                Text(tr('Agrégateurs de paiement'),
                     style: theme.textTheme.titleMedium),
                 const SizedBox(height: 4),
                 Text(
                   active.isEmpty
-                      ? 'Aucun agrégateur actif avec ses clés : les achats sont indisponibles.'
-                      : 'Utilisé pour les achats : ${active.first}'
-                          '${active.length > 1 ? ' (relais : ${active.skip(1).join(', ')})' : ''}.',
+                      ? tr(
+                          'Aucun agrégateur actif avec ses clés : les achats sont indisponibles.')
+                      : trf('Utilisé pour les achats : {0}{1}.', [
+                          active.first,
+                          active.length > 1
+                              ? trf(' (relais : {0})',
+                                  [active.skip(1).join(', ')])
+                              : ''
+                        ]),
                   style: theme.textTheme.bodySmall?.copyWith(
                       color: active.isEmpty ? scheme.error : scheme.primary),
                 ),
@@ -150,7 +164,7 @@ class _PaymentProvidersCardState extends ConsumerState<PaymentProvidersCard> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Les clés se règlent dans les secrets du dépôt, jamais dans l’application.',
+                        tr('Les clés se règlent dans les secrets du dépôt, jamais dans l’application.'),
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: scheme.onSurfaceVariant),
                       ),
@@ -159,7 +173,7 @@ class _PaymentProvidersCardState extends ConsumerState<PaymentProvidersCard> {
                     FilledButton(
                       onPressed:
                           !dirty || _saving || _enabled!.isEmpty ? null : _save,
-                      child: const Text('Enregistrer'),
+                      child: Text(tr('Enregistrer')),
                     ),
                   ],
                 ),
@@ -201,8 +215,9 @@ class _PaymentProvidersCardState extends ConsumerState<PaymentProvidersCard> {
                 Text(label, style: theme.textTheme.titleSmall),
                 Text(
                   p?.configured ?? false
-                      ? 'Clés configurées'
-                      : 'Clés absentes : ${p?.secrets.join(', ') ?? ''}',
+                      ? tr('Clés configurées')
+                      : trf(
+                          'Clés absentes : {0}', [p?.secrets.join(', ') ?? '']),
                   style: theme.textTheme.bodySmall?.copyWith(
                       color: p?.configured ?? false
                           ? theme.colorScheme.primary
@@ -214,10 +229,10 @@ class _PaymentProvidersCardState extends ConsumerState<PaymentProvidersCard> {
           if (p?.configured ?? false)
             TextButton(
               onPressed: _testing ? null : () => _test(name, label),
-              child: const Text('Tester'),
+              child: Text(tr('Tester')),
             ),
           IconButton(
-            tooltip: 'Monter',
+            tooltip: tr('Monter'),
             visualDensity: VisualDensity.compact,
             onPressed: i == 0
                 ? null
@@ -252,7 +267,7 @@ class _PaymentProvidersCardState extends ConsumerState<PaymentProvidersCard> {
       ref.invalidate(paymentProvidersProvider);
       _order = null;
       _enabled = null;
-      if (mounted) showMessage(context, 'Agrégateurs enregistrés.');
+      if (mounted) showMessage(context, tr('Agrégateurs enregistrés.'));
     } catch (e) {
       if (mounted) showMessage(context, adminErrorMessage(e));
     } finally {

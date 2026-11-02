@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Un rapport en attente d'envoi.
 class ErrorReport {
@@ -80,8 +81,8 @@ class ErrorReporter {
     if (!enabled) return;
     _enqueue(ErrorReport(
         kind: 'slow',
-        message:
-            'Requête lente : ${(d.inMilliseconds / 1000).toStringAsFixed(1)} s',
+        message: trf('Requête lente : {0} s',
+            [(d.inMilliseconds / 1000).toStringAsFixed(1)]),
         context: path));
   }
 
@@ -97,7 +98,7 @@ class ErrorReporter {
   Future<void> _send(ErrorReport r) async {
     if (_sendOverride != null) return _sendOverride(r);
     final client = Supabase.instance.client;
-    if (client.auth.currentUser == null) throw StateError('non connecté');
+    if (client.auth.currentUser == null) throw StateError(tr('non connecté'));
     await client.rpc('report_client_error', params: {
       'p_kind': r.kind,
       'p_message': r.message,

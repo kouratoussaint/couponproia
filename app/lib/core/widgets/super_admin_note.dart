@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Encadré « visible par le super administrateur uniquement » : détails techniques
 /// (fournisseur et modèle d'IA, version du moteur) que les utilisateurs ne voient pas.
@@ -20,7 +21,7 @@ class SuperAdminNote extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Visible par le super administrateur uniquement',
+          Text(tr('Visible par le super administrateur uniquement'),
               style: theme.textTheme.labelSmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           const SizedBox(height: 2),

@@ -14,6 +14,7 @@ import '../notifications/data/push_service.dart';
 import '../profile/presentation/responsible_gaming_screen.dart';
 import '../profile/data/profile_repository.dart';
 import '../system/system_providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Clé du Scaffold principal : permet d'ouvrir le menu depuis la barre de chaque onglet.
 final shellScaffoldKey = GlobalKey<ScaffoldState>();
@@ -25,7 +26,7 @@ class DrawerMenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      tooltip: 'Menu',
+      tooltip: tr('Menu'),
       icon: const Icon(Icons.menu),
       onPressed: () => shellScaffoldKey.currentState?.openDrawer(),
     );
@@ -95,68 +96,68 @@ class AppDrawer extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
           children: [
             DrawerHeaderCard(onTap: () => open(AppRoutes.billing)),
-            const DrawerSectionTitle('Mon espace et compte'),
-            item(Icons.bookmarks_outlined, 'Mes coupons',
+            DrawerSectionTitle(tr('Mon espace et compte')),
+            item(Icons.bookmarks_outlined, tr('Mes coupons'),
                 () => go(AppRoutes.assistantMyCoupons)),
-            item(Icons.menu_book_outlined, 'Mon carnet de paris',
+            item(Icons.menu_book_outlined, tr('Mon carnet de paris'),
                 () => open(AppRoutes.journal)),
-            item(Icons.workspace_premium_outlined, 'Abonnement et crédits',
+            item(Icons.workspace_premium_outlined, tr('Abonnement et crédits'),
                 () => open(AppRoutes.billing)),
-            item(Icons.person_outline, 'Mon profil', () => tab(4),
+            item(Icons.person_outline, tr('Mon profil'), () => tab(4),
                 selected: currentIndex == 4),
             const Divider(),
-            const DrawerSectionTitle('Découvrir'),
-            item(Icons.home_outlined, 'Accueil', () => tab(0),
+            DrawerSectionTitle(tr('Découvrir')),
+            item(Icons.home_outlined, tr('Accueil'), () => tab(0),
                 selected: currentIndex == 0),
-            item(Icons.sports_soccer_outlined, 'Matchs', () => tab(1),
+            item(Icons.sports_soccer_outlined, tr('Matchs'), () => tab(1),
                 selected: currentIndex == 1),
-            item(Icons.emoji_events_outlined, 'Compétitions et classements',
+            item(Icons.emoji_events_outlined, tr('Compétitions et classements'),
                 () => go(AppRoutes.matchesCompetitions)),
-            item(Icons.receipt_long_outlined, 'Coupons IA', () => tab(2),
+            item(Icons.receipt_long_outlined, tr('Coupons IA'), () => tab(2),
                 selected: currentIndex == 2),
-            item(Icons.insights_outlined, 'Performances',
+            item(Icons.insights_outlined, tr('Performances'),
                 () => open(AppRoutes.performance)),
-            item(Icons.forum_outlined, 'Communauté et Tipsters',
+            item(Icons.forum_outlined, tr('Communauté et Tipsters'),
                 () => open(AppRoutes.community)),
             const Divider(),
-            const DrawerSectionTitle('Outils'),
-            item(Icons.smart_toy_outlined, 'Assistant IA', () => tab(3),
+            DrawerSectionTitle(tr('Outils')),
+            item(Icons.smart_toy_outlined, tr('Assistant IA'), () => tab(3),
                 selected: currentIndex == 3),
-            item(Icons.science_outlined, 'Laboratoire IA',
+            item(Icons.science_outlined, tr('Laboratoire IA'),
                 () => go(AppRoutes.assistantLab)),
-            item(Icons.palette_outlined, 'Studio graphique',
+            item(Icons.palette_outlined, tr('Studio graphique'),
                 () => open(AppRoutes.studio)),
             const Divider(),
-            const DrawerSectionTitle('Aide'),
-            item(Icons.help_outline, 'Aide et questions fréquentes',
+            DrawerSectionTitle(tr('Aide')),
+            item(Icons.help_outline, tr('Aide et questions fréquentes'),
                 () => open(AppRoutes.help)),
-            item(Icons.health_and_safety_outlined, 'Jeu responsable',
+            item(Icons.health_and_safety_outlined, tr('Jeu responsable'),
                 () => open(AppRoutes.responsibleGaming)),
-            item(Icons.support_agent, 'Contacter le support', () {
+            item(Icons.support_agent, tr('Contacter le support'), () {
               _close();
               contactSupport(context, ref);
             }),
-            item(Icons.gavel_outlined, 'Mentions légales et documents',
+            item(Icons.gavel_outlined, tr('Mentions légales et documents'),
                 () => go(AppRoutes.legal)),
             if (team) ...[
               const Divider(),
-              const DrawerSectionTitle('Administration'),
+              DrawerSectionTitle(tr('Administration')),
               if (permissions.contains('admin.access'))
                 item(
                     Icons.admin_panel_settings_outlined,
-                    'Console d’administration',
+                    tr('Console d’administration'),
                     () => open(AppRoutes.adminConsole)),
               if (!permissions.contains('admin.access') &&
                   permissions.contains('sports.configure'))
-                item(Icons.sync_alt, 'Données sportives',
+                item(Icons.sync_alt, tr('Données sportives'),
                     () => open(AppRoutes.sportsAdmin)),
               if (!permissions.contains('admin.access') &&
                   permissions.contains('generation.manage'))
-                item(Icons.auto_mode, 'Coupons et générations',
+                item(Icons.auto_mode, tr('Coupons et générations'),
                     () => open(AppRoutes.generationsAdmin)),
               if (!permissions.contains('admin.access') &&
                   permissions.contains('ai.configure'))
-                item(Icons.psychology_outlined, 'Moteur et IA',
+                item(Icons.psychology_outlined, tr('Moteur et IA'),
                     () => open(AppRoutes.engineAdmin)),
             ],
             const Divider(),
@@ -167,7 +168,7 @@ class AppDrawer extends ConsumerWidget {
               return ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 24),
                 leading: Icon(Icons.logout, color: red),
-                title: Text('Se déconnecter',
+                title: Text(tr('Se déconnecter'),
                     style: TextStyle(color: red, fontWeight: FontWeight.w700)),
                 onTap: () async {
                   _close();
@@ -180,7 +181,8 @@ class AppDrawer extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
                 child: Text(
-                  'Version ${version.version} (${version.buildNumber})',
+                  trf('Version {0} ({1})',
+                      [version.version, version.buildNumber]),
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
@@ -195,14 +197,14 @@ class AppDrawer extends ConsumerWidget {
 /// « Forfait PRO », « Forfait STARTER », « Compte équipe ».
 String planBadge(Credits? c) {
   if (c == null) return '';
-  if (c.unlimited) return 'Compte équipe';
-  return 'Forfait ${c.plan.replaceAll('_', ' ')}';
+  if (c.unlimited) return tr('Compte équipe');
+  return trf('Forfait {0}', [c.plan.replaceAll('_', ' ')]);
 }
 
 /// « 50 crédits », « Illimités ».
 String creditsBadge(Credits? c) {
   if (c == null) return '…';
-  if (c.unlimited) return 'Illimités';
+  if (c.unlimited) return tr('Illimités');
   return creditsLabel(c.total);
 }
 
@@ -246,10 +248,10 @@ class DrawerHeaderCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Coupon Pro IA',
+                      Text(tr('Coupon Pro IA'),
                           style: theme.textTheme.titleMedium?.copyWith(
                               color: fg, fontWeight: FontWeight.w800)),
-                      Text('Espace utilisateur',
+                      Text(tr('Espace utilisateur'),
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: muted)),
                     ],
@@ -295,7 +297,7 @@ class DrawerHeaderCard extends ConsumerWidget {
                 ),
                 child: Row(children: [
                   Expanded(
-                    child: Text('Crédits IA disponibles',
+                    child: Text(tr('Crédits IA disponibles'),
                         style: theme.textTheme.bodyMedium?.copyWith(color: fg)),
                   ),
                   Text(creditsBadge(credits),
@@ -310,7 +312,7 @@ class DrawerHeaderCard extends ConsumerWidget {
                   style: solidButtonStyle(context, SolidTone.green),
                   onPressed: onTap,
                   icon: const Icon(Icons.workspace_premium_outlined, size: 18),
-                  label: const Text('Voir les forfaits'),
+                  label: Text(tr('Voir les forfaits')),
                 ),
               ],
             ],

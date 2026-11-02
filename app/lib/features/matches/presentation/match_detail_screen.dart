@@ -15,6 +15,7 @@ import 'sports_widgets.dart';
 import '../../community/data/community_repository.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../data/live_updates.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Fiche d'un match : en-tête, puis 4 onglets (Pronostic, Analyse, Marchés, Stats).
 /// Les estimations viennent du moteur (serveur) ; chaque fait indique sa source et son heure.
@@ -29,11 +30,11 @@ class MatchDetailScreen extends ConsumerWidget {
     return Scaffold(
       bottomNavigationBar: const ManualCouponBar(),
       appBar: AppBar(
-        title: Text(match.valueOrNull?.competition.name ?? 'Match'),
+        title: Text(match.valueOrNull?.competition.name ?? tr('Match')),
         actions: [
           if (match.valueOrNull case final m?)
             IconButton(
-              tooltip: 'Partager',
+              tooltip: tr('Partager'),
               icon: const Icon(Icons.share_outlined),
               onPressed: () => SharePlus.instance.share(ShareParams(
                   text: matchShareText(m, shareLink(ref, matchId: m.id)))),
@@ -44,11 +45,11 @@ class MatchDetailScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Match indisponible',
+            title: tr('Match indisponible'),
             body: userMessageFor(e)),
         data: (m) => m == null
-            ? const InfoMessage(
-                icon: Icons.help_outline, title: 'Match introuvable')
+            ? InfoMessage(
+                icon: Icons.help_outline, title: tr('Match introuvable'))
             : _MatchTabs(match: m),
       ),
     );
@@ -84,11 +85,11 @@ class _MatchTabs extends ConsumerWidget {
                 tabAlignment: TabAlignment.start,
                 labelStyle: theme.textTheme.titleSmall
                     ?.copyWith(fontWeight: FontWeight.w700),
-                tabs: const [
-                  Tab(text: 'Pronostic'),
-                  Tab(text: 'Analyse'),
-                  Tab(text: 'Marchés'),
-                  Tab(text: 'Stats'),
+                tabs: [
+                  Tab(text: tr('Pronostic')),
+                  Tab(text: tr('Analyse')),
+                  Tab(text: tr('Marchés')),
+                  Tab(text: tr('Stats')),
                 ],
               ),
               theme.scaffoldBackgroundColor,
@@ -201,13 +202,15 @@ class MatchHeader extends ConsumerWidget {
                             )),
                         Text(
                             m.status == MatchStatus.scheduled
-                                ? 'Coup d’envoi'
+                                ? tr('Coup d’envoi')
                                 : statusLabel(m),
                             style: theme.textTheme.labelMedium),
                         if (m.htHomeGoals != null &&
                             m.htAwayGoals != null &&
                             m.status != MatchStatus.scheduled)
-                          Text('Mi-temps ${m.htHomeGoals}-${m.htAwayGoals}',
+                          Text(
+                              trf('Mi-temps {0}-{1}',
+                                  [m.htHomeGoals, m.htAwayGoals]),
                               style: theme.textTheme.labelSmall),
                       ],
                     ),
@@ -220,7 +223,7 @@ class MatchHeader extends ConsumerWidget {
                 Text(
                   [
                     if (m.venue != null) m.venue!,
-                    if (m.referee != null) 'Arbitre : ${m.referee}'
+                    if (m.referee != null) trf('Arbitre : {0}', [m.referee])
                   ].join(' · '),
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: scheme.onSurfaceVariant),
@@ -245,7 +248,7 @@ class MatchHeader extends ConsumerWidget {
                           size: 18, color: scheme.primary),
                       const SizedBox(width: 8),
                       Flexible(
-                        child: Text('Analyse offerte du jour',
+                        child: Text(tr('Analyse offerte du jour'),
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.labelLarge?.copyWith(
                                 color: scheme.primary,
@@ -292,8 +295,10 @@ class _FollowTeamButton extends ConsumerWidget {
             showMessage(
                 context,
                 on
-                    ? 'Vous ne suivez plus ${team.name}.'
-                    : 'Vous suivez ${team.name} : ses matchs passent en premier sur l’accueil.');
+                    ? trf('Vous ne suivez plus {0}.', [team.name])
+                    : trf(
+                        'Vous suivez {0} : ses matchs passent en premier sur l’accueil.',
+                        [team.name]));
           }
         } catch (e) {
           if (context.mounted) {
@@ -302,7 +307,7 @@ class _FollowTeamButton extends ConsumerWidget {
         }
       },
       icon: Icon(on ? Icons.star : Icons.star_border, size: 18),
-      label: Text(on ? 'Suivie' : 'Suivre'),
+      label: Text(on ? tr('Suivie') : tr('Suivre')),
     );
   }
 }
@@ -310,8 +315,9 @@ class _FollowTeamButton extends ConsumerWidget {
 /// Texte de partage d'un match : affiche, date et lien qui ouvre la fiche dans l'application.
 String matchShareText(MatchSummary m, String? link) => [
       '${m.home.name} – ${m.away.name}',
-      '${m.competition.name} · ${shortDate(m.kickoffAt)} à ${timeLabel(m.kickoffAt)}',
-      'Probabilités, forme et cotes sur Coupon Pro IA.',
+      trf('{0} · {1} à {2}',
+          [m.competition.name, shortDate(m.kickoffAt), timeLabel(m.kickoffAt)]),
+      tr('Probabilités, forme et cotes sur Coupon Pro IA.'),
       if (link != null) link,
-      'Estimations, aucune certitude. 18+',
+      tr('Estimations, aucune certitude. 18+'),
     ].join('\n');

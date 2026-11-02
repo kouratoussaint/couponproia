@@ -7,6 +7,7 @@ import '../../analysis/data/analysis_format.dart';
 import '../../coupons/data/coupon_models.dart';
 import '../../matches/data/sports_format.dart';
 import '../data/studio_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Visuel d'un coupon, dessiné à la taille exacte du format (1 px logique = 1 px exporté).
 /// Tout ce qui est affiché vient du coupon : équipes, issues, cotes, horaires, résultat.
@@ -495,7 +496,7 @@ class _Header extends StatelessWidget {
         SizedBox(width: 24 * scale),
         Expanded(
           child: Text(
-            name.isEmpty ? 'Coupon Pro IA' : name,
+            name.isEmpty ? tr('Coupon Pro IA') : name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: p.t(46 * scale, w: FontWeight.w800),
@@ -540,7 +541,7 @@ class _Title extends StatelessWidget {
         SizedBox(height: 10 * scale),
         Container(height: 8 * scale, width: 140 * scale, color: p.accent),
         SizedBox(height: 14 * scale),
-        Text('$n sélection${n > 1 ? 's' : ''}',
+        Text(trf('{0} sélection{1}', [n, n > 1 ? 's' : '']),
             style: p.b(32 * scale, color: p.muted, w: FontWeight.w600)),
       ],
     );
@@ -594,7 +595,8 @@ class _Lines extends StatelessWidget {
               height: rowHeight * 0.5,
               child: Center(
                 child: Text(
-                    '+ $hidden autre${hidden > 1 ? 's' : ''} sélection${hidden > 1 ? 's' : ''}',
+                    trf('+ {0} autre{1} sélection{2}',
+                        [hidden, hidden > 1 ? 's' : '', hidden > 1 ? 's' : '']),
                     style: p.b(30, color: p.muted)),
               ),
             ),
@@ -824,7 +826,9 @@ class _Total extends StatelessWidget {
     final resultText = result == null
         ? null
         : '${resultLabels[result] ?? result}'
-            '${result == 'won' && coupon.settledOdd != null ? ' · cote ${decimal(coupon.settledOdd!)}' : ''}';
+            '${result == 'won' && coupon.settledOdd != null ? trf(' · cote {0}', [
+                    decimal(coupon.settledOdd!)
+                  ]) : ''}';
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 34 * s, vertical: 24 * s),
       decoration: BoxDecoration(
@@ -839,14 +843,15 @@ class _Total extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('COTE TOTALE',
+                Text(tr('COTE TOTALE'),
                     style: p.b(28 * s,
                         color: p.muted, w: FontWeight.w700, spacing: 2)),
                 if (options.showProbability)
                   Padding(
                     padding: EdgeInsets.only(top: 8 * s),
                     child: Text(
-                      'Probabilité estimée (modèle) : ${pct(coupon.combinedProbability)}',
+                      trf('Probabilité estimée (modèle) : {0}',
+                          [pct(coupon.combinedProbability)]),
                       style: p.b(26 * s, color: p.muted),
                     ),
                   ),
@@ -854,7 +859,7 @@ class _Total extends StatelessWidget {
                   Padding(
                     padding: EdgeInsets.only(top: 8 * s),
                     child: Text(
-                      'Résultat : $resultText',
+                      trf('Résultat : {0}', [resultText]),
                       style: p.b(30 * s,
                           w: FontWeight.w800,
                           color: result == 'won'
@@ -908,7 +913,7 @@ class _Footer extends StatelessWidget {
                   Image.asset('assets/brand/logo_emblem.webp',
                       width: 36 * scale, height: 36 * scale),
                   SizedBox(width: 10 * scale),
-                  Text('Réalisé avec Coupon Pro IA',
+                  Text(tr('Réalisé avec Coupon Pro IA'),
                       style:
                           p.b(24 * scale, w: FontWeight.w700, color: p.muted)),
                 ],
@@ -940,12 +945,12 @@ class _Dashes extends StatelessWidget {
       );
 }
 
-String _weekday(DateTime d) => const [
-      'Lun.',
-      'Mar.',
-      'Mer.',
-      'Jeu.',
-      'Ven.',
-      'Sam.',
-      'Dim.'
+String _weekday(DateTime d) => [
+      tr('Lun.'),
+      tr('Mar.'),
+      tr('Mer.'),
+      tr('Jeu.'),
+      tr('Ven.'),
+      tr('Sam.'),
+      tr('Dim.')
     ][d.weekday - 1];

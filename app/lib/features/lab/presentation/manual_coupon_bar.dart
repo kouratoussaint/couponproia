@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_routes.dart';
 import '../../analysis/data/analysis_format.dart';
 import '../data/lab_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Barre du coupon en construction (générateur manuel), visible dès qu'une cote est choisie.
 class ManualCouponBar extends ConsumerWidget {
@@ -28,13 +29,17 @@ class ManualCouponBar extends ConsumerWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Mon coupon : ${picks.length} sélection${picks.length > 1 ? 's' : ''} · cote indicative ${decimal(indicativeOdd(picks))}',
+                    trf('Mon coupon : {0} sélection{1} · cote indicative {2}', [
+                      picks.length,
+                      picks.length > 1 ? 's' : '',
+                      decimal(indicativeOdd(picks))
+                    ]),
                     style: TextStyle(
                         color: scheme.onPrimaryContainer,
                         fontWeight: FontWeight.w600),
                   ),
                 ),
-                Text('Ouvrir',
+                Text(tr('Ouvrir'),
                     style: TextStyle(color: scheme.onPrimaryContainer)),
                 Icon(Icons.chevron_right, color: scheme.onPrimaryContainer),
               ],

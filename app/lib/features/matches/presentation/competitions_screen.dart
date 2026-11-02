@@ -8,6 +8,7 @@ import '../data/sports_format.dart';
 import '../data/sports_models.dart';
 import '../data/sports_repository.dart';
 import 'sports_widgets.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Liste des compétitions suivies (écran autonome, pour les liens directs).
 class CompetitionsScreen extends StatelessWidget {
@@ -15,7 +16,7 @@ class CompetitionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Compétitions et classements')),
+        appBar: AppBar(title: Text(tr('Compétitions et classements'))),
         body: const CompetitionsList(),
       );
 }
@@ -32,12 +33,12 @@ class CompetitionsList extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => InfoMessage(
           icon: Icons.cloud_off_outlined,
-          title: 'Indisponible',
+          title: tr('Indisponible'),
           body: userMessageFor(e)),
       data: (list) => list.isEmpty
-          ? const InfoMessage(
+          ? InfoMessage(
               icon: Icons.emoji_events_outlined,
-              title: 'Aucune compétition suivie')
+              title: tr('Aucune compétition suivie'))
           : ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: list.length,
@@ -53,8 +54,8 @@ class CompetitionsList extends ConsumerWidget {
                   subtitle: Text([
                     if (c.country != null) c.country!,
                     c.currentSeason == null
-                        ? 'saison non synchronisée'
-                        : 'saison ${seasonLabel(c.currentSeason!)}',
+                        ? tr('saison non synchronisée')
+                        : trf('saison {0}', [seasonLabel(c.currentSeason!)]),
                   ].join(' · ')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push(AppRoutes.standingsFor(c.id)),
@@ -75,25 +76,25 @@ class StandingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final competition = ref.watch(competitionProvider(competitionId));
     return Scaffold(
-      appBar:
-          AppBar(title: Text(competition.valueOrNull?.name ?? 'Classement')),
+      appBar: AppBar(
+          title: Text(competition.valueOrNull?.name ?? tr('Classement'))),
       body: competition.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Indisponible',
+            title: tr('Indisponible'),
             body: userMessageFor(e)),
         data: (c) {
           if (c == null) {
-            return const InfoMessage(
-                icon: Icons.help_outline, title: 'Compétition introuvable');
+            return InfoMessage(
+                icon: Icons.help_outline, title: tr('Compétition introuvable'));
           }
           if (c.currentSeason == null) {
-            return const InfoMessage(
+            return InfoMessage(
               icon: Icons.hourglass_empty,
-              title: 'Saison pas encore synchronisée',
-              body:
-                  'Le classement apparaîtra après la prochaine synchronisation quotidienne.',
+              title: tr('Saison pas encore synchronisée'),
+              body: tr(
+                  'Le classement apparaîtra après la prochaine synchronisation quotidienne.'),
             );
           }
           return _StandingsTable(competition: c);
@@ -117,15 +118,15 @@ class _StandingsTable extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => InfoMessage(
           icon: Icons.cloud_off_outlined,
-          title: 'Indisponible',
+          title: tr('Indisponible'),
           body: userMessageFor(e)),
       data: (list) {
         if (list.isEmpty) {
-          return const InfoMessage(
+          return InfoMessage(
             icon: Icons.table_rows_outlined,
-            title: 'Pas de classement',
-            body:
-                'Le fournisseur ne publie pas de classement pour cette compétition, ou pas encore pour cette saison.',
+            title: tr('Pas de classement'),
+            body: tr(
+                'Le fournisseur ne publie pas de classement pour cette compétition, ou pas encore pour cette saison.'),
           );
         }
         final groups = <String, List<StandingRow>>{};
@@ -165,13 +166,13 @@ class _StandingsTable extends ConsumerWidget {
                         child: Row(
                           children: [
                             cell('#', width: 28, style: header),
-                            Expanded(child: Text('Équipe', style: header)),
+                            Expanded(child: Text(tr('Équipe'), style: header)),
                             cell('J', style: header),
                             cell('G', style: header),
                             cell('N', style: header),
                             cell('P', style: header),
-                            cell('Diff', width: 38, style: header),
-                            cell('Pts', width: 36, style: header),
+                            cell(tr('Diff'), width: 38, style: header),
+                            cell(tr('Pts'), width: 36, style: header),
                           ],
                         ),
                       ),
@@ -211,7 +212,7 @@ class _StandingsTable extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.all(12),
               child: Text(
-                'Source : API-Football · J joués, G gagnés, N nuls, P perdus.',
+                tr('Source : API-Football · J joués, G gagnés, N nuls, P perdus.'),
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,

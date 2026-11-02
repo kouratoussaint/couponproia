@@ -5,6 +5,7 @@ import '../../../core/providers.dart';
 import '../../analysis/data/analysis_repository.dart';
 import 'coupon_models.dart';
 import 'coupon_phase.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 const _selectionColumns =
     'position, selection_key, odd, odd_best, bookmakers, odds_captured_at, '
@@ -170,7 +171,7 @@ class CouponRepository {
         if (force) 'force': true,
       });
     } on FunctionException catch (e) {
-      throw _engineError(e, 'Publication impossible pour le moment.');
+      throw _engineError(e, tr('Publication impossible pour le moment.'));
     }
   }
 
@@ -192,7 +193,7 @@ class CouponRepository {
         if (force) 'force': true,
       });
     } on FunctionException catch (e) {
-      throw _engineError(e, 'Modification impossible pour le moment.');
+      throw _engineError(e, tr('Modification impossible pour le moment.'));
     }
   }
 
@@ -203,7 +204,7 @@ class CouponRepository {
           body: {'job': 'duplicate_coupon', 'coupon_id': couponId});
       return (res.data as Map)['id'] as String;
     } on FunctionException catch (e) {
-      throw _engineError(e, 'Duplication impossible pour le moment.');
+      throw _engineError(e, tr('Duplication impossible pour le moment.'));
     }
   }
 
@@ -218,7 +219,7 @@ class CouponRepository {
     }
     return AnalysisException(d['message'] as String? ??
         (e.status == 403
-            ? 'Action réservée au super administrateur.'
+            ? tr('Action réservée au super administrateur.')
             : fallback));
   }
 

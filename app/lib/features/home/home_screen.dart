@@ -34,6 +34,7 @@ import '../onboarding/presentation/onboarding_sheet.dart';
 import '../profile/data/profile_repository.dart';
 import '../shell/app_drawer.dart';
 import '../matches/data/live_updates.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 const _weekdays = [
   'lundi',
@@ -44,19 +45,19 @@ const _weekdays = [
   'samedi',
   'dimanche'
 ];
-const _months = [
+final _months = [
   'janvier',
-  'février',
+  tr('février'),
   'mars',
   'avril',
   'mai',
   'juin',
   'juillet',
-  'août',
+  tr('août'),
   'septembre',
   'octobre',
   'novembre',
-  'décembre',
+  tr('décembre'),
 ];
 
 String longDate(DateTime d) =>
@@ -140,7 +141,7 @@ class HomeScreen extends ConsumerWidget {
               child: ActionChip(
                 avatar: Icon(Icons.bolt, size: 18, color: scheme.primary),
                 label: Text(credits.unlimited ? '∞' : '${credits.total}'),
-                tooltip: 'Crédits IA',
+                tooltip: tr('Crédits IA'),
                 onPressed: () => context.push(AppRoutes.billing),
               ),
             ),
@@ -151,7 +152,7 @@ class HomeScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           children: [
-            Text(name == null ? 'Bonjour' : 'Bonjour, $name',
+            Text(name == null ? tr('Bonjour') : trf('Bonjour, {0}', [name]),
                 style: theme.textTheme.headlineSmall
                     ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 2),
@@ -175,7 +176,7 @@ class HomeScreen extends ConsumerWidget {
             const _Shortcuts(),
             const SizedBox(height: 20),
             Text(
-              'Les pronostics sont des estimations, jamais des certitudes. Interdit aux moins de 18 ans.',
+              tr('Les pronostics sont des estimations, jamais des certitudes. Interdit aux moins de 18 ans.'),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: scheme.onSurfaceVariant),
               textAlign: TextAlign.center,
@@ -291,16 +292,16 @@ class _StatusTiles extends ConsumerWidget {
         );
     return Row(
       children: [
-        tile(ready ? '${split.toPlay.length}' : '–', 'à jouer',
+        tile(ready ? '${split.toPlay.length}' : '–', tr('à jouer'),
             () => context.go(AppRoutes.coupons),
             accent: split.toPlay.isNotEmpty),
         const SizedBox(width: 10),
-        tile(ready ? '${split.live.length}' : '–', 'en cours',
+        tile(ready ? '${split.live.length}' : '–', tr('en cours'),
             () => context.go(AppRoutes.coupons)),
         const SizedBox(width: 10),
         tile(
             upcoming.isEmpty ? '–' : timeLabel(upcoming.first),
-            upcoming.isEmpty ? 'plus de match' : '1er match',
+            upcoming.isEmpty ? tr('plus de match') : tr('1er match'),
             () => context.go(AppRoutes.matches)),
       ],
     );
@@ -331,11 +332,10 @@ class _CouponOfTheDay extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _Eyebrow('Coupon du jour'),
+                _Eyebrow(tr('Coupon du jour')),
                 const SizedBox(height: 8),
                 Text(
-                  'Le coupon du jour est publié chaque matin, quand des matchs à venir ont des cotes '
-                  'récentes. Sinon, le moteur s’abstient.',
+                  tr('Le coupon du jour est publié chaque matin, quand des matchs à venir ont des cotes récentes. Sinon, le moteur s’abstient.'),
                   style: theme.textTheme.bodyMedium,
                 ),
               ],
@@ -361,13 +361,24 @@ class _CouponOfTheDay extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _Eyebrow('Coupon du jour'),
+                        _Eyebrow(tr('Coupon du jour')),
                         const SizedBox(height: 6),
                         Text(
                           c.locked || sels.isEmpty
-                              ? 'Sélections visibles avec un forfait, ou après les matchs'
-                              : '${sels.length} sélection${sels.length > 1 ? 's' : ''}'
-                                  '${sels.isEmpty ? '' : timeLabel(first) == timeLabel(last) ? ' · ${timeLabel(first)}' : ' · de ${timeLabel(first)} à ${timeLabel(last)}'}',
+                              ? tr(
+                                  'Sélections visibles avec un forfait, ou après les matchs')
+                              : trf('{0} sélection{1}{2}', [
+                                  sels.length,
+                                  sels.length > 1 ? 's' : '',
+                                  sels.isEmpty
+                                      ? ''
+                                      : timeLabel(first) == timeLabel(last)
+                                          ? ' · ${timeLabel(first)}'
+                                          : trf(' · de {0} à {1}', [
+                                              timeLabel(first),
+                                              timeLabel(last)
+                                            ])
+                                ]),
                           style: muted,
                         ),
                       ],
@@ -384,7 +395,7 @@ class _CouponOfTheDay extends ConsumerWidget {
                       if (c.result != null)
                         ResultBadge(result: c.result, odd: c.settledOdd)
                       else
-                        Text('${pct(c.combinedProbability)} estimé',
+                        Text(trf('{0} estimé', [pct(c.combinedProbability)]),
                             style: muted),
                     ],
                   ),
@@ -434,7 +445,8 @@ class _CouponOfTheDay extends ConsumerWidget {
                   ),
                 if (sels.length > 4)
                   Text(
-                      '+ ${sels.length - 4} autre${sels.length - 4 > 1 ? 's' : ''}',
+                      trf('+ {0} autre{1}',
+                          [sels.length - 4, sels.length - 4 > 1 ? 's' : '']),
                       style: muted),
               ],
               const SizedBox(height: 14),
@@ -444,7 +456,7 @@ class _CouponOfTheDay extends ConsumerWidget {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14))),
                 onPressed: () => context.push(AppRoutes.couponDetailFor(c.id)),
-                child: const Text('Voir le coupon'),
+                child: Text(tr('Voir le coupon')),
               ),
             ],
           ),
@@ -464,20 +476,24 @@ class _Shortcuts extends StatelessWidget {
     final items = [
       (
         Icons.smart_toy_outlined,
-        'Assistant',
+        tr('Assistant'),
         () => context.go(AppRoutes.assistant)
       ),
       (
         Icons.bookmarks_outlined,
-        'Mes coupons',
+        tr('Mes coupons'),
         () => context.push(AppRoutes.myCoupons)
       ),
       (
         Icons.science_outlined,
-        'Laboratoire',
+        tr('Laboratoire'),
         () => context.push(AppRoutes.lab)
       ),
-      (Icons.palette_outlined, 'Studio', () => context.push(AppRoutes.studio)),
+      (
+        Icons.palette_outlined,
+        tr('Studio'),
+        () => context.push(AppRoutes.studio)
+      ),
     ];
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -565,7 +581,7 @@ class _FeaturedMatch extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('CADEAU · ANALYSE OFFERTE DU JOUR',
+                        Text(tr('CADEAU · ANALYSE OFFERTE DU JOUR'),
                             style: theme.textTheme.labelMedium?.copyWith(
                                 color: ink,
                                 fontWeight: FontWeight.w800,
@@ -573,8 +589,7 @@ class _FeaturedMatch extends ConsumerWidget {
                         const SizedBox(height: 3),
                         if (match == null)
                           Text(
-                            'Chaque matin, un match est choisi et son analyse complète est offerte à tous, '
-                            'sans crédit.',
+                            tr('Chaque matin, un match est choisi et son analyse complète est offerte à tous, sans crédit.'),
                             style: theme.textTheme.bodyMedium,
                           )
                         else ...[
@@ -598,7 +613,10 @@ class _FeaturedMatch extends ConsumerWidget {
                               ),
                             ),
                           Text(
-                              '${match.competition.name} · ${timeLabel(match.kickoffAt)} · gratuite, sans crédit',
+                              trf('{0} · {1} · gratuite, sans crédit', [
+                                match.competition.name,
+                                timeLabel(match.kickoffAt)
+                              ]),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodySmall
@@ -622,7 +640,7 @@ class _FeaturedMatch extends ConsumerWidget {
                   onPressed: () =>
                       context.push(AppRoutes.matchDetailFor(match.id)),
                   icon: const Icon(Icons.auto_awesome),
-                  label: const Text('Voir l’analyse offerte'),
+                  label: Text(tr('Voir l’analyse offerte')),
                 ),
               ],
             ],
@@ -691,13 +709,13 @@ class _MatchesBlockState extends ConsumerState<_MatchesBlock> {
         Row(
           children: [
             Expanded(
-              child: Text('Matchs',
+              child: Text(tr('Matchs'),
                   style: theme.textTheme.titleLarge
                       ?.copyWith(fontWeight: FontWeight.w800)),
             ),
             TextButton(
               onPressed: () => context.go(AppRoutes.matches),
-              child: const Text('Tout voir'),
+              child: Text(tr('Tout voir')),
             ),
           ],
         ),
@@ -714,9 +732,9 @@ class _MatchesBlockState extends ConsumerState<_MatchesBlock> {
                 ),
                 child: Row(
                   children: [
-                    seg('Aujourd’hui', false),
+                    seg(tr('Aujourd’hui'), false),
                     const SizedBox(width: 3),
-                    seg('Demain', true),
+                    seg(tr('Demain'), true),
                   ],
                 ),
               ),
@@ -724,7 +742,7 @@ class _MatchesBlockState extends ConsumerState<_MatchesBlock> {
             const SizedBox(width: 10),
             Expanded(
               flex: 2,
-              child: Text('Marché : 1 · N · 2',
+              child: Text(tr('Marché : 1 · N · 2'),
                   textAlign: TextAlign.right,
                   style: theme.textTheme.labelMedium
                       ?.copyWith(color: scheme.onSurfaceVariant)),
@@ -751,8 +769,9 @@ class _MatchesBlockState extends ConsumerState<_MatchesBlock> {
             if (shown.isEmpty) {
               return _Surface(
                 child: Text(_tomorrow
-                    ? 'Aucun match demain dans les compétitions suivies.'
-                    : 'Plus de match à venir aujourd’hui dans les compétitions suivies.'),
+                    ? tr('Aucun match demain dans les compétitions suivies.')
+                    : tr(
+                        'Plus de match à venir aujourd’hui dans les compétitions suivies.')),
               );
             }
             return _Surface(
@@ -797,7 +816,7 @@ class _MatchRow extends StatelessWidget {
               ConstrainedBox(
                 constraints: const BoxConstraints(minWidth: 46),
                 child: m.isLive
-                    ? Text(m.elapsed == null ? 'Direct' : '${m.elapsed}’',
+                    ? Text(m.elapsed == null ? tr('Direct') : '${m.elapsed}’',
                         style: theme.textTheme.labelLarge?.copyWith(
                             color: BrandColors.rouge,
                             fontWeight: FontWeight.w800))
@@ -930,18 +949,27 @@ class _LastCoupons extends ConsumerWidget {
         Row(
           children: [
             Expanded(
-              child: Text('Derniers coupons',
+              child: Text(tr('Derniers coupons'),
                   style: theme.textTheme.titleLarge
                       ?.copyWith(fontWeight: FontWeight.w800)),
             ),
-            TextButton(onPressed: openAll, child: const Text('Tout voir')),
+            TextButton(onPressed: openAll, child: Text(tr('Tout voir'))),
           ],
         ),
         Text(
           week.isEmpty
-              ? '7 derniers jours : pas encore de coupon réglé · pertes toujours comprises'
-              : '7 derniers jours : $won gagné${won > 1 ? 's' : ''} · $lost perdu${lost > 1 ? 's' : ''}'
-                  ' sur ${week.length} réglé${week.length > 1 ? 's' : ''} · pertes comprises',
+              ? tr(
+                  '7 derniers jours : pas encore de coupon réglé · pertes toujours comprises')
+              : trf(
+                  '7 derniers jours : {0} gagné{1} · {2} perdu{3} sur {4} réglé{5} · pertes comprises',
+                  [
+                      won,
+                      won > 1 ? 's' : '',
+                      lost,
+                      lost > 1 ? 's' : '',
+                      week.length,
+                      week.length > 1 ? 's' : ''
+                    ]),
           style: theme.textTheme.bodySmall
               ?.copyWith(color: scheme.onSurfaceVariant),
         ),
@@ -951,7 +979,7 @@ class _LastCoupons extends ConsumerWidget {
         else if (settled.isEmpty)
           _Surface(
             child: Text(
-                'Les résultats apparaissent ici dès que les premiers coupons sont réglés, gagnés comme perdus.',
+                tr('Les résultats apparaissent ici dès que les premiers coupons sont réglés, gagnés comme perdus.'),
                 style: theme.textTheme.bodyMedium),
           )
         else
@@ -1061,11 +1089,11 @@ class _LiveBlockState extends ConsumerState<_LiveBlock> {
                         color: BrandColors.rouge, shape: BoxShape.circle)),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('En direct (${live.length})',
+                  child: Text(trf('En direct ({0})', [live.length]),
                       style: theme.textTheme.titleSmall
                           ?.copyWith(fontWeight: FontWeight.w800)),
                 ),
-                Text('mis à jour toutes les 5 min',
+                Text(tr('mis à jour toutes les 5 min'),
                     style: theme.textTheme.labelSmall
                         ?.copyWith(color: scheme.onSurfaceVariant)),
               ],
@@ -1105,8 +1133,10 @@ class _LiveBlockState extends ConsumerState<_LiveBlock> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () => context.go(AppRoutes.matches),
-                  child: Text(
-                      '+ ${live.length - shown.length} autre${live.length - shown.length > 1 ? 's' : ''}'),
+                  child: Text(trf('+ {0} autre{1}', [
+                    live.length - shown.length,
+                    live.length - shown.length > 1 ? 's' : ''
+                  ])),
                 ),
               ),
           ],

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 class Profile {
   const Profile({
@@ -63,7 +64,7 @@ class ProfileRepository {
 
   Future<void> updateDisplayName(String name) async {
     final user = _client.auth.currentUser;
-    if (user == null) throw AuthException('Session expirée');
+    if (user == null) throw AuthException(tr('Session expirée'));
     await _client
         .from('profiles')
         .update({'display_name': name.trim()}).eq('id', user.id);
@@ -77,7 +78,7 @@ class ProfileRepository {
     required String? avatarUrl,
   }) async {
     final user = _client.auth.currentUser;
-    if (user == null) throw AuthException('Session expirée');
+    if (user == null) throw AuthException(tr('Session expirée'));
     await _client.from('profiles').update({
       'display_name': displayName.trim(),
       'country_code': countryCode,
@@ -91,7 +92,7 @@ class ProfileRepository {
   /// Envoie la photo dans son dossier et renvoie son adresse publique.
   Future<String> uploadAvatar(Uint8List bytes, String extension) async {
     final user = _client.auth.currentUser;
-    if (user == null) throw AuthException('Session expirée');
+    if (user == null) throw AuthException(tr('Session expirée'));
     final ext = extension.toLowerCase() == 'png' ? 'png' : 'jpg';
     final path =
         '${user.id}/photo-${DateTime.now().millisecondsSinceEpoch}.$ext';
@@ -118,7 +119,7 @@ class ProfileRepository {
   /// Vérifie le mot de passe actuel avant un changement sensible (e-mail, mot de passe).
   Future<void> verifyPassword(String password) async {
     final email = _client.auth.currentUser?.email;
-    if (email == null) throw AuthException('Session expirée');
+    if (email == null) throw AuthException(tr('Session expirée'));
     await _client.auth.signInWithPassword(email: email, password: password);
   }
 

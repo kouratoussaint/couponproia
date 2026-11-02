@@ -5,34 +5,36 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers.dart';
 import 'community_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Message lisible pour une erreur de la communauté.
 String communityErrorMessage(Object e) {
   if (e is PostgrestException) {
     switch (e.hint) {
       case 'plan_required':
-        return 'Publier demande le forfait PRO TIPSTER ou BUSINESS.';
+        return tr('Publier demande le forfait PRO TIPSTER ou BUSINESS.');
       case 'profile_required':
-        return 'Créez d’abord votre profil Tipster.';
+        return tr('Créez d’abord votre profil Tipster.');
       case 'too_late':
-        return 'Trop tard : un coupon se publie avant le premier coup d’envoi.';
+        return tr(
+            'Trop tard : un coupon se publie avant le premier coup d’envoi.');
       case 'already_published':
-        return 'Ce coupon est déjà publié.';
+        return tr('Ce coupon est déjà publié.');
       case 'rate_limited':
         return e.message;
       case 'feature_disabled':
-        return 'La communauté est momentanément indisponible.';
+        return tr('La communauté est momentanément indisponible.');
     }
     if (e.code == '23505') {
       return e.message.contains('handle')
-          ? 'Cet identifiant est déjà pris.'
-          : 'C’est déjà fait.';
+          ? tr('Cet identifiant est déjà pris.')
+          : tr('C’est déjà fait.');
     }
     if (e.code == '22023' || e.code == '42501' || e.code == 'P0002') {
       return e.message;
     }
   }
-  return 'Action impossible pour le moment. Réessayez.';
+  return tr('Action impossible pour le moment. Réessayez.');
 }
 
 class CommunityRepository {
@@ -43,7 +45,7 @@ class CommunityRepository {
 
   String get _uid {
     final id = _client.auth.currentUser?.id;
-    if (id == null) throw AuthException('Session expirée');
+    if (id == null) throw AuthException(tr('Session expirée'));
     return id;
   }
 
@@ -256,7 +258,7 @@ class CommunityRepository {
     return {
       for (final r in rows)
         (r['team_id'] as num).toInt():
-            (r['team'] as Map?)?['name'] as String? ?? 'Équipe',
+            (r['team'] as Map?)?['name'] as String? ?? tr('Équipe'),
     };
   }
 

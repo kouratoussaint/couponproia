@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Niveau déclaré : règle les explications affichées, jamais les chiffres.
 enum UserLevel {
@@ -9,10 +10,12 @@ enum UserLevel {
   intermediaire('Intermédiaire', 'Je suis les stats et les cotes'),
   expert('Expert', 'Je fais mes propres analyses');
 
-  const UserLevel(this.label, this.description);
+  const UserLevel(this._label, this._description);
 
-  final String label;
-  final String description;
+  final String _label;
+  String get label => tr(_label);
+  final String _description;
+  String get description => tr(_description);
 
   static UserLevel? fromName(String? name) {
     for (final l in values) {
@@ -72,7 +75,7 @@ class PreferencesRepository {
     bool markOnboarded = false,
   }) async {
     final user = _client.auth.currentUser;
-    if (user == null) throw AuthException('Session expirée');
+    if (user == null) throw AuthException(tr('Session expirée'));
     await _client.from('user_preferences').update({
       if (favoriteCompetitions != null)
         'favorite_competitions': favoriteCompetitions.toList()..sort(),

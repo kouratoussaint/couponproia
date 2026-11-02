@@ -12,6 +12,7 @@ import '../data/sports_models.dart';
 import '../data/sports_repository.dart';
 import 'match_tabs.dart';
 import 'sports_widgets.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Onglet Stats : uniquement des résultats enregistrés (classement, forme, comparatif de saison,
 /// séries en cours, confrontations directes).
@@ -36,13 +37,14 @@ class _StatsTabState extends ConsumerState<StatsTab> {
       error: (e, _) => ListView(children: [
         InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Statistiques indisponibles',
+            title: tr('Statistiques indisponibles'),
             body: userMessageFor(e)),
       ]),
       data: (ins) => ins == null
-          ? ListView(children: const [
+          ? ListView(children: [
               InfoMessage(
-                  icon: Icons.help_outline, title: 'Statistiques introuvables')
+                  icon: Icons.help_outline,
+                  title: tr('Statistiques introuvables'))
             ])
           : ListView(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
@@ -70,8 +72,12 @@ class _StatsTabState extends ConsumerState<StatsTab> {
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        'Chiffres calculés le ${shortDate(ins.computedAt)} à ${timeLabel(ins.computedAt)} '
-                        'sur les résultats enregistrés (API-Football).',
+                        trf(
+                            'Chiffres calculés le {0} à {1} sur les résultats enregistrés (API-Football).',
+                            [
+                              shortDate(ins.computedAt),
+                              timeLabel(ins.computedAt)
+                            ]),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -198,9 +204,9 @@ class _SummaryTiles extends StatelessWidget {
     final h2h = ins.h2h;
     return Row(
       children: [
-        _Tile(title: 'Classement', home: _rank(h), away: _rank(a)),
+        _Tile(title: tr('Classement'), home: _rank(h), away: _rank(a)),
         _Tile(
-          title: 'Forme',
+          title: tr('Forme'),
           home: ins.homeForm.isEmpty
               ? '—'
               : '${formPoints(ins.homeForm)}/${ins.homeForm.length * 3} pts',
@@ -209,10 +215,10 @@ class _SummaryTiles extends StatelessWidget {
               : '${formPoints(ins.awayForm)}/${ins.awayForm.length * 3} pts',
         ),
         _Tile(
-          title: 'Face-à-face',
-          home: '${h2h.homeWins} V',
-          away: '${h2h.awayWins} V',
-          footer: '${h2h.draws} N',
+          title: tr('Face-à-face'),
+          home: trf('{0} V', [h2h.homeWins]),
+          away: trf('{0} V', [h2h.awayWins]),
+          footer: trf('{0} N', [h2h.draws]),
         ),
       ],
     );
@@ -256,19 +262,21 @@ class _FormCard extends StatelessWidget {
                   Text(
                       form.isEmpty
                           ? ''
-                          : '${formPoints(form)} pts sur ${form.length * 3}',
+                          : trf('{0} pts sur {1}',
+                              [formPoints(form), form.length * 3]),
                       style: theme.textTheme.labelMedium),
                 ],
               ),
               const SizedBox(height: 6),
               if (form.isEmpty)
-                Text('Aucun match enregistré', style: theme.textTheme.bodySmall)
+                Text(tr('Aucun match enregistré'),
+                    style: theme.textTheme.bodySmall)
               else ...[
                 FormChips(results: [for (final e in form) e.letter]),
                 const SizedBox(height: 6),
                 for (final e in form)
                   Text(
-                    '${e.letter} · ${shortDate(e.kickoffAt)} · ${e.atHome ? 'contre' : 'chez'} ${e.opponent} '
+                    '${e.letter} · ${shortDate(e.kickoffAt)} · ${e.atHome ? tr('contre') : tr('chez')} ${e.opponent} '
                     '${e.goalsFor}-${e.goalsAgainst} · ${e.competition}',
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
@@ -284,26 +292,31 @@ class _FormCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Forme', style: theme.textTheme.titleMedium),
+            Text(tr('Forme'), style: theme.textTheme.titleMedium),
             const SizedBox(height: 10),
             SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text('Tous les matchs')),
-                ButtonSegment(value: true, label: Text('Domicile / extérieur')),
+              segments: [
+                ButtonSegment(value: false, label: Text(tr('Tous les matchs'))),
+                ButtonSegment(
+                    value: true, label: Text(tr('Domicile / extérieur'))),
               ],
               selected: {venue},
               onSelectionChanged: (s) => onVenue(s.first),
             ),
             team(
                 true,
-                venue ? '${match.home.name} à domicile' : match.home.name,
+                venue
+                    ? trf('{0} à domicile', [match.home.name])
+                    : match.home.name,
                 home),
             team(
                 false,
-                venue ? '${match.away.name} à l’extérieur' : match.away.name,
+                venue
+                    ? trf('{0} à l’extérieur', [match.away.name])
+                    : match.away.name,
                 away),
             const SizedBox(height: 6),
-            Text('Du plus récent au plus ancien · toutes compétitions.',
+            Text(tr('Du plus récent au plus ancien · toutes compétitions.'),
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           ],
@@ -415,12 +428,12 @@ class _StandingsCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                    child:
-                        Text('Classement', style: theme.textTheme.titleMedium)),
+                    child: Text(tr('Classement'),
+                        style: theme.textTheme.titleMedium)),
                 TextButton(
                   onPressed: () => context
                       .push(AppRoutes.standingsFor(match.competition.id)),
-                  child: const Text('Tout voir'),
+                  child: Text(tr('Tout voir')),
                 ),
               ],
             ),
@@ -442,17 +455,18 @@ class _StandingsCard extends StatelessWidget {
             Row(
               children: [
                 SizedBox(width: 34, child: Text('#', style: head)),
-                Expanded(child: Text('Équipe', style: head)),
+                Expanded(child: Text(tr('Équipe'), style: head)),
                 SizedBox(
                     width: 28,
                     child: Text('J', style: head, textAlign: TextAlign.end)),
                 SizedBox(
                     width: 44,
-                    child:
-                        Text('Diff.', style: head, textAlign: TextAlign.end)),
+                    child: Text(tr('Diff.'),
+                        style: head, textAlign: TextAlign.end)),
                 SizedBox(
                     width: 40,
-                    child: Text('Pts', style: head, textAlign: TextAlign.end)),
+                    child:
+                        Text(tr('Pts'), style: head, textAlign: TextAlign.end)),
               ],
             ),
             ...children,
@@ -460,15 +474,17 @@ class _StandingsCard extends StatelessWidget {
             Wrap(
               spacing: 14,
               children: [
-                _zoneKey(context, scheme.primary, 'Places qualificatives'),
-                _zoneKey(context, scheme.error, 'Relégation'),
+                _zoneKey(context, scheme.primary, tr('Places qualificatives')),
+                _zoneKey(context, scheme.error, tr('Relégation')),
               ],
             ),
             if (ins.standingsUpdatedAt != null) ...[
               const SizedBox(height: 8),
               SourceChip(
-                  label:
-                      'API-Football · classement du ${shortDate(ins.standingsUpdatedAt!)} ${timeLabel(ins.standingsUpdatedAt!)}'),
+                  label: trf('API-Football · classement du {0} {1}', [
+                shortDate(ins.standingsUpdatedAt!),
+                timeLabel(ins.standingsUpdatedAt!)
+              ])),
             ],
           ],
         ),
@@ -504,42 +520,49 @@ class _SeasonCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Comparatif de la saison', style: theme.textTheme.titleMedium),
+            Text(tr('Comparatif de la saison'),
+                style: theme.textTheme.titleMedium),
             const SizedBox(height: 4),
             Text(
-                '${match.competition.name} · ${match.home.name} ${h.played} matchs · ${match.away.name} ${a.played} matchs',
+                trf('{0} · {1} {2} matchs · {3} {4} matchs', [
+                  match.competition.name,
+                  match.home.name,
+                  h.played,
+                  match.away.name,
+                  a.played
+                ]),
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
             _DuelBar(
-                label: 'Buts marqués par match',
+                label: tr('Buts marqués par match'),
                 home: h.goalsForAvg,
                 away: a.goalsForAvg,
                 max: 4,
                 homeText: decimal(h.goalsForAvg, 1),
                 awayText: decimal(a.goalsForAvg, 1)),
             _DuelBar(
-                label: 'Buts encaissés par match',
+                label: tr('Buts encaissés par match'),
                 home: h.goalsAgainstAvg,
                 away: a.goalsAgainstAvg,
                 max: 4,
                 homeText: decimal(h.goalsAgainstAvg, 1),
                 awayText: decimal(a.goalsAgainstAvg, 1)),
             _DuelBar(
-                label: 'Matchs sans encaisser',
+                label: tr('Matchs sans encaisser'),
                 home: h.played == 0 ? 0 : h.cleanSheets / h.played,
                 away: a.played == 0 ? 0 : a.cleanSheets / a.played,
                 max: 1,
                 homeText: frac(h.cleanSheets, h.played),
                 awayText: frac(a.cleanSheets, a.played)),
             _DuelBar(
-                label: 'Matchs à 3 buts ou plus',
+                label: tr('Matchs à 3 buts ou plus'),
                 home: h.played == 0 ? 0 : h.threePlus / h.played,
                 away: a.played == 0 ? 0 : a.threePlus / a.played,
                 max: 1,
                 homeText: frac(h.threePlus, h.played),
                 awayText: frac(a.threePlus, a.played)),
             _DuelBar(
-                label: 'Les deux équipes ont marqué',
+                label: tr('Les deux équipes ont marqué'),
                 home: h.played == 0 ? 0 : h.btts / h.played,
                 away: a.played == 0 ? 0 : a.btts / a.played,
                 max: 1,
@@ -631,13 +654,13 @@ class _StreaksCard extends StatelessWidget {
     final theme = Theme.of(context);
     final items = <(bool, String, Streak, String)>[
       for (final s in usefulStreaks(ins.homeStreaks).take(2))
-        (true, match.home.name, s, 'toutes compétitions'),
+        (true, match.home.name, s, tr('toutes compétitions')),
       for (final s in usefulStreaks(ins.homeAtHomeStreaks).take(1))
-        (true, match.home.name, s, 'à domicile'),
+        (true, match.home.name, s, tr('à domicile')),
       for (final s in usefulStreaks(ins.awayStreaks).take(2))
-        (false, match.away.name, s, 'toutes compétitions'),
+        (false, match.away.name, s, tr('toutes compétitions')),
       for (final s in usefulStreaks(ins.awayAwayStreaks).take(1))
-        (false, match.away.name, s, 'à l’extérieur'),
+        (false, match.away.name, s, tr('à l’extérieur')),
     ];
     return Card(
       child: Padding(
@@ -645,11 +668,11 @@ class _StreaksCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Séries en cours', style: theme.textTheme.titleMedium),
+            Text(tr('Séries en cours'), style: theme.textTheme.titleMedium),
             if (items.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text('Aucune série d’au moins 3 matchs en cours.',
+                child: Text(tr('Aucune série d’au moins 3 matchs en cours.'),
                     style: theme.textTheme.bodyMedium),
               ),
             for (final (isHome, name, s, scope) in items)
@@ -688,7 +711,8 @@ class _StreaksCard extends StatelessWidget {
                             [
                               scope,
                               if (s.from != null && s.to != null)
-                                'du ${shortDate(s.from!)} au ${shortDate(s.to!)}',
+                                trf('du {0} au {1}',
+                                    [shortDate(s.from!), shortDate(s.to!)]),
                             ].join(' · '),
                             style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant),
@@ -700,8 +724,7 @@ class _StreaksCard extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 8),
-            Text(
-                '« Au moins » : la série couvre tous les matchs enregistrés et peut être plus longue.',
+            Text(tr('« Au moins » : la série couvre tous les matchs enregistrés et peut être plus longue.'),
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           ],
@@ -754,31 +777,46 @@ class _H2hCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Confrontations directes', style: theme.textTheme.titleMedium),
+            Text(tr('Confrontations directes'),
+                style: theme.textTheme.titleMedium),
             const SizedBox(height: 10),
             if (h.count == 0)
               Text(
-                  'Aucune confrontation dans les résultats enregistrés (saisons synchronisées).',
+                  tr('Aucune confrontation dans les résultats enregistrés (saisons synchronisées).'),
                   style: theme.textTheme.bodyMedium)
             else ...[
               Row(
                 children: [
-                  box('${h.homeWins}', 'Victoires', true),
-                  box('${h.draws}', 'Nuls', null),
-                  box('${h.awayWins}', 'Victoires', false),
+                  box('${h.homeWins}', tr('Victoires'), true),
+                  box('${h.draws}', tr('Nuls'), null),
+                  box('${h.awayWins}', tr('Victoires'), false),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                'Sur ${h.count} confrontation${h.count > 1 ? 's' : ''}'
-                '${h.first == null || h.last == null ? '' : ', du ${shortDate(h.first!)}/${h.first!.year} au ${shortDate(h.last!)}/${h.last!.year}'}'
-                '${h.avgGoals == null ? '' : ' · ${decimal(h.avgGoals!, 1)} buts par match en moyenne'}.',
+                trf('Sur {0} confrontation{1}{2}{3}.', [
+                  h.count,
+                  h.count > 1 ? 's' : '',
+                  h.first == null || h.last == null
+                      ? ''
+                      : trf(', du {0}/{1} au {2}/{3}', [
+                          shortDate(h.first!),
+                          h.first!.year,
+                          shortDate(h.last!),
+                          h.last!.year
+                        ]),
+                  h.avgGoals == null
+                      ? ''
+                      : trf(' · {0} buts par match en moyenne',
+                          [decimal(h.avgGoals!, 1)])
+                ]),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 8),
               Text(
-                  'Résultat pour ${match.home.name}, du plus récent au plus ancien',
+                  trf('Résultat pour {0}, du plus récent au plus ancien',
+                      [match.home.name]),
                   style: theme.textTheme.labelMedium),
               for (final x in h.matches)
                 Container(

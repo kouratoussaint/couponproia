@@ -11,41 +11,42 @@ import '../../../core/widgets/form_widgets.dart';
 import '../../onboarding/data/preferences_repository.dart';
 import '../../onboarding/presentation/onboarding_sheet.dart';
 import '../data/profile_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Pays proposés (code ISO à 2 lettres).
-const profileCountries = <String, String>{
-  'BF': 'Burkina Faso',
-  'BJ': 'Bénin',
-  'CI': 'Côte d’Ivoire',
-  'CM': 'Cameroun',
-  'CD': 'RD Congo',
-  'CG': 'Congo',
-  'GA': 'Gabon',
-  'GH': 'Ghana',
-  'GN': 'Guinée',
-  'ML': 'Mali',
-  'MR': 'Mauritanie',
-  'NE': 'Niger',
-  'NG': 'Nigeria',
-  'SN': 'Sénégal',
-  'TD': 'Tchad',
-  'TG': 'Togo',
-  'MA': 'Maroc',
-  'DZ': 'Algérie',
-  'TN': 'Tunisie',
-  'FR': 'France',
-  'BE': 'Belgique',
-  'CH': 'Suisse',
-  'CA': 'Canada',
+final profileCountries = <String, String>{
+  'BF': tr('Burkina Faso'),
+  'BJ': tr('Bénin'),
+  'CI': tr('Côte d’Ivoire'),
+  'CM': tr('Cameroun'),
+  'CD': tr('RD Congo'),
+  'CG': tr('Congo'),
+  'GA': tr('Gabon'),
+  'GH': tr('Ghana'),
+  'GN': tr('Guinée'),
+  'ML': tr('Mali'),
+  'MR': tr('Mauritanie'),
+  'NE': tr('Niger'),
+  'NG': tr('Nigeria'),
+  'SN': tr('Sénégal'),
+  'TD': tr('Tchad'),
+  'TG': tr('Togo'),
+  'MA': tr('Maroc'),
+  'DZ': tr('Algérie'),
+  'TN': tr('Tunisie'),
+  'FR': tr('France'),
+  'BE': tr('Belgique'),
+  'CH': tr('Suisse'),
+  'CA': tr('Canada'),
 };
 
 /// Fuseaux horaires proposés (heure des matchs et des notifications).
-const profileTimezones = <String, String>{
-  'Africa/Ouagadougou': 'Ouagadougou, Abidjan, Dakar, Bamako (GMT)',
-  'Africa/Lagos': 'Lagos, Douala, Niamey, Kinshasa (GMT+1)',
-  'Africa/Casablanca': 'Casablanca (GMT+1)',
-  'Europe/Paris': 'Paris, Bruxelles, Genève (heure d’Europe centrale)',
-  'America/Toronto': 'Montréal, Toronto (heure de l’Est)',
+final profileTimezones = <String, String>{
+  'Africa/Ouagadougou': tr('Ouagadougou, Abidjan, Dakar, Bamako (GMT)'),
+  'Africa/Lagos': tr('Lagos, Douala, Niamey, Kinshasa (GMT+1)'),
+  'Africa/Casablanca': tr('Casablanca (GMT+1)'),
+  'Europe/Paris': tr('Paris, Bruxelles, Genève (heure d’Europe centrale)'),
+  'America/Toronto': tr('Montréal, Toronto (heure de l’Est)'),
 };
 
 /// Profil → crayon : toutes les informations du compte au même endroit.
@@ -96,7 +97,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     try {
       final bytes = await file.readAsBytes();
       if (bytes.length > 1024 * 1024) {
-        throw const FormatException('Image trop lourde (1 Mo maximum).');
+        throw FormatException(tr('Image trop lourde (1 Mo maximum).'));
       }
       final url = await ref
           .read(profileRepositoryProvider)
@@ -134,7 +135,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       ref.invalidate(myProfileProvider);
       ref.invalidate(myPreferencesProvider);
       if (mounted) {
-        showMessage(context, 'Profil enregistré.');
+        showMessage(context, tr('Profil enregistré.'));
         context.pop();
       }
     } catch (e) {
@@ -152,7 +153,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final prefs = ref.watch(myPreferencesProvider).valueOrNull;
     final email = ref.watch(currentUserProvider)?.email ?? '';
     return Scaffold(
-      appBar: AppBar(title: const Text('Modifier le profil')),
+      appBar: AppBar(title: Text(tr('Modifier le profil'))),
       body: profile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(userMessageFor(e))),
@@ -180,7 +181,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         right: -4,
                         bottom: -4,
                         child: IconButton.filled(
-                          tooltip: 'Changer la photo',
+                          tooltip: tr('Changer la photo'),
                           onPressed: _busy ? null : _pickPhoto,
                           icon:
                               const Icon(Icons.photo_camera_outlined, size: 20),
@@ -194,14 +195,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     child: TextButton(
                       onPressed:
                           _busy ? null : () => setState(() => _avatar = null),
-                      child: const Text('Retirer la photo'),
+                      child: Text(tr('Retirer la photo')),
                     ),
                   ),
                 const SizedBox(height: 12),
-                const _Section('Identité'),
+                _Section(tr('Identité')),
                 TextFormField(
                   controller: _name,
-                  decoration: const InputDecoration(labelText: 'Pseudo'),
+                  decoration: InputDecoration(labelText: tr('Pseudo')),
                   textInputAction: TextInputAction.next,
                   validator: Validators.displayName,
                 ),
@@ -209,7 +210,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 DropdownButtonFormField<String>(
                   initialValue: _country,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Pays'),
+                  decoration: InputDecoration(labelText: tr('Pays')),
                   items: [
                     for (final e in profileCountries.entries)
                       DropdownMenuItem(value: e.key, child: Text(e.value)),
@@ -220,10 +221,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 DropdownButtonFormField<String>(
                   initialValue: _timezone,
                   isExpanded: true,
-                  decoration: const InputDecoration(
-                      labelText: 'Fuseau horaire',
-                      helperText:
-                          'Heure des matchs, des notifications et des heures calmes'),
+                  decoration: InputDecoration(
+                      labelText: tr('Fuseau horaire'),
+                      helperText: tr(
+                          'Heure des matchs, des notifications et des heures calmes')),
                   items: [
                     for (final e in profileTimezones.entries)
                       DropdownMenuItem(
@@ -234,7 +235,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   onChanged: (v) => setState(() => _timezone = v ?? _timezone),
                 ),
                 const SizedBox(height: 20),
-                const _Section('Mon niveau'),
+                _Section(tr('Mon niveau')),
                 SegmentedButton<UserLevel>(
                   emptySelectionAllowed: true,
                   segments: [
@@ -249,12 +250,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.emoji_events_outlined),
-                  title: const Text('Compétitions suivies'),
+                  title: Text(tr('Compétitions suivies')),
                   subtitle: Text(() {
                     final n = prefs?.favoriteCompetitions.length ?? 0;
                     return n == 0
-                        ? 'Aucune'
-                        : '$n compétition${n > 1 ? 's' : ''}';
+                        ? tr('Aucune')
+                        : trf('{0} compétition{1}', [n, n > 1 ? 's' : '']);
                   }()),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => showOnboarding(context, fromProfile: true),
@@ -262,16 +263,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.star_outline),
-                  title: const Text('Équipes suivies'),
+                  title: Text(tr('Équipes suivies')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push(AppRoutes.favoriteTeams),
                 ),
                 const SizedBox(height: 12),
-                const _Section('Connexion'),
+                _Section(tr('Connexion')),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.alternate_email),
-                  title: const Text('Adresse e-mail'),
+                  title: Text(tr('Adresse e-mail')),
                   subtitle: Text(email),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _changeEmail(context),
@@ -279,8 +280,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.lock_outline),
-                  title: const Text('Mot de passe'),
-                  subtitle: const Text('Changer le mot de passe'),
+                  title: Text('Mot de passe'),
+                  subtitle: Text(tr('Changer le mot de passe')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _changePassword(context),
                 ),
@@ -294,7 +295,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Enregistrer'),
+                      : Text(tr('Enregistrer')),
                 ),
               ],
             ),
@@ -312,7 +313,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       builder: (_) => const _EmailChangeSheet(),
     );
     if (changed == true && context.mounted) {
-      showMessage(context, 'Adresse e-mail modifiée.');
+      showMessage(context, tr('Adresse e-mail modifiée.'));
     }
   }
 
@@ -324,7 +325,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       builder: (_) => const _PasswordChangeSheet(),
     );
     if (changed == true && context.mounted) {
-      showMessage(context, 'Mot de passe modifié.');
+      showMessage(context, tr('Mot de passe modifié.'));
     }
   }
 }
@@ -400,41 +401,43 @@ class _EmailChangeSheetState extends ConsumerState<_EmailChangeSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Changer d’adresse e-mail',
+            Text(tr('Changer d’adresse e-mail'),
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
             if (!_codeSent) ...[
               PasswordField(
                 controller: _password,
-                label: 'Mot de passe actuel',
+                label: tr('Mot de passe actuel'),
                 textInputAction: TextInputAction.next,
-                validator: (v) =>
-                    (v ?? '').isEmpty ? 'Saisissez votre mot de passe.' : null,
+                validator: (v) => (v ?? '').isEmpty
+                    ? tr('Saisissez votre mot de passe.')
+                    : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
                 decoration:
-                    const InputDecoration(labelText: 'Nouvelle adresse e-mail'),
+                    InputDecoration(labelText: tr('Nouvelle adresse e-mail')),
                 validator: Validators.email,
               ),
             ] else ...[
-              Text(
-                  'Un code à 6 chiffres a été envoyé à ${_email.text.trim()} (pensez aux spams).'),
+              Text(trf(
+                  'Un code à 6 chiffres a été envoyé à {0} (pensez aux spams).',
+                  [_email.text.trim()])),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _code,
                 keyboardType: TextInputType.number,
                 maxLength: 6,
-                decoration: const InputDecoration(labelText: 'Code reçu'),
+                decoration: InputDecoration(labelText: tr('Code reçu')),
                 validator: Validators.otpCode,
               ),
             ],
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _busy ? null : _submit,
-              child: Text(_codeSent ? 'Confirmer' : 'Recevoir un code'),
+              child: Text(_codeSent ? tr('Confirmer') : tr('Recevoir un code')),
             ),
           ],
         ),
@@ -493,20 +496,21 @@ class _PasswordChangeSheetState extends ConsumerState<_PasswordChangeSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Changer le mot de passe',
+            Text(tr('Changer le mot de passe'),
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
             PasswordField(
               controller: _current,
-              label: 'Mot de passe actuel',
+              label: tr('Mot de passe actuel'),
               textInputAction: TextInputAction.next,
-              validator: (v) =>
-                  (v ?? '').isEmpty ? 'Saisissez votre mot de passe.' : null,
+              validator: (v) => (v ?? '').isEmpty
+                  ? tr('Saisissez votre mot de passe.')
+                  : null,
             ),
             const SizedBox(height: 12),
             PasswordField(
               controller: _next,
-              label: 'Nouveau mot de passe',
+              label: tr('Nouveau mot de passe'),
               textInputAction: TextInputAction.next,
               validator: Validators.password,
               autofillHints: const [AutofillHints.newPassword],
@@ -514,16 +518,16 @@ class _PasswordChangeSheetState extends ConsumerState<_PasswordChangeSheet> {
             const SizedBox(height: 12),
             PasswordField(
               controller: _confirm,
-              label: 'Confirmer le nouveau mot de passe',
+              label: tr('Confirmer le nouveau mot de passe'),
               validator: (v) => v != _next.text
-                  ? 'Les mots de passe ne correspondent pas.'
+                  ? tr('Les mots de passe ne correspondent pas.')
                   : null,
               autofillHints: const [AutofillHints.newPassword],
             ),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _busy ? null : _submit,
-              child: const Text('Changer le mot de passe'),
+              child: Text(tr('Changer le mot de passe')),
             ),
           ],
         ),

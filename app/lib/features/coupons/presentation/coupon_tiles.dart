@@ -5,10 +5,11 @@ import '../../analysis/data/analysis_format.dart';
 import '../../matches/data/sports_format.dart';
 import '../data/coupon_models.dart';
 import '../data/coupon_phase.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Nom court d'un coupon : « Coupon du jour », « Cote élevée », « Opportunités du moment »
 /// (le titre sans la date, déjà donnée par le contexte).
-String couponName(Coupon c) => c.title.split(' · ').first;
+String couponName(Coupon c) => trTitle(c.title.split(' · ').first);
 
 /// Heure courte : « 14:30 » aujourd'hui, sinon « Demain 15:00 », « mar. 03/11 20:45 ».
 String kickoffShort(DateTime t, DateTime now) => dateOnly(t) == dateOnly(now)
@@ -20,12 +21,12 @@ String kickoffShort(DateTime t, DateTime now) => dateOnly(t) == dateOnly(now)
   final theme = Theme.of(context);
   final dark = theme.brightness == Brightness.dark;
   final (label, fg) = switch (risk) {
-    'prudent' => ('Prudent', theme.colorScheme.primary),
+    'prudent' => (tr('Prudent'), theme.colorScheme.primary),
     'equilibre' => (
-        'Équilibré',
+        tr('Équilibré'),
         dark ? BrandColors.orange : const Color(0xFF8A5300)
       ),
-    _ => ('Audacieux', theme.colorScheme.error),
+    _ => (tr('Audacieux'), theme.colorScheme.error),
   };
   return (label: label, fg: fg, bg: fg.withValues(alpha: 0.13));
 }
@@ -58,7 +59,7 @@ class RiskTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = riskStyle(context, risk);
     return Semantics(
-        label: 'Risque estimé : ${s.label.toLowerCase()}',
+        label: trf('Risque estimé : {0}', [s.label.toLowerCase()]),
         child: ExcludeSemantics(child: _Tag(s.label, s.fg, s.bg)));
   }
 }
@@ -196,7 +197,7 @@ class _OddBlock extends StatelessWidget {
                     ? theme.textTheme.headlineSmall
                     : theme.textTheme.titleLarge)
                 ?.copyWith(fontWeight: FontWeight.w800)),
-        Text('${pct(c.combinedProbability)} estimé',
+        Text(trf('{0} estimé', [pct(c.combinedProbability)]),
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
       ],
@@ -215,7 +216,8 @@ class _LockedLine extends StatelessWidget {
           size: 16, color: theme.colorScheme.onSurfaceVariant),
       const SizedBox(width: 6),
       Expanded(
-        child: Text('Réservé aux forfaits payants jusqu’à la fin des matchs',
+        child: Text(
+            tr('Réservé aux forfaits payants jusqu’à la fin des matchs'),
             style: theme.textTheme.bodySmall),
       ),
     ]);
@@ -275,7 +277,13 @@ class FeaturedCouponCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                            '${c.selections.isEmpty ? '' : '${c.selections.length} sélections · '}1er match ${kickoffShort(c.firstKickoffAt, now)}',
+                            trf('{0}1er match {1}', [
+                              c.selections.isEmpty
+                                  ? ''
+                                  : trf('{0} sélections · ',
+                                      [c.selections.length]),
+                              kickoffShort(c.firstKickoffAt, now)
+                            ]),
                             style: muted),
                         Text(publishedLine(c), style: muted),
                       ],
@@ -343,8 +351,13 @@ class CompactCouponTile extends StatelessWidget {
     final now = DateTime.now();
     final teams = [for (final s in c.selections) s.match.home].join(', ');
     final meta = c.locked
-        ? 'Réservé aux forfaits payants · ${kickoffShort(c.firstKickoffAt, now)}'
-        : '${c.selections.length} sél. · ${kickoffShort(c.firstKickoffAt, now)}${teams.isEmpty ? '' : ' · $teams'}';
+        ? trf('Réservé aux forfaits payants · {0}',
+            [kickoffShort(c.firstKickoffAt, now)])
+        : trf('{0} sél. · {1}{2}', [
+            c.selections.length,
+            kickoffShort(c.firstKickoffAt, now),
+            teams.isEmpty ? '' : ' · $teams'
+          ]);
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -414,19 +427,19 @@ class SelectionStateIcon extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final live = dark ? BrandColors.orange : const Color(0xFF8A5300);
     final (icon, color, label) = switch (state) {
-      SelectionState.won => (Icons.check, scheme.primary, 'Validée'),
-      SelectionState.lost => (Icons.close, scheme.error, 'Ratée'),
-      SelectionState.voided => (Icons.remove, scheme.outline, 'Annulée'),
-      SelectionState.live => (Icons.sensors, live, 'En direct'),
+      SelectionState.won => (Icons.check, scheme.primary, tr('Validée')),
+      SelectionState.lost => (Icons.close, scheme.error, tr('Ratée')),
+      SelectionState.voided => (Icons.remove, scheme.outline, tr('Annulée')),
+      SelectionState.live => (Icons.sensors, live, tr('En direct')),
       SelectionState.awaiting => (
           Icons.hourglass_top,
           scheme.onSurfaceVariant,
-          'Règlement en attente'
+          tr('Règlement en attente')
         ),
       SelectionState.pending => (
           Icons.schedule,
           scheme.onSurfaceVariant,
-          'À venir'
+          tr('À venir')
         ),
     };
     return Semantics(
@@ -533,8 +546,15 @@ class LiveCouponCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                     waiting
-                        ? 'Matchs terminés · règlement en cours'
-                        : '${p.won} sélection${p.won > 1 ? 's' : ''} validée${p.won > 1 ? 's' : ''} sur ${p.total} · encore en jeu',
+                        ? tr('Matchs terminés · règlement en cours')
+                        : trf(
+                            '{0} sélection{1} validée{2} sur {3} · encore en jeu',
+                            [
+                                p.won,
+                                p.won > 1 ? 's' : '',
+                                p.won > 1 ? 's' : '',
+                                p.total
+                              ]),
                     style: theme.textTheme.bodySmall?.copyWith(
                         color: scheme.primary, fontWeight: FontWeight.w600)),
                 const Divider(height: 24),
@@ -554,8 +574,16 @@ class LiveCouponCard extends StatelessWidget {
                                       ?.copyWith(fontWeight: FontWeight.w600),
                                   overflow: TextOverflow.ellipsis),
                               Text(
-                                  '${outcomeKeyLabel(c.selections[i].key, c.selections[i].match.home, c.selections[i].match.away)} · cote ${decimal(c.selections[i].odd)}'
-                                  '${states[i] == SelectionState.pending ? ' · ${kickoffShort(c.selections[i].match.kickoffAt, now)}' : ''}',
+                                  trf('{0} · cote {1}{2}', [
+                                    outcomeKeyLabel(
+                                        c.selections[i].key,
+                                        c.selections[i].match.home,
+                                        c.selections[i].match.away),
+                                    decimal(c.selections[i].odd),
+                                    states[i] == SelectionState.pending
+                                        ? ' · ${kickoffShort(c.selections[i].match.kickoffAt, now)}'
+                                        : ''
+                                  ]),
                                   style: muted),
                             ],
                           ),
@@ -611,16 +639,19 @@ class ResultDayHeader extends StatelessWidget {
                       style: theme.textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.w800)),
                   Text(
-                      '$n coupon${n > 1 ? 's' : ''} décidé${n > 1 ? 's' : ''}, pertes comprises',
+                      trf('{0} coupon{1} décidé{2}, pertes comprises',
+                          [n, n > 1 ? 's' : '', n > 1 ? 's' : '']),
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: scheme.onSurfaceVariant)),
                 ],
               ),
             ),
-            count(day.won, day.won > 1 ? 'gagnés' : 'gagné', scheme.primary),
-            count(day.lost, day.lost > 1 ? 'perdus' : 'perdu', scheme.error),
+            count(day.won, day.won > 1 ? tr('gagnés') : tr('gagné'),
+                scheme.primary),
+            count(day.lost, day.lost > 1 ? tr('perdus') : tr('perdu'),
+                scheme.error),
             if (day.voided > 0)
-              count(day.voided, day.voided > 1 ? 'annulés' : 'annulé',
+              count(day.voided, day.voided > 1 ? tr('annulés') : tr('annulé'),
                   scheme.outline),
           ],
         ),
@@ -644,9 +675,9 @@ class ResultCouponTile extends StatelessWidget {
     final scheme = theme.colorScheme;
     final c = coupon;
     final (icon, color, label) = switch (c.result) {
-      'won' => (Icons.check, scheme.primary, 'Gagné'),
-      'lost' => (Icons.close, scheme.error, 'Perdu'),
-      _ => (Icons.remove, scheme.outline, 'Annulé'),
+      'won' => (Icons.check, scheme.primary, tr('Gagné')),
+      'lost' => (Icons.close, scheme.error, tr('Perdu')),
+      _ => (Icons.remove, scheme.outline, tr('Annulé')),
     };
     final detail = resultDetail(c);
     final settled = settledLine(c);

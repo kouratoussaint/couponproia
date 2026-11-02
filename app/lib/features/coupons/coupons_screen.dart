@@ -15,6 +15,7 @@ import 'presentation/coupon_actions.dart';
 import 'presentation/coupon_tiles.dart';
 import 'presentation/coupon_widgets.dart';
 import '../help/help_screens.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Onglet Coupons, en trois onglets :
 /// - « À jouer » : aucun match commencé (Coupon du jour en avant, puis lignes compactes) ;
@@ -98,19 +99,19 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
     return Scaffold(
       appBar: AppBar(
         leading: const DrawerMenuButton(),
-        title: const Text('Coupons'),
+        title: Text(tr('Coupons')),
         actions: [
           const HelpButton('acces-coupons'),
           IconButton(
-              tooltip: 'Actualiser',
+              tooltip: tr('Actualiser'),
               icon: const Icon(Icons.refresh),
               onPressed: _refresh)
         ],
       ),
       body: flags['platform_coupons'] == false
-          ? const InfoMessage(
+          ? InfoMessage(
               icon: Icons.pause_circle_outline,
-              title: 'Coupons momentanément indisponibles')
+              title: tr('Coupons momentanément indisponibles'))
           : Column(
               children: [
                 Padding(
@@ -118,9 +119,12 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
                   child: CouponTabs(
                     selected: tab,
                     labels: [
-                      'À jouer · ${active.hasValue ? split.toPlay.length : '…'}',
-                      'En cours · ${active.hasValue ? split.live.length : '…'}',
-                      'Résultats · ${decided.hasValue ? inPeriod.length : '…'}',
+                      trf('À jouer · {0}',
+                          [active.hasValue ? split.toPlay.length : '…']),
+                      trf('En cours · {0}',
+                          [active.hasValue ? split.live.length : '…']),
+                      trf('Résultats · {0}',
+                          [decided.hasValue ? inPeriod.length : '…']),
                     ],
                     onSelected: (i) => setState(() => _tab = i),
                   ),
@@ -152,21 +156,21 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
         if (v.hasError && !v.hasValue)
           InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Coupons indisponibles',
+            title: tr('Coupons indisponibles'),
             body: userMessageFor(v.error!),
-            action: FilledButton(
-                onPressed: _refresh, child: const Text('Réessayer')),
+            action:
+                FilledButton(onPressed: _refresh, child: Text(tr('Réessayer'))),
           ),
       ];
 
   // '' = tous les types (une valeur nulle serait prise pour une annulation du menu).
   Widget _typeMenu(List<String> categories) => _PillMenu<String>(
         label: _category == null
-            ? 'Tous les types'
+            ? tr('Tous les types')
             : categoryLabels[_category] ?? _category!,
         value: _category ?? '',
         items: {
-          '': 'Tous les types',
+          '': tr('Tous les types'),
           for (final c in categories) c: categoryLabels[c] ?? c,
         },
         onSelected: (v) => setState(() => _category = v.isEmpty ? null : v),
@@ -195,13 +199,12 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
     if (active.hasValue && list.isEmpty) {
       out.add(InfoMessage(
         icon: Icons.event_available_outlined,
-        title: 'Aucun coupon à jouer pour l’instant',
-        body:
-            'Le moteur publie des coupons quand des matchs à venir ont des cotes récentes et que des '
-            'sélections remplissent ses critères. Sinon, il s’abstient.',
+        title: tr('Aucun coupon à jouer pour l’instant'),
+        body: tr(
+            'Le moteur publie des coupons quand des matchs à venir ont des cotes récentes et que des sélections remplissent ses critères. Sinon, il s’abstient.'),
         action: TextButton(
             onPressed: () => setState(() => _tab = 2),
-            child: const Text('Voir les résultats')),
+            child: Text(tr('Voir les résultats'))),
       ));
       return out;
     }
@@ -238,9 +241,8 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
       out.add(CompactCouponTile(
           coupon: c, onTap: () => _open(c), onLongPress: () => _actions(c)));
     }
-    out.add(_footer(
-        'Probabilités estimées par le modèle, jamais des certitudes. Appui long sur un coupon : '
-        'partager, copier, créer un visuel.'));
+    out.add(_footer(tr(
+        'Probabilités estimées par le modèle, jamais des certitudes. Appui long sur un coupon : partager, copier, créer un visuel.')));
     return out;
   }
 
@@ -255,16 +257,18 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
     return [
       ..._loadState(active),
       if (active.hasValue && list.isEmpty)
-        const InfoMessage(
+        InfoMessage(
           icon: Icons.sports_soccer_outlined,
-          title: 'Aucun coupon en cours',
-          body: 'Un coupon arrive ici au coup d’envoi de son premier match.',
+          title: tr('Aucun coupon en cours'),
+          body:
+              tr('Un coupon arrive ici au coup d’envoi de son premier match.'),
         ),
       if (next.isNotEmpty)
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 6, 4, 2),
           child: Text(
-              'PROCHAIN MATCH ${kickoffShort(next.first, now).toUpperCase()}',
+              trf('PROCHAIN MATCH {0}',
+                  [kickoffShort(next.first, now).toUpperCase()]),
               style: theme.textTheme.labelMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w700,
@@ -277,7 +281,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
         Center(
           child: TextButton(
             onPressed: () => setState(() => _tab = 2),
-            child: const Text('Les coupons déjà décidés sont dans Résultats'),
+            child: Text(tr('Les coupons déjà décidés sont dans Résultats')),
           ),
         ),
     ];
@@ -310,9 +314,9 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
         child: ListTile(
           leading:
               Icon(Icons.insights_outlined, color: theme.colorScheme.primary),
-          title: const Text('Performances'),
+          title: Text(tr('Performances')),
           subtitle:
-              const Text('Bilan détaillé : réussite, cotes, pertes comprises'),
+              Text(tr('Bilan détaillé : réussite, cotes, pertes comprises')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(AppRoutes.performance),
         ),
@@ -348,15 +352,16 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
       if (decided.hasValue && shown.isEmpty)
         InfoMessage(
           icon: Icons.history,
-          title: 'Aucun résultat pour ces critères',
+          title: tr('Aucun résultat pour ces critères'),
           body: _days == 0
               ? null
-              : 'Les coupons plus anciens restent consultables avec la période « Tout ».',
+              : tr(
+                  'Les coupons plus anciens restent consultables avec la période « Tout ».'),
           action: _days == 0
               ? null
               : TextButton(
                   onPressed: () => setState(() => _days = 0),
-                  child: const Text('Tout afficher')),
+                  child: Text(tr('Tout afficher'))),
         ),
       for (final day in groupByDay(shown)) ...[
         ResultDayHeader(day),
@@ -372,14 +377,14 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
               _days = 0;
             }),
             icon: const Icon(Icons.expand_more),
-            label: const Text('Charger les jours précédents'),
+            label: Text(tr('Charger les jours précédents')),
           ),
         ),
       if (decided.hasValue && !mayHaveMore && _days != 0 && shown.isNotEmpty)
         Center(
           child: TextButton(
             onPressed: () => setState(() => _days = 0),
-            child: const Text('Voir tout l’historique'),
+            child: Text(tr('Voir tout l’historique')),
           ),
         ),
       if (retired.isNotEmpty)
@@ -388,8 +393,8 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
           clipBehavior: Clip.antiAlias,
           child: ExpansionTile(
             leading: const Icon(Icons.block),
-            title: Text('Coupons retirés (${retired.length})'),
-            subtitle: const Text('Retirés par l’équipe, hors statistiques'),
+            title: Text(trf('Coupons retirés ({0})', [retired.length])),
+            subtitle: Text(tr('Retirés par l’équipe, hors statistiques')),
             childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
             children: [
               if (perms.contains('coupons.publish'))
@@ -402,8 +407,9 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
                         deleteWithdrawnCoupons(context, ref, retired),
                     icon: const Icon(Icons.delete_sweep_outlined),
                     label: Text(retired.length == 1
-                        ? 'Supprimer définitivement'
-                        : 'Supprimer définitivement les ${retired.length}'),
+                        ? tr('Supprimer définitivement')
+                        : trf('Supprimer définitivement les {0}',
+                            [retired.length])),
                   ),
                 ),
               for (final c in retired)
@@ -415,9 +421,8 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
           ),
         ),
       if (decided.hasValue)
-        _footer(
-            'Tous les coupons publiés restent consultables, gagnés comme perdus. Bilan détaillé : '
-            'Performances, en haut de cet onglet.'),
+        _footer(tr(
+            'Tous les coupons publiés restent consultables, gagnés comme perdus. Bilan détaillé : Performances, en haut de cet onglet.')),
     ];
   }
 

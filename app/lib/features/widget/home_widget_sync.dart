@@ -15,6 +15,7 @@ import '../coupons/data/coupon_repository.dart';
 import '../matches/data/live_updates.dart';
 import '../matches/data/sports_format.dart';
 import '../matches/data/sports_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 const widgetProviderName = 'com.couponproia.coupon_pro_ia.CouponWidgetProvider';
 
@@ -71,14 +72,17 @@ WidgetSnapshot widgetSnapshot(
   final live = today.where((m) => m.isLive).length;
   final n = today.length;
   final line2 = n == 0
-      ? 'Aucun match suivi aujourd’hui'
-      : '$n match${n > 1 ? 's' : ''} aujourd’hui'
-          '${live > 0 ? ' · $live en direct' : ''}';
+      ? tr('Aucun match suivi aujourd’hui')
+      : trf('{0} match{1} aujourd’hui{2}', [
+          n,
+          n > 1 ? 's' : '',
+          live > 0 ? trf(' · {0} en direct', [live]) : ''
+        ]);
   if (c == null) {
     return WidgetSnapshot(
-      title: 'Coupon du jour',
+      title: tr('Coupon du jour'),
       odd: '',
-      line1: 'Pas encore publié aujourd’hui : il arrive dans la matinée.',
+      line1: tr('Pas encore publié aujourd’hui : il arrive dans la matinée.'),
       line2: line2,
       route: AppRoutes.coupons,
     );
@@ -90,29 +94,32 @@ WidgetSnapshot widgetSnapshot(
   final String title;
   switch (c.result) {
     case 'won':
-      title = 'Coupon du jour · Gagné';
+      title = tr('Coupon du jour · Gagné');
       line1 = settledLine(c).isEmpty
-          ? 'Toutes les sélections validées'
+          ? tr('Toutes les sélections validées')
           : settledLine(c);
     case 'lost':
-      title = 'Coupon du jour · Perdu';
-      line1 = resultDetail(c).isEmpty ? 'Coupon perdu' : resultDetail(c);
+      title = tr('Coupon du jour · Perdu');
+      line1 = resultDetail(c).isEmpty ? tr('Coupon perdu') : resultDetail(c);
     case 'void':
-      title = 'Coupon du jour · Annulé';
-      line1 = 'Annulé (match reporté ou annulé)';
+      title = tr('Coupon du jour · Annulé');
+      line1 = tr('Annulé (match reporté ou annulé)');
     default:
-      title = 'Coupon du jour';
+      title = tr('Coupon du jour');
       if (c.locked) {
-        line1 =
-            'Réservé aux forfaits payants jusqu’à la fin des matchs · 1er match $first';
+        line1 = trf(
+            'Réservé aux forfaits payants jusqu’à la fin des matchs · 1er match {0}',
+            [first]);
       } else if (phaseOf(c, now) == CouponPhase.live) {
         final p = progressOf(c);
-        line1 =
-            'En cours : ${p.won} sélection${p.won > 1 ? 's' : ''} validée${p.won > 1 ? 's' : ''} sur ${p.total}';
+        line1 = trf('En cours : {0} sélection{1} validée{2} sur {3}',
+            [p.won, p.won > 1 ? 's' : '', p.won > 1 ? 's' : '', p.total]);
       } else {
         final s = c.selections.length;
-        line1 =
-            '${s == 0 ? '' : '$s sélection${s > 1 ? 's' : ''} · '}1er match $first';
+        line1 = trf('{0}1er match {1}', [
+          s == 0 ? '' : trf('{0} sélection{1} · ', [s, s > 1 ? 's' : '']),
+          first
+        ]);
       }
   }
   return WidgetSnapshot(
@@ -128,7 +135,8 @@ WidgetSnapshot widgetSnapshot(
 String kickoffLabel(DateTime t, DateTime now) =>
     dateOnly(t) == dateOnly(now) ? _time(t) : '${dayLabel(t, now)} ${_time(t)}';
 
-String decimalLabel(double v) => v.toStringAsFixed(2).replaceAll('.', ',');
+String decimalLabel(double v) =>
+    v.toStringAsFixed(2).replaceAll('.', decimalSeparator);
 
 /// Textes du widget à partir des données de l'app (null tant que rien n'est chargé).
 final widgetSnapshotProvider = Provider.autoDispose<WidgetSnapshot?>((ref) {
@@ -152,7 +160,7 @@ Future<void> pushToHomeWidget(WidgetSnapshot s, DateTime now) async {
       HomeWidget.saveWidgetData<String>('line2', s.line2),
       HomeWidget.saveWidgetData<String>('route', s.route),
       HomeWidget.saveWidgetData<String>(
-          'updated', 'Mis à jour à ${_time(now)}'),
+          'updated', trf('Mis à jour à {0}', [_time(now)])),
     ]);
     await HomeWidget.updateWidget(qualifiedAndroidName: widgetProviderName);
   } catch (_) {

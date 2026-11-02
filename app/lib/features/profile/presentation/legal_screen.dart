@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../legal/legal_repository.dart';
 import '../../legal/legal_screens.dart';
 import '../../system/system_providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Mentions de responsabilité (section 23 du cahier des charges).
 /// Le texte vient de `app_settings.legal.disclaimers`, avec une copie locale hors ligne.
@@ -16,13 +17,12 @@ class LegalScreen extends ConsumerWidget {
     final disclaimers =
         ref.watch(disclaimersProvider).valueOrNull ?? fallbackDisclaimers;
     return Scaffold(
-      appBar: AppBar(title: const Text('Mentions légales et documents')),
+      appBar: AppBar(title: Text(tr('Mentions légales et documents'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Text(
-            'Coupon Pro IA est une plateforme d’analyse et de création de contenus de pronostics. '
-            'Elle ne place aucun pari et n’est liée à aucun bookmaker.',
+            tr('Coupon Pro IA est une plateforme d’analyse et de création de contenus de pronostics. Elle ne place aucun pari et n’est liée à aucun bookmaker.'),
             style: theme.textTheme.bodyLarge,
           ),
           const SizedBox(height: 16),

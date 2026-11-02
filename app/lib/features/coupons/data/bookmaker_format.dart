@@ -1,5 +1,6 @@
 import '../../matches/data/sports_format.dart';
 import 'coupon_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Code de pari tel qu'on le saisit chez un bookmaker (1xBet et la plupart des sites) :
 /// 1 / X / 2, 1X / X2 / 12, « Plus de 2,5 buts », « Les deux marquent : Oui ».
@@ -7,8 +8,9 @@ String bookmakerPick(String key) {
   final parts = key.split('.');
   final market = parts.first;
   final outcome = parts.length > 1 ? parts[1] : '';
-  final line =
-      parts.length > 2 ? parts.sublist(2).join('.').replaceAll('.', ',') : '';
+  final line = parts.length > 2
+      ? parts.sublist(2).join('.').replaceAll('.', decimalSeparator)
+      : '';
   switch (market) {
     case '1X2':
       return switch (outcome) {
@@ -24,26 +26,28 @@ String bookmakerPick(String key) {
       };
     case 'OU':
       return outcome == 'OVER'
-          ? 'Plus de $line buts (Total Plus $line)'
-          : 'Moins de $line buts (Total Moins $line)';
+          ? trf('Plus de {0} buts (Total Plus {1})', [line, line])
+          : trf('Moins de {0} buts (Total Moins {1})', [line, line]);
     case 'BTTS':
       return outcome == 'YES'
-          ? 'Les deux marquent : Oui'
-          : 'Les deux marquent : Non';
+          ? tr('Les deux marquent : Oui')
+          : tr('Les deux marquent : Non');
     case 'DNB':
       return outcome == 'HOME'
-          ? 'Remboursé si nul : 1 (DNB 1)'
-          : 'Remboursé si nul : 2 (DNB 2)';
+          ? tr('Remboursé si nul : 1 (DNB 1)')
+          : tr('Remboursé si nul : 2 (DNB 2)');
     case 'TTH' || 'TTA':
-      final side = market == 'TTH' ? 'domicile' : 'extérieur';
+      final side = market == 'TTH' ? 'domicile' : tr('extérieur');
       return outcome == 'OVER'
-          ? 'Buts équipe $side : plus de $line (Total Plus $line)'
-          : 'Buts équipe $side : moins de $line (Total Moins $line)';
+          ? trf('Buts équipe {0} : plus de {1} (Total Plus {2})',
+              [side, line, line])
+          : trf('Buts équipe {0} : moins de {1} (Total Moins {2})',
+              [side, line, line]);
   }
   return key;
 }
 
-String _odd(double v) => v.toStringAsFixed(2).replaceAll('.', ',');
+String _odd(double v) => v.toStringAsFixed(2).replaceAll('.', decimalSeparator);
 
 /// Texte d'un coupon prêt à reporter sur un site de paris : une ligne par match
 /// (date, affiche, code du pari, cote). Jamais pour un coupon réservé : son contenu est masqué.
@@ -52,12 +56,20 @@ String bookmakerText(
   final sorted = [...selections]
     ..sort((a, b) => a.match.kickoffAt.compareTo(b.match.kickoffAt));
   return [
-    'Coupon Pro IA · $title',
+    trf('Coupon Pro IA · {0}', [title]),
     for (final (i, s) in sorted.indexed)
-      '${i + 1}. ${shortDate(s.match.kickoffAt)} ${timeLabel(s.match.kickoffAt)} · '
-          '${s.match.home} – ${s.match.away} · ${bookmakerPick(s.key)} · cote ${_odd(s.odd)}',
-    'Cote totale indicative : ${_odd(totalOdd)} (les cotes du bookmaker peuvent différer)',
-    'Estimations, aucune certitude. 18+ · Pariez de façon responsable.',
+      trf('{0}. {1} {2} · {3} – {4} · {5} · cote {6}', [
+        i + 1,
+        shortDate(s.match.kickoffAt),
+        timeLabel(s.match.kickoffAt),
+        s.match.home,
+        s.match.away,
+        bookmakerPick(s.key),
+        _odd(s.odd)
+      ]),
+    trf('Cote totale indicative : {0} (les cotes du bookmaker peuvent différer)',
+        [_odd(totalOdd)]),
+    tr('Estimations, aucune certitude. 18+ · Pariez de façon responsable.'),
   ].join('\n');
 }
 

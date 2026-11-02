@@ -7,6 +7,7 @@ import '../../analysis/data/analysis_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../simulator/data/stake_math.dart';
 import '../../system/system_providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 final growthProvider = FutureProvider.autoDispose
     .family<Map<String, dynamic>, int>((ref, days) async {
@@ -40,16 +41,16 @@ class _GrowthAdminScreenState extends ConsumerState<GrowthAdminScreen> {
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!perms.contains('growth.read')) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Conversion et rétention')),
-        body: const InfoMessage(
+        appBar: AppBar(title: Text(tr('Conversion et rétention'))),
+        body: InfoMessage(
             icon: Icons.lock_outline,
-            title: 'Écran réservé au super administrateur'),
+            title: tr('Écran réservé au super administrateur')),
       );
     }
     final theme = Theme.of(context);
     final data = ref.watch(growthProvider(_days));
     return Scaffold(
-      appBar: AppBar(title: const Text('Conversion et rétention')),
+      appBar: AppBar(title: Text(tr('Conversion et rétention'))),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(growthProvider(_days)),
         child: ListView(
@@ -60,7 +61,7 @@ class _GrowthAdminScreenState extends ConsumerState<GrowthAdminScreen> {
               children: [
                 for (final d in const [7, 30, 90])
                   ChoiceChip(
-                      label: Text('$d jours'),
+                      label: Text(trf('{0} jours', [d])),
                       selected: _days == d,
                       onSelected: (_) => setState(() => _days = d)),
               ],
@@ -87,22 +88,22 @@ class _GrowthAdminScreenState extends ConsumerState<GrowthAdminScreen> {
     final a = _m(g['active']);
     final signed = _i(f['signed_up']);
     final steps = [
-      ('Inscrits', _i(f['signed_up'])),
-      ('Premier lancement terminé', _i(f['onboarded'])),
-      ('Revenus un autre jour', _i(f['came_back'])),
-      ('Premier achat', _i(f['first_purchase'])),
-      ('Abonnement renouvelé', _i(f['renewed'])),
+      (tr('Inscrits'), _i(f['signed_up'])),
+      (tr('Premier lancement terminé'), _i(f['onboarded'])),
+      (tr('Revenus un autre jour'), _i(f['came_back'])),
+      (tr('Premier achat'), _i(f['first_purchase'])),
+      (tr('Abonnement renouvelé'), _i(f['renewed'])),
     ];
     final muted = theme.textTheme.bodySmall
         ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
     return [
-      const SectionTitle('Utilisateurs actifs'),
+      SectionTitle(tr('Utilisateurs actifs')),
       Row(children: [
-        _Kpi('Aujourd’hui', '${_i(a['day'])}'),
-        _Kpi('7 jours', '${_i(a['week'])}'),
-        _Kpi('30 jours', '${_i(a['month'])}'),
+        _Kpi(tr('Aujourd’hui'), '${_i(a['day'])}'),
+        _Kpi(tr('7 jours'), '${_i(a['week'])}'),
+        _Kpi(tr('30 jours'), '${_i(a['month'])}'),
       ]),
-      SectionTitle('Entonnoir des inscrits ($_days derniers jours)'),
+      SectionTitle(trf('Entonnoir des inscrits ({0} derniers jours)', [_days])),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -131,25 +132,32 @@ class _GrowthAdminScreenState extends ConsumerState<GrowthAdminScreen> {
                   ),
                 ),
               Text(
-                  'Utilisateurs inscrits pendant la période, et ce qu’ils ont fait depuis.',
+                  tr('Utilisateurs inscrits pendant la période, et ce qu’ils ont fait depuis.'),
                   style: muted),
             ],
           ),
         ),
       ),
-      const SectionTitle('Sur la période'),
+      SectionTitle(tr('Sur la période')),
       Card(
         child: Column(children: [
-          _Line('Nouveaux clients payants', '${_i(p['new_paying'])}'),
-          _Line('Renouvellements d’abonnement', '${_i(p['renewals'])}'),
-          _Line('Revenus encaissés', money(_i(p['revenue_xof']))),
-          _Line('Forfaits payants en cours',
-              '${_i(p['paying_now'])} sur ${_i(p['users_total'])} (${share(_i(p['paying_now']), _i(p['users_total']))})'),
-          _Line('Liens partagés ouverts',
-              '${_i(p['share_opens'])} (dont ${_i(p['share_opens_android'])} sur Android)'),
+          _Line(tr('Nouveaux clients payants'), '${_i(p['new_paying'])}'),
+          _Line(tr('Renouvellements d’abonnement'), '${_i(p['renewals'])}'),
+          _Line(tr('Revenus encaissés'), money(_i(p['revenue_xof']))),
+          _Line(
+              tr('Forfaits payants en cours'),
+              trf('{0} sur {1} ({2})', [
+                _i(p['paying_now']),
+                _i(p['users_total']),
+                share(_i(p['paying_now']), _i(p['users_total']))
+              ])),
+          _Line(
+              tr('Liens partagés ouverts'),
+              trf('{0} (dont {1} sur Android)',
+                  [_i(p['share_opens']), _i(p['share_opens_android'])])),
         ]),
       ),
-      const SectionTitle('Rétention par semaine d’inscription'),
+      SectionTitle(tr('Rétention par semaine d’inscription')),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -157,7 +165,13 @@ class _GrowthAdminScreenState extends ConsumerState<GrowthAdminScreen> {
             columnWidths: const {0: FlexColumnWidth(1.3)},
             children: [
               TableRow(children: [
-                for (final h in ['Semaine', 'Inscrits', 'J7', 'J30', 'Payants'])
+                for (final h in [
+                  tr('Semaine'),
+                  tr('Inscrits'),
+                  'J7',
+                  'J30',
+                  tr('Payants')
+                ])
                   Padding(
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Text(h, style: theme.textTheme.labelMedium),
@@ -170,7 +184,7 @@ class _GrowthAdminScreenState extends ConsumerState<GrowthAdminScreen> {
                       '${r['week']}'.substring(5).split('-').reversed.join('/');
                   final users = _i(r['users']);
                   return TableRow(children: [
-                    Text('du $week'),
+                    Text(trf('du {0}', [week])),
                     Text('$users'),
                     Text(_i(r['d7_eligible']) == 0
                         ? '…'
@@ -188,9 +202,7 @@ class _GrowthAdminScreenState extends ConsumerState<GrowthAdminScreen> {
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Text(
-            'J7 / J30 : part des inscrits de la semaine revenus dans l’app au moins une fois 7 (30) jours ou plus '
-            'après leur inscription (« … » : trop récent pour le savoir). Activité comptée à chaque ouverture de l’app '
-            'depuis la version 0.25.0 ; avant, d’après les traces existantes (connexions, analyses, assistant, carnet).',
+            tr('J7 / J30 : part des inscrits de la semaine revenus dans l’app au moins une fois 7 (30) jours ou plus après leur inscription (« … » : trop récent pour le savoir). Activité comptée à chaque ouverture de l’app depuis la version 0.25.0 ; avant, d’après les traces existantes (connexions, analyses, assistant, carnet).'),
             style: muted),
       ),
     ];

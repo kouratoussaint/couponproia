@@ -1,6 +1,8 @@
 /// Modèles des coupons de la plateforme (écrits par le serveur, lus par l'app).
 library;
 
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
+
 double _d(Object? v) => (v as num).toDouble();
 double? _dn(Object? v) => v == null ? null : (v as num).toDouble();
 int _i(Object? v) => (v as num).toInt();
@@ -11,33 +13,37 @@ Map<String, dynamic> _map(Object? v) =>
 List<String> _strings(Object? v) =>
     v is List ? v.map((e) => e.toString()).toList() : const [];
 
-const categoryLabels = {
-  'du_jour': 'Coupon du jour',
-  'prudent': 'Prudent',
-  'equilibre': 'Équilibré',
-  'audacieux': 'Audacieux',
-  'cote_elevee': 'Cote élevée',
-  'multi_competitions': 'Multi-compétitions',
-  'competition': 'Spécial compétition',
-  'marche': 'Spécial marché',
-  'strategie': 'Stratégie',
+final categoryLabels = {
+  'du_jour': tr('Coupon du jour'),
+  'prudent': tr('Prudent'),
+  'equilibre': tr('Équilibré'),
+  'audacieux': tr('Audacieux'),
+  'cote_elevee': tr('Cote élevée'),
+  'multi_competitions': tr('Multi-compétitions'),
+  'competition': tr('Spécial compétition'),
+  'marche': tr('Spécial marché'),
+  'strategie': tr('Stratégie'),
 };
 
-const riskLabels = {
-  'prudent': 'Risque estimé : prudent',
-  'equilibre': 'Risque estimé : équilibré',
-  'audacieux': 'Risque estimé : audacieux',
+final riskLabels = {
+  'prudent': tr('Risque estimé : prudent'),
+  'equilibre': tr('Risque estimé : équilibré'),
+  'audacieux': tr('Risque estimé : audacieux'),
 };
 
-const resultLabels = {'won': 'Gagné', 'lost': 'Perdu', 'void': 'Annulé'};
+final resultLabels = {
+  'won': tr('Gagné'),
+  'lost': tr('Perdu'),
+  'void': tr('Annulé')
+};
 
-const statusLabels = {
-  'pending_review': 'À valider',
-  'ready': 'Prêt, publication programmée',
-  'published': 'Publié',
-  'rejected': 'Rejeté',
-  'expired': 'Expiré (non publié)',
-  'withdrawn': 'Retiré',
+final statusLabels = {
+  'pending_review': tr('À valider'),
+  'ready': tr('Prêt, publication programmée'),
+  'published': tr('Publié'),
+  'rejected': tr('Rejeté'),
+  'expired': tr('Expiré (non publié)'),
+  'withdrawn': tr('Retiré'),
 };
 
 class SelectionMatch {

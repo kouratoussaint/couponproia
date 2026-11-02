@@ -19,6 +19,7 @@ import '../data/sports_format.dart';
 import '../data/sports_models.dart';
 import '../data/sports_repository.dart';
 import 'sports_widgets.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 export 'match_stats_tab.dart';
 
@@ -55,9 +56,9 @@ class PronosticTab extends ConsumerWidget {
       padding: _pad,
       children: [
         if (!_analysisEnabled(ref))
-          const NoticeCard(
+          NoticeCard(
               icon: Icons.pause_circle_outline,
-              text: 'Les analyses sont momentanément désactivées.')
+              text: tr('Les analyses sont momentanément désactivées.'))
         else
           ...analysis.when(
             loading: () => [const LinearProgressIndicator()],
@@ -70,8 +71,7 @@ class PronosticTab extends ConsumerWidget {
                   AnalyzeButton(match: match),
                   const SizedBox(height: 8),
                   Text(
-                    'L’analyse donne l’estimation du modèle pour chaque issue, la cote juste, les scores '
-                    'les plus probables et la lecture de l’IA, vérifiée chiffre par chiffre.',
+                    tr('L’analyse donne l’estimation du modèle pour chaque issue, la cote juste, les scores les plus probables et la lecture de l’IA, vérifiée chiffre par chiffre.'),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
@@ -129,9 +129,9 @@ class _MarketPreview extends ConsumerWidget {
     final theme = Theme.of(context);
     final market = ref.watch(market1x2OfMatchProvider(match.id)).valueOrNull;
     if (market == null) {
-      return const NoticeCard(
+      return NoticeCard(
           icon: Icons.info_outline,
-          text: 'Aucune cote relevée pour ce match pour l’instant.');
+          text: tr('Aucune cote relevée pour ce match pour l’instant.'));
     }
     return Card(
       child: Padding(
@@ -139,21 +139,21 @@ class _MarketPreview extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Selon les cotes des bookmakers',
+            Text(tr('Selon les cotes des bookmakers'),
                 style: theme.textTheme.labelLarge),
             const SizedBox(height: 4),
             Text(
-                'Probabilités implicites, marge des bookmakers retirée (${market.bookmakers} bookmakers au maximum). '
-                'Ce n’est pas l’estimation du modèle.',
+                trf('Probabilités implicites, marge des bookmakers retirée ({0} bookmakers au maximum). Ce n’est pas l’estimation du modèle.',
+                    [market.bookmakers]),
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
             const SizedBox(height: 8),
             ProbabilityBar(
-                label: 'Victoire ${match.home.name}',
+                label: trf('Victoire {0}', [match.home.name]),
                 probability: market.pHome),
-            ProbabilityBar(label: 'Match nul', probability: market.pDraw),
+            ProbabilityBar(label: tr('Match nul'), probability: market.pDraw),
             ProbabilityBar(
-                label: 'Victoire ${match.away.name}',
+                label: trf('Victoire {0}', [match.away.name]),
                 probability: market.pAway),
           ],
         ),
@@ -191,11 +191,10 @@ class AnalysisTab extends ConsumerWidget {
       padding: _pad,
       children: [
         if (analysis == null) ...[
-          const NoticeCard(
+          NoticeCard(
               icon: Icons.auto_awesome_outlined,
-              text:
-                  'La lecture de l’IA apparaît après « Analyser avec l’IA ». Les faits ci-dessous viennent '
-                  'directement des résultats enregistrés.'),
+              text: tr(
+                  'La lecture de l’IA apparaît après « Analyser avec l’IA ». Les faits ci-dessous viennent directement des résultats enregistrés.')),
           if (_analysisEnabled(ref)) AnalyzeButton(match: match),
         ] else
           Card(
@@ -209,7 +208,7 @@ class AnalysisTab extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('EN UNE PHRASE',
+                  Text(tr('EN UNE PHRASE'),
                       style: theme.textTheme.labelMedium?.copyWith(
                           color: theme.colorScheme.primary,
                           fontWeight: FontWeight.w800,
@@ -218,7 +217,9 @@ class AnalysisTab extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Text(
                       '${outcomeKeyLabel(pick.key, home, away)}'
-                      '${pick.oddMedian == null ? '' : ' · cote ${decimal(pick.oddMedian!)}'}',
+                      '${pick.oddMedian == null ? '' : trf(' · cote {0}', [
+                              decimal(pick.oddMedian!)
+                            ])}',
                       style: theme.textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
@@ -236,13 +237,13 @@ class AnalysisTab extends ConsumerWidget {
           ),
         MatchdayCard(match: match),
         if (facts.isNotEmpty) ...[
-          const SectionTitle('Faits vérifiés'),
+          SectionTitle(tr('Faits vérifiés')),
           for (final f in facts) FactCard(fact: f),
         ] else if (insights == null)
           const Padding(
               padding: EdgeInsets.all(16), child: LinearProgressIndicator()),
         if (ai != null) ...[
-          const SectionTitle('La lecture de l’IA'),
+          SectionTitle(tr('La lecture de l’IA')),
           Card(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
@@ -250,16 +251,20 @@ class AnalysisTab extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (ai.form.isNotEmpty)
-                    TextBlock(title: 'La forme', body: ai.form),
+                    TextBlock(title: tr('La forme'), body: ai.form),
                   if (ai.homeFactors.isNotEmpty)
-                    TextBlock(title: 'Atouts de $home', items: ai.homeFactors),
+                    TextBlock(
+                        title: trf('Atouts de {0}', [home]),
+                        items: ai.homeFactors),
                   if (ai.awayFactors.isNotEmpty)
-                    TextBlock(title: 'Atouts de $away', items: ai.awayFactors),
+                    TextBlock(
+                        title: trf('Atouts de {0}', [away]),
+                        items: ai.awayFactors),
                   if (ai.trends.isNotEmpty)
-                    TextBlock(title: 'Tendances', items: ai.trends),
+                    TextBlock(title: tr('Tendances'), items: ai.trends),
                   if (ai.picks.isNotEmpty)
                     TextBlock(
-                      title: 'Pourquoi ces marchés',
+                      title: tr('Pourquoi ces marchés'),
                       items: [
                         for (final p in ai.picks)
                           '${outcomeKeyLabel(p.key, home, away)} (${pct(p.modelProbability)}) : ${p.justification}'
@@ -267,11 +272,11 @@ class AnalysisTab extends ConsumerWidget {
                     ),
                   if (ai.risks.isNotEmpty)
                     TextBlock(
-                        title: 'Ce qui peut tout changer',
+                        title: tr('Ce qui peut tout changer'),
                         items: ai.risks,
                         color: BrandColors.orange),
                   if (ai.conclusion.isNotEmpty)
-                    TextBlock(title: 'Conclusion', body: ai.conclusion),
+                    TextBlock(title: tr('Conclusion'), body: ai.conclusion),
                 ],
               ),
             ),
@@ -279,27 +284,26 @@ class AnalysisTab extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             child: Text(
-              'Chaque chiffre des textes de l’IA est vérifié automatiquement : il doit figurer dans la fiche '
-              'du moteur. Les mots de certitude sont refusés.',
+              tr('Chaque chiffre des textes de l’IA est vérifié automatiquement : il doit figurer dans la fiche du moteur. Les mots de certitude sont refusés.'),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
         ],
         if (analysis != null && pick != null) ...[
-          const SectionTitle('Si ça ne passe pas'),
+          SectionTitle(tr('Si ça ne passe pas')),
           NoticeCard(
               icon: Icons.info_outline,
               text: downsideText(pick, analysis.fiche, home, away)),
         ],
         if (analysis != null) ...[
           if (mergedMissing(analysis.fiche, ai).isNotEmpty) ...[
-            const SectionTitle('Informations manquantes'),
+            SectionTitle(tr('Informations manquantes')),
             Card(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                 child: TextBlock(
-                    title: 'Non pris en compte',
+                    title: tr('Non pris en compte'),
                     items: mergedMissing(analysis.fiche, ai),
                     color: theme.colorScheme.onSurfaceVariant),
               ),
@@ -329,16 +333,15 @@ class MarketsTab extends ConsumerWidget {
       padding: _pad,
       children: [
         if (analysis == null)
-          const NoticeCard(
+          NoticeCard(
               icon: Icons.query_stats,
-              text:
-                  'L’estimation du modèle pour chaque marché (cote juste, écart avec le marché) apparaît '
-                  'après l’analyse, dans l’onglet Pronostic.')
+              text: tr(
+                  'L’estimation du modèle pour chaque marché (cote juste, écart avec le marché) apparaît après l’analyse, dans l’onglet Pronostic.'))
         else ...[
           if (analysis.fiche.comparableLines.isEmpty)
-            const NoticeCard(
+            NoticeCard(
                 icon: Icons.info_outline,
-                text: 'Pas de cotes comparables au moment de l’analyse.')
+                text: tr('Pas de cotes comparables au moment de l’analyse.'))
           else
             MarketsComparison(
                 fiche: analysis.fiche,
@@ -354,7 +357,7 @@ class MarketsTab extends ConsumerWidget {
           if (analysis.fiche.comparableLines.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-              child: Text('Touchez une ligne pour simuler une mise.',
+              child: Text(tr('Touchez une ligne pour simuler une mise.'),
                   style: Theme.of(context)
                       .textTheme
                       .labelMedium
@@ -362,7 +365,7 @@ class MarketsTab extends ConsumerWidget {
             ),
           ScoresCard(fiche: analysis.fiche),
         ],
-        const SectionTitle('Toutes les cotes'),
+        SectionTitle(tr('Toutes les cotes')),
         OddsBoard(match: match),
         const ResponsibleNote(),
       ],
@@ -388,11 +391,10 @@ class OddsBoard extends ConsumerWidget {
       error: (e, _) => Text(userMessageFor(e)),
       data: (list) {
         if (list.isEmpty) {
-          return const NoticeCard(
+          return NoticeCard(
             icon: Icons.info_outline,
-            text:
-                'Aucune cote relevée pour ce match. Les cotes sont relevées plusieurs fois par jour '
-                'pour les matchs à venir.',
+            text: tr(
+                'Aucune cote relevée pour ce match. Les cotes sont relevées plusieurs fois par jour pour les matchs à venir.'),
           );
         }
         final byMarket = oddsByMarket(list);
@@ -454,17 +456,18 @@ class OddsBoard extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Text(
-                      'Touchez une cote pour l’ajouter à votre coupon.',
+                      tr('Touchez une cote pour l’ajouter à votre coupon.'),
                       style: theme.textTheme.labelMedium
                           ?.copyWith(color: theme.colorScheme.primary),
                     ),
                   ),
                 SourceChip(
-                    label:
-                        'Cote médiane de $books bookmakers au maximum · relevé ${shortDate(latest)} ${timeLabel(latest)}'),
+                    label: trf(
+                        'Cote médiane de {0} bookmakers au maximum · relevé {1} {2}',
+                        [books, shortDate(latest), timeLabel(latest)])),
                 const SizedBox(height: 6),
                 Text(
-                  '« max » = meilleure cote relevée. Les cotes changent et peuvent différer de celles de votre opérateur.',
+                  tr('« max » = meilleure cote relevée. Les cotes changent et peuvent différer de celles de votre opérateur.'),
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
@@ -512,7 +515,7 @@ class _OddTile extends StatelessWidget {
             Text(formatOdd(odd.median),
                 style: theme.textTheme.titleMedium
                     ?.copyWith(color: scheme.primary)),
-            Text('max ${formatOdd(odd.best)}',
+            Text(trf('max {0}', [formatOdd(odd.best)]),
                 style: theme.textTheme.labelSmall),
           ],
         ),
@@ -528,24 +531,22 @@ Color teamColor(bool home) => home ? BrandColors.vertIA : BrandColors.orange;
 class GlossaryCard extends StatelessWidget {
   const GlossaryCard({super.key});
 
-  static const entries = [
+  static final entries = [
     (
-      'Estimation du modèle',
-      'La probabilité calculée par notre modèle à partir des résultats enregistrés. '
-          'C’est une estimation, pas une certitude.'
+      tr('Estimation du modèle'),
+      tr('La probabilité calculée par notre modèle à partir des résultats enregistrés. C’est une estimation, pas une certitude.')
     ),
     (
-      'Cote juste',
-      'La cote qui correspondrait exactement à l’estimation (1 ÷ probabilité). '
-          'Une cote du marché plus haute que la cote juste est plus intéressante.'
+      tr('Cote juste'),
+      tr('La cote qui correspondrait exactement à l’estimation (1 ÷ probabilité). Une cote du marché plus haute que la cote juste est plus intéressante.')
     ),
     (
-      'Écart',
-      'La différence entre l’estimation du modèle et celle du marché (cotes, marge retirée).'
+      tr('Écart'),
+      tr('La différence entre l’estimation du modèle et celle du marché (cotes, marge retirée).')
     ),
     (
-      'Fiabilité',
-      'Dépend du nombre de matchs enregistrés pour chaque équipe : peu de matchs, estimation moins solide.'
+      tr('Fiabilité'),
+      tr('Dépend du nombre de matchs enregistrés pour chaque équipe : peu de matchs, estimation moins solide.')
     ),
   ];
 
@@ -557,7 +558,7 @@ class GlossaryCard extends StatelessWidget {
         data: theme.copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           leading: Icon(Icons.help_outline, color: theme.colorScheme.primary),
-          title: const Text('Comprendre ces chiffres'),
+          title: Text(tr('Comprendre ces chiffres')),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           expandedCrossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -616,7 +617,8 @@ class MatchdayCard extends ConsumerWidget {
                 Text(
                   [
                     if (lineup.formation != null) lineup.formation!,
-                    if (lineup.coach != null) 'entraîneur ${lineup.coach}'
+                    if (lineup.coach != null)
+                      trf('entraîneur {0}', [lineup.coach])
                   ].join(' · '),
                   style: theme.textTheme.bodySmall,
                 ),
@@ -627,7 +629,7 @@ class MatchdayCard extends ConsumerWidget {
               ],
               if (out.isNotEmpty) ...[
                 const SizedBox(height: 6),
-                Text('Absents',
+                Text(tr('Absents'),
                     style: theme.textTheme.labelMedium
                         ?.copyWith(color: BrandColors.rouge)),
                 for (final a in out)
@@ -636,7 +638,7 @@ class MatchdayCard extends ConsumerWidget {
               ],
               if (doubt.isNotEmpty) ...[
                 const SizedBox(height: 6),
-                Text('Incertains',
+                Text(tr('Incertains'),
                     style: theme.textTheme.labelMedium
                         ?.copyWith(color: BrandColors.orange)),
                 for (final a in doubt)
@@ -644,7 +646,7 @@ class MatchdayCard extends ConsumerWidget {
                       style: theme.textTheme.bodySmall),
               ],
               if (lineup == null && absent.isEmpty)
-                Text('Aucun absent annoncé',
+                Text(tr('Aucun absent annoncé'),
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: scheme.onSurfaceVariant)),
             ],
@@ -660,7 +662,7 @@ class MatchdayCard extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SectionTitle('Compositions et absents'),
+            SectionTitle(tr('Compositions et absents')),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -677,8 +679,8 @@ class MatchdayCard extends ConsumerWidget {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Compositions officielles attendues vers ${timeLabel(expected)} '
-                                '(20 à 40 minutes avant le coup d’envoi).',
+                                trf('Compositions officielles attendues vers {0} (20 à 40 minutes avant le coup d’envoi).',
+                                    [timeLabel(expected)]),
                                 style: theme.textTheme.bodySmall,
                               ),
                             ),
@@ -687,7 +689,7 @@ class MatchdayCard extends ConsumerWidget {
                       ),
                     if (checked == null)
                       Text(
-                          'Absents pas encore vérifiés : la vérification commence 6 heures avant le match.',
+                          tr('Absents pas encore vérifiés : la vérification commence 6 heures avant le match.'),
                           style: theme.textTheme.bodySmall)
                     else
                       Row(
@@ -700,7 +702,9 @@ class MatchdayCard extends ConsumerWidget {
                       ),
                     if (checked != null) ...[
                       const SizedBox(height: 10),
-                      Text('API-Football · relevé à ${timeLabel(checked)}',
+                      Text(
+                          trf('API-Football · relevé à {0}',
+                              [timeLabel(checked)]),
                           style: theme.textTheme.labelSmall
                               ?.copyWith(color: scheme.onSurfaceVariant)),
                     ],

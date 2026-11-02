@@ -7,6 +7,7 @@ import '../../../core/widgets/form_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/bookmaker_format.dart';
 import '../data/coupon_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Lien bookmaker réglé par l'équipe, ou null (aucun bouton « Ouvrir … » dans ce cas).
 final bookmakerLinkProvider = Provider<BookmakerLink?>((ref) =>
@@ -25,13 +26,13 @@ Future<void> copyForBookmaker(BuildContext context, WidgetRef ref, String title,
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(
-      content: const Text(
-          'Coupon copié au format bookmaker. Vérifiez chaque cote sur le site avant de valider.'),
+      content: Text(tr(
+          'Coupon copié au format bookmaker. Vérifiez chaque cote sur le site avant de valider.')),
       duration: const Duration(seconds: 6),
       action: link == null
           ? null
           : SnackBarAction(
-              label: 'Ouvrir ${link.name}',
+              label: trf('Ouvrir {0}', [link.name]),
               onPressed: () => openBookmaker(context, link)),
     ));
 }
@@ -39,7 +40,8 @@ Future<void> copyForBookmaker(BuildContext context, WidgetRef ref, String title,
 Future<void> openBookmaker(BuildContext context, BookmakerLink link) async {
   final ok = await launchUrl(link.url, mode: LaunchMode.externalApplication);
   if (!ok && context.mounted) {
-    showMessage(context, 'Impossible d’ouvrir ${link.name}.', error: true);
+    showMessage(context, trf('Impossible d’ouvrir {0}.', [link.name]),
+        error: true);
   }
 }
 
@@ -68,13 +70,13 @@ class BookmakerButtons extends ConsumerWidget {
           onPressed: () =>
               copyForBookmaker(context, ref, title, totalOdd, selections),
           icon: const Icon(Icons.content_paste_go_outlined),
-          label: const Text('Copier pour mon bookmaker'),
+          label: Text(tr('Copier pour mon bookmaker')),
         ),
         if (link != null)
           OutlinedButton.icon(
             onPressed: () => openBookmaker(context, link),
             icon: const Icon(Icons.open_in_new),
-            label: Text('Ouvrir ${link.name}'),
+            label: Text(trf('Ouvrir {0}', [link.name])),
           ),
       ],
     );

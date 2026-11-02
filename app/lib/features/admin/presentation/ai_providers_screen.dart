@@ -7,8 +7,13 @@ import '../../matches/data/sports_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/ai_providers_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
-const _periods = {'today': 'Aujourd’hui', 'days_7': '7 j', 'days_30': '30 j'};
+final _periods = {
+  'today': tr('Aujourd’hui'),
+  'days_7': tr('7 j'),
+  'days_30': tr('30 j')
+};
 
 const _initials = {'gemini': 'G', 'groq': 'Q', 'anthropic': 'C'};
 
@@ -30,10 +35,12 @@ String _int(int v) {
 
 String _seconds(int? ms) => ms == null
     ? '–'
-    : '${(ms / 1000).toStringAsFixed(1).replaceAll('.', ',')} s';
+    : trf('{0} s',
+        [(ms / 1000).toStringAsFixed(1).replaceAll('.', decimalSeparator)]);
 
-String _usd(double? v) =>
-    v == null ? '–' : '${v.toStringAsFixed(2).replaceAll('.', ',')} \$';
+String _usd(double? v) => v == null
+    ? '–'
+    : '${v.toStringAsFixed(2).replaceAll('.', decimalSeparator)} \$';
 
 /// Console → Fournisseurs d'IA (super administrateur) : rôle de chaque IA dans l'ordre
 /// d'appel, modèle, consommation, quota et test de connexion.
@@ -71,20 +78,20 @@ class _AiProvidersScreenState extends ConsumerState<AiProvidersScreen> {
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!perms.contains('ai.providers')) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Fournisseurs d’IA')),
-        body: const InfoMessage(
+        appBar: AppBar(title: Text(tr('Fournisseurs d’IA'))),
+        body: InfoMessage(
             icon: Icons.lock_outline,
-            title: 'Écran réservé au super administrateur'),
+            title: tr('Écran réservé au super administrateur')),
       );
     }
     final async = ref.watch(aiProvidersProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Fournisseurs d’IA')),
+      appBar: AppBar(title: Text(tr('Fournisseurs d’IA'))),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Indisponible',
+            title: tr('Indisponible'),
             body: e is AiProvidersException ? e.message : userMessageFor(e)),
         data: (list) {
           if (_roles == null) _reset(list);
@@ -110,11 +117,12 @@ class _AiProvidersScreenState extends ConsumerState<AiProvidersScreen> {
                 const SizedBox(height: 12),
                 _OrderBanner(
                   text: order.primary == null
-                      ? 'Aucune IA principale : choisissez-en une.'
-                      : 'Ordre d’appel : ${[
-                          order.primary!,
-                          ...order.fallbacks
-                        ].map((n) => labels[n] ?? n).join(' → ')}',
+                      ? tr('Aucune IA principale : choisissez-en une.')
+                      : trf('Ordre d’appel : {0}', [
+                          [order.primary!, ...order.fallbacks]
+                              .map((n) => labels[n] ?? n)
+                              .join(' → ')
+                        ]),
                   warning: order.primary == null,
                 ),
                 const SizedBox(height: 4),
@@ -141,19 +149,16 @@ class _AiProvidersScreenState extends ConsumerState<AiProvidersScreen> {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.check),
-                  label: const Text('Enregistrer les changements'),
+                  label: Text(tr('Enregistrer les changements')),
                 ),
                 if (dirty)
                   TextButton(
                     onPressed: () => setState(() => _reset(list)),
-                    child: const Text('Annuler les changements'),
+                    child: Text(tr('Annuler les changements')),
                   ),
                 const SizedBox(height: 8),
                 Text(
-                  'Une seule principale à la fois ; une IA sans clé ne peut pas être choisie. '
-                  'Si la principale échoue ou atteint sa limite, la suivante prend le relais pour la même analyse. '
-                  'Chaque changement est inscrit au journal d’audit. « Tester » envoie une courte requête sans données d’utilisateur. '
-                  'Les clés restent sur le serveur : l’application ne les voit jamais.',
+                  tr('Une seule principale à la fois ; une IA sans clé ne peut pas être choisie. Si la principale échoue ou atteint sa limite, la suivante prend le relais pour la même analyse. Chaque changement est inscrit au journal d’audit. « Tester » envoie une courte requête sans données d’utilisateur. Les clés restent sur le serveur : l’application ne les voit jamais.'),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
@@ -192,21 +197,31 @@ class _AiProvidersScreenState extends ConsumerState<AiProvidersScreen> {
         context: context,
         builder: (c) => AlertDialog(
           icon: Icon(r.ok ? Icons.check_circle_outline : Icons.error_outline),
-          title: Text(r.ok ? '${p.label} répond' : '${p.label} ne répond pas'),
+          title: Text(r.ok
+              ? trf('{0} répond', [p.label])
+              : trf('{0} ne répond pas', [p.label])),
           content: Text([
-            'Modèle : ${r.model}',
-            'Temps de réponse : ${_seconds(r.latencyMs)}',
-            if (r.error != null) 'Erreur : ${r.error}',
+            trf('Modèle : {0}', [r.model]),
+            trf('Temps de réponse : {0}', [_seconds(r.latencyMs)]),
+            if (r.error != null) trf('Erreur : {0}', [r.error]),
             if (r.quota?.requestsRemaining != null)
-              'Requêtes restantes : ${_int(r.quota!.requestsRemaining!)}'
-                  '${r.quota!.requestsLimit == null ? '' : ' sur ${_int(r.quota!.requestsLimit!)}'}',
+              trf('Requêtes restantes : {0}{1}', [
+                _int(r.quota!.requestsRemaining!),
+                r.quota!.requestsLimit == null
+                    ? ''
+                    : trf(' sur {0}', [_int(r.quota!.requestsLimit!)])
+              ]),
             if (r.quota?.tokensRemaining != null)
-              'Jetons restants : ${_int(r.quota!.tokensRemaining!)}'
-                  '${r.quota!.tokensLimit == null ? '' : ' sur ${_int(r.quota!.tokensLimit!)}'}',
+              trf('Jetons restants : {0}{1}', [
+                _int(r.quota!.tokensRemaining!),
+                r.quota!.tokensLimit == null
+                    ? ''
+                    : trf(' sur {0}', [_int(r.quota!.tokensLimit!)])
+              ]),
           ].join('\n')),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(c), child: const Text('Fermer'))
+                onPressed: () => Navigator.pop(c), child: Text(tr('Fermer')))
           ],
         ),
       );
@@ -227,19 +242,33 @@ class _AiProvidersScreenState extends ConsumerState<AiProvidersScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('Appliquer ce choix ?'),
+        title: Text(tr('Appliquer ce choix ?')),
         content: Text(
-          'Principale : ${labels[order.primary]} (${_models[order.primary] ?? 'modèle non choisi'})\n'
-          '${order.fallbacks.isEmpty ? 'Aucune IA de secours.' : order.fallbacks.asMap().entries.map((e) => 'Secours ${e.key + 1} : ${labels[e.value]} (${_models[e.value] ?? '–'})').join('\n')}\n\n'
-          'Les prochaines analyses utiliseront cet ordre.',
+          trf(
+              'Principale : {0} ({1})\n{2}\n\nLes prochaines analyses utiliseront cet ordre.',
+              [
+                labels[order.primary],
+                _models[order.primary] ?? tr('modèle non choisi'),
+                order.fallbacks.isEmpty
+                    ? tr('Aucune IA de secours.')
+                    : order.fallbacks
+                        .asMap()
+                        .entries
+                        .map((e) => trf('Secours {0} : {1} ({2})', [
+                              e.key + 1,
+                              labels[e.value],
+                              _models[e.value] ?? '–'
+                            ]))
+                        .join('\n')
+              ]),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
-              child: const Text('Annuler')),
+              child: Text(tr('Annuler'))),
           FilledButton(
               onPressed: () => Navigator.pop(c, true),
-              child: const Text('Appliquer')),
+              child: Text(tr('Appliquer'))),
         ],
       ),
     );
@@ -253,7 +282,7 @@ class _AiProvidersScreenState extends ConsumerState<AiProvidersScreen> {
           );
       _roles = null;
       ref.invalidate(aiProvidersProvider);
-      if (mounted) showMessage(context, 'Fournisseurs d’IA mis à jour.');
+      if (mounted) showMessage(context, tr('Fournisseurs d’IA mis à jour.'));
     } catch (e) {
       if (mounted) {
         showMessage(
@@ -357,7 +386,7 @@ class _ProviderCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(info.label, style: theme.textTheme.titleMedium),
-                        Text(model ?? 'Modèle non choisi',
+                        Text(model ?? tr('Modèle non choisi'),
                             style: muted, overflow: TextOverflow.ellipsis),
                       ],
                     ),
@@ -387,27 +416,41 @@ class _ProviderCard extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 !info.configured
-                    ? 'Clé absente : ajoutez ${info.secret} dans les secrets du dépôt.'
+                    ? trf(
+                        'Clé absente : ajoutez {0} dans les secrets du dépôt.',
+                        [info.secret])
                     : last == null
-                        ? 'Clé configurée · aucun appel pour l’instant'
-                        : 'Clé configurée · dernier appel le ${shortDate(last)} à ${timeLabel(last)}'
-                            '${info.lastCallStatus == 'success' ? '' : ' (${info.lastCallStatus == 'invalid' ? 'réponse rejetée' : 'erreur'})'}',
+                        ? tr('Clé configurée · aucun appel pour l’instant')
+                        : trf(
+                            'Clé configurée · dernier appel le {0} à {1}{2}', [
+                            shortDate(last),
+                            timeLabel(last),
+                            info.lastCallStatus == 'success'
+                                ? ''
+                                : ' (${info.lastCallStatus == 'invalid' ? tr('réponse rejetée') : 'erreur'})'
+                          ]),
                 style: theme.textTheme.bodySmall?.copyWith(
                     color: info.configured ? scheme.primary : scheme.error),
               ),
               const SizedBox(height: 10),
               Row(
                 children: [
-                  _Stat(value: _int(u.calls), label: 'appels'),
-                  _Stat(value: _int(u.rejected), label: 'rejetés'),
-                  _Stat(value: _seconds(u.avgLatencyMs), label: 'moyenne'),
-                  _Stat(value: _usd(u.costUsd), label: 'coût'),
+                  _Stat(value: _int(u.calls), label: tr('appels')),
+                  _Stat(value: _int(u.rejected), label: tr('rejetés')),
+                  _Stat(value: _seconds(u.avgLatencyMs), label: tr('moyenne')),
+                  _Stat(value: _usd(u.costUsd), label: tr('coût')),
                 ],
               ),
               const SizedBox(height: 6),
               Text(
-                'Erreurs : ${u.errors} · limites atteintes : ${u.rateLimited} · '
-                'jetons : ${_int(u.inputTokens)} envoyés, ${_int(u.outputTokens)} reçus',
+                trf(
+                    'Erreurs : {0} · limites atteintes : {1} · jetons : {2} envoyés, {3} reçus',
+                    [
+                      u.errors,
+                      u.rateLimited,
+                      _int(u.inputTokens),
+                      _int(u.outputTokens)
+                    ]),
                 style: muted,
               ),
               const SizedBox(height: 10),
@@ -425,13 +468,13 @@ class _ProviderCard extends StatelessWidget {
                           PopupMenuItem(value: r, child: Text(r.label)),
                       ],
                       child: _OutlineBox(
-                          text: 'Rôle : ${role.label}',
+                          text: trf('Rôle : {0}', [role.label]),
                           enabled: info.configured),
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton.outlined(
-                    tooltip: 'Changer de modèle',
+                    tooltip: tr('Changer de modèle'),
                     onPressed: info.configured ? onModel : null,
                     icon: const Icon(Icons.tune),
                   ),
@@ -443,7 +486,7 @@ class _ProviderCard extends StatelessWidget {
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Tester'),
+                        : Text(tr('Tester')),
                   ),
                 ],
               ),
@@ -562,14 +605,14 @@ class _QuotaBlock extends StatelessWidget {
         (q.requestsRemaining != null || q.tokensRemaining != null)) {
       if (q.requestsLimit != null && q.requestsRemaining != null) {
         bar(
-            'Requêtes restantes',
+            tr('Requêtes restantes'),
             q.requestsLimit! - q.requestsRemaining!,
             q.requestsLimit!,
             '${_int(q.requestsRemaining!)} / ${_int(q.requestsLimit!)}');
       }
       if (q.tokensLimit != null && q.tokensRemaining != null) {
         bar(
-            'Jetons restants',
+            tr('Jetons restants'),
             q.tokensLimit! - q.tokensRemaining!,
             q.tokensLimit!,
             '${_int(q.tokensRemaining!)} / ${_int(q.tokensLimit!)}');
@@ -577,9 +620,16 @@ class _QuotaBlock extends StatelessWidget {
       rows.add(Padding(
         padding: const EdgeInsets.only(top: 4),
         child: Text(
-          'Annoncé par ${info.label}'
-          '${q.at == null ? '' : ' le ${shortDate(q.at!)} à ${timeLabel(q.at!)}'}'
-          '${q.requestsReset == null ? '' : ' · remise à zéro des requêtes dans ${q.requestsReset}'}',
+          trf('Annoncé par {0}{1}{2}', [
+            info.label,
+            q.at == null
+                ? ''
+                : trf(' le {0} à {1}', [shortDate(q.at!), timeLabel(q.at!)]),
+            q.requestsReset == null
+                ? ''
+                : trf(
+                    ' · remise à zéro des requêtes dans {0}', [q.requestsReset])
+          ]),
           style: muted,
         ),
       ));
@@ -587,27 +637,32 @@ class _QuotaBlock extends StatelessWidget {
       final perDay = info.referenceLimits['requests_per_day'];
       final tokensDay = info.referenceLimits['tokens_per_day'];
       if (perDay != null) {
-        bar('Requêtes du jour (offre gratuite)', today.calls, perDay,
+        bar(tr('Requêtes du jour (offre gratuite)'), today.calls, perDay,
             '${_int(today.calls)} / ${_int(perDay)}');
       }
       if (tokensDay != null) {
         final used = today.inputTokens + today.outputTokens;
-        bar('Jetons du jour', used, tokensDay,
+        bar(tr('Jetons du jour'), used, tokensDay,
             '${_int(used)} / ${_int(tokensDay)}');
       }
       final perMinute = info.referenceLimits['requests_per_minute'];
       rows.add(Padding(
         padding: const EdgeInsets.only(top: 4),
         child: Text(
-          'Limites de référence de l’offre gratuite'
-          '${perMinute == null ? '' : ' (dont $perMinute requêtes par minute)'}. '
-          'Le quota exact s’affichera après le premier appel.',
+          trf(
+              'Limites de référence de l’offre gratuite{0}. Le quota exact s’affichera après le premier appel.',
+              [
+                perMinute == null
+                    ? ''
+                    : trf(' (dont {0} requêtes par minute)', [perMinute])
+              ]),
           style: muted,
         ),
       ));
     } else {
       rows.add(Text(
-        '${info.label} n’annonce pas son quota : ${_int(today.calls)} appel${today.calls > 1 ? 's' : ''} aujourd’hui.',
+        trf('{0} n’annonce pas son quota : {1} appel{2} aujourd’hui.',
+            [info.label, _int(today.calls), today.calls > 1 ? 's' : '']),
         style: muted,
       ));
     }
@@ -649,7 +704,7 @@ class _ModelSheetState extends State<_ModelSheet> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Text('Modèle ${widget.provider.label}',
+              child: Text(trf('Modèle {0}', [widget.provider.label]),
                   style: theme.textTheme.titleLarge),
             ),
             Padding(
@@ -657,7 +712,7 @@ class _ModelSheetState extends State<_ModelSheet> {
               child: TextField(
                 controller: _custom,
                 decoration: InputDecoration(
-                  labelText: 'Nom du modèle',
+                  labelText: tr('Nom du modèle'),
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.check),
                     onPressed: () => Navigator.pop(context, _custom.text),
@@ -680,7 +735,8 @@ class _ModelSheetState extends State<_ModelSheet> {
                       child: Text(
                           s.error is AiProvidersException
                               ? '${s.error}'
-                              : 'Liste des modèles indisponible : saisissez le nom.',
+                              : tr(
+                                  'Liste des modèles indisponible : saisissez le nom.'),
                           style: theme.textTheme.bodyMedium),
                     );
                   }

@@ -17,6 +17,7 @@ import '../data/studio_export.dart';
 import '../data/studio_models.dart';
 import '../data/studio_repository.dart';
 import 'coupon_visual.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Coupon à mettre en forme : coupon de la plateforme ou coupon enregistré par l'utilisateur.
 final studioCouponProvider = FutureProvider.autoDispose
@@ -44,10 +45,10 @@ class StudioScreen extends ConsumerWidget {
     final branding = ref.watch(brandingProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Studio graphique'),
+        title: Text(tr('Studio graphique')),
         actions: [
           IconButton(
-            tooltip: 'Mon identité visuelle',
+            tooltip: tr('Mon identité visuelle'),
             icon: const Icon(Icons.badge_outlined),
             onPressed: () => context.push(AppRoutes.studioBranding),
           ),
@@ -59,7 +60,7 @@ class StudioScreen extends ConsumerWidget {
         (_, _, AsyncError(:final error)) =>
           InfoMessage(
               icon: Icons.cloud_off_outlined,
-              title: 'Studio indisponible',
+              title: tr('Studio indisponible'),
               body: userMessageFor(error)),
         (
           AsyncData(value: final c),
@@ -67,16 +68,15 @@ class StudioScreen extends ConsumerWidget {
           AsyncData(value: final b)
         ) =>
           c == null
-              ? const InfoMessage(
+              ? InfoMessage(
                   icon: Icons.lock_outline,
-                  title: 'Coupon indisponible',
-                  body:
-                      'Ce coupon est réservé ou introuvable. Un visuel ne peut être créé qu’à partir '
-                      'd’un coupon dont toutes les sélections vous sont visibles.')
+                  title: tr('Coupon indisponible'),
+                  body: tr(
+                      'Ce coupon est réservé ou introuvable. Un visuel ne peut être créé qu’à partir d’un coupon dont toutes les sélections vous sont visibles.'))
               : !r.enabled
-                  ? const InfoMessage(
+                  ? InfoMessage(
                       icon: Icons.construction,
-                      title: 'Studio momentanément indisponible')
+                      title: tr('Studio momentanément indisponible'))
                   : _Editor(coupon: c, rights: r, branding: b),
         _ => const Center(child: CircularProgressIndicator()),
       },
@@ -172,8 +172,10 @@ class _EditorState extends ConsumerState<_Editor> {
   Future<void> _export({required bool save}) async {
     final bad = forbiddenWordIn(_text.text);
     if (bad != null) {
-      showMessage(context,
-          'Texte refusé : « $bad ». Les pronostics sont des estimations.',
+      showMessage(
+          context,
+          trf('Texte refusé : « {0} ». Les pronostics sont des estimations.',
+              [bad]),
           error: true);
       return;
     }
@@ -207,8 +209,8 @@ class _EditorState extends ConsumerState<_Editor> {
           showMessage(
               context,
               ok
-                  ? 'Visuel enregistré dans la galerie.'
-                  : 'Accès à la galerie refusé.',
+                  ? tr('Visuel enregistré dans la galerie.')
+                  : tr('Accès à la galerie refusé.'),
               error: !ok);
         }
       } else {
@@ -257,12 +259,12 @@ class _EditorState extends ConsumerState<_Editor> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Toutes les informations viennent du coupon : équipes, issues, cotes et horaires ne sont pas modifiables.',
+                tr('Toutes les informations viennent du coupon : équipes, issues, cotes et horaires ne sont pas modifiables.'),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
-              const SectionTitle('Modèle'),
+              SectionTitle(tr('Modèle')),
               SizedBox(
                 height: 44,
                 child: ListView(
@@ -281,8 +283,9 @@ class _EditorState extends ConsumerState<_Editor> {
                             if (t.available) {
                               setState(() => _template = t.code);
                             } else {
-                              _locked(
-                                  'Le modèle « ${t.name} » est inclus à partir du forfait ${t.minPlan.replaceAll('_', ' ')}.');
+                              _locked(trf(
+                                  'Le modèle « {0} » est inclus à partir du forfait {1}.',
+                                  [t.name, t.minPlan.replaceAll('_', ' ')]));
                             }
                           },
                         ),
@@ -296,29 +299,29 @@ class _EditorState extends ConsumerState<_Editor> {
                   child:
                       Text(_tpl!.description, style: theme.textTheme.bodySmall),
                 ),
-              const SectionTitle('Format'),
+              SectionTitle(tr('Format')),
               Wrap(
                 spacing: 8,
                 children: [
                   for (final f in StudioFormat.values)
                     ChoiceChip(
-                      label: Text(
-                          '${f.label} ${f.width.toInt()}×${f.height.toInt()}'),
+                      label: Text(trf('{0} {1}×{2}',
+                          [f.label, f.width.toInt(), f.height.toInt()])),
                       selected: _format == f,
                       onSelected: (_) => setState(() => _format = f),
                     ),
                 ],
               ),
-              const SectionTitle('Contenu'),
+              SectionTitle(tr('Contenu')),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Probabilité estimée par le modèle'),
+                title: Text(tr('Probabilité estimée par le modèle')),
                 value: _showProbability,
                 onChanged: (v) => setState(() => _showProbability = v),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Logos des équipes'),
+                title: Text(tr('Logos des équipes')),
                 value: _showLogos,
                 onChanged: (v) => setState(() => _showLogos = v),
               ),
@@ -326,10 +329,10 @@ class _EditorState extends ConsumerState<_Editor> {
                 controller: _text,
                 maxLength: 120,
                 maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Texte personnalisé (facultatif)',
-                  helperText:
-                      'Ex. : « Ma sélection du week-end ». Pas de promesse de résultat.',
+                decoration: InputDecoration(
+                  labelText: tr('Texte personnalisé (facultatif)'),
+                  helperText: tr(
+                      'Ex. : « Ma sélection du week-end ». Pas de promesse de résultat.'),
                 ),
                 onChanged: (_) => setState(() {}),
               ),
@@ -337,12 +340,13 @@ class _EditorState extends ConsumerState<_Editor> {
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.badge_outlined),
-                  title: const Text('Mon identité visuelle'),
+                  title: Text(tr('Mon identité visuelle')),
                   subtitle: Text(switch (r.branding) {
-                    'full' => 'Nom, couleurs, logo, couverture et signature',
-                    'name' =>
-                      'Nom et couleurs (logo et couverture à partir de PRO TIPSTER)',
-                    _ => 'Disponible à partir du forfait STARTER',
+                    'full' =>
+                      tr('Nom, couleurs, logo, couverture et signature'),
+                    'name' => tr(
+                        'Nom et couleurs (logo et couverture à partir de PRO TIPSTER)'),
+                    _ => tr('Disponible à partir du forfait STARTER'),
                   }),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push(AppRoutes.studioBranding),
@@ -352,8 +356,7 @@ class _EditorState extends ConsumerState<_Editor> {
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    'La mention « Réalisé avec Coupon Pro IA » est ajoutée avec votre forfait. '
-                    'L’avertissement « Estimations, aucun gain garanti, 18+ » figure sur tous les visuels.',
+                    tr('La mention « Réalisé avec Coupon Pro IA » est ajoutée avec votre forfait. L’avertissement « Estimations, aucun gain garanti, 18+ » figure sur tous les visuels.'),
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
@@ -390,7 +393,7 @@ class _EditorState extends ConsumerState<_Editor> {
                       // Galerie : téléphone uniquement (sur le web, « Partager » télécharge).
                       if (_type != StudioFileType.pdf && !kIsWeb)
                         IconButton.outlined(
-                          tooltip: 'Enregistrer dans la galerie',
+                          tooltip: tr('Enregistrer dans la galerie'),
                           onPressed: _busy || !_ready
                               ? null
                               : () => _export(save: true),
@@ -402,13 +405,17 @@ class _EditorState extends ConsumerState<_Editor> {
                             ? null
                             : () => _export(save: false),
                         icon: const Icon(Icons.share),
-                        label: const Text('Partager'),
+                        label: Text(tr('Partager')),
                       ),
                     ],
                   ),
                   if (remaining != null)
                     Text(
-                        '$remaining visuel${remaining > 1 ? 's' : ''} restant${remaining > 1 ? 's' : ''} aujourd’hui',
+                        trf('{0} visuel{1} restant{2} aujourd’hui', [
+                          remaining,
+                          remaining > 1 ? 's' : '',
+                          remaining > 1 ? 's' : ''
+                        ]),
                         style: theme.textTheme.bodySmall),
                 ],
               ),
@@ -425,7 +432,7 @@ class _EditorState extends ConsumerState<_Editor> {
       ..showSnackBar(SnackBar(
         content: Text(message),
         action: SnackBarAction(
-            label: 'Forfaits',
+            label: tr('Forfaits'),
             onPressed: () => context.push(AppRoutes.billing)),
       ));
   }

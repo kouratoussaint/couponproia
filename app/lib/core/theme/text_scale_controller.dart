@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Taille du texte choisie dans l'app (s'ajoute au réglage du téléphone).
 enum TextSize {
@@ -10,9 +11,10 @@ enum TextSize {
   large('Grand', 1.15),
   extraLarge('Très grand', 1.3);
 
-  const TextSize(this.label, this.factor);
+  const TextSize(this._label, this.factor);
 
-  final String label;
+  final String _label;
+  String get label => tr(_label);
   final double factor;
 
   static TextSize fromName(String? name) =>

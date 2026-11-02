@@ -17,6 +17,7 @@ import '../matches/data/sports_models.dart';
 import '../matches/data/sports_repository.dart';
 import '../matches/presentation/sports_widgets.dart';
 import 'search_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Recherche : équipes (à suivre), compétitions (classement), matchs des 3 derniers jours
 /// aux 10 prochains, coupons de la plateforme et vos coupons.
@@ -94,12 +95,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           textInputAction: TextInputAction.search,
           onSubmitted: (v) => setState(() => _query = v.trim()),
           decoration: InputDecoration(
-            hintText: 'Équipe, compétition, coupon…',
+            hintText: tr('Équipe, compétition, coupon…'),
             border: InputBorder.none,
             suffixIcon: _controller.text.isEmpty
                 ? null
                 : IconButton(
-                    tooltip: 'Effacer',
+                    tooltip: tr('Effacer'),
                     icon: const Icon(Icons.close),
                     onPressed: () => setState(() {
                       _controller.clear();
@@ -113,21 +114,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 32),
         children: [
           if (!searchable(q))
-            const InfoMessage(
+            InfoMessage(
               icon: Icons.search,
-              title: 'Que cherchez-vous ?',
-              body:
-                  'Tapez au moins 2 lettres : une équipe, une compétition ou un pays. '
-                  'Les accents et majuscules ne comptent pas.',
+              title: tr('Que cherchez-vous ?'),
+              body: tr(
+                  'Tapez au moins 2 lettres : une équipe, une compétition ou un pays. Les accents et majuscules ne comptent pas.'),
             ),
           if (nothing)
-            const InfoMessage(
+            InfoMessage(
               icon: Icons.search_off,
-              title: 'Aucun résultat',
-              body: 'Vérifiez l’orthographe ou essayez une partie du nom.',
+              title: tr('Aucun résultat'),
+              body: tr('Vérifiez l’orthographe ou essayez une partie du nom.'),
             ),
           if (teams.isNotEmpty) ...[
-            section('Équipes', teams.length),
+            section(tr('Équipes'), teams.length),
             Card(
               clipBehavior: Clip.antiAlias,
               child: Column(children: [
@@ -137,8 +137,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     title: Text(t.name),
                     trailing: IconButton(
                       tooltip: favorites.containsKey(t.id)
-                          ? 'Ne plus suivre'
-                          : 'Suivre cette équipe',
+                          ? tr('Ne plus suivre')
+                          : tr('Suivre cette équipe'),
                       icon: Icon(
                           favorites.containsKey(t.id)
                               ? Icons.star
@@ -176,7 +176,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               data: (list) => list.isEmpty
                   ? const <Widget>[]
                   : [
-                      section('Matchs (3 derniers jours, 10 prochains)',
+                      section(tr('Matchs (3 derniers jours, 10 prochains)'),
                           list.length),
                       Card(
                         clipBehavior: Clip.antiAlias,
@@ -190,7 +190,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ],
             ),
           if (competitions.isNotEmpty) ...[
-            section('Compétitions', competitions.length),
+            section(tr('Compétitions'), competitions.length),
             Card(
               clipBehavior: Clip.antiAlias,
               child: Column(children: [
@@ -209,14 +209,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ),
           ],
           if (coupons.isNotEmpty) ...[
-            section('Coupons IA', coupons.length),
+            section(tr('Coupons IA'), coupons.length),
             for (final c in coupons)
               CompactCouponTile(
                   coupon: c,
                   onTap: () => context.push(AppRoutes.couponDetailFor(c.id))),
           ],
           if (mine.isNotEmpty) ...[
-            section('Mes coupons', mine.length),
+            section(tr('Mes coupons'), mine.length),
             for (final c in mine) MyCouponTile(coupon: c),
           ],
         ],
@@ -231,7 +231,7 @@ class SearchButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IconButton(
-        tooltip: 'Rechercher',
+        tooltip: tr('Rechercher'),
         icon: const Icon(Icons.search),
         onPressed: () => context.push(AppRoutes.search),
       );

@@ -15,18 +15,23 @@ import '../../system/system_providers.dart';
 import '../data/assistant_models.dart';
 import '../data/assistant_repository.dart';
 import '../data/my_coupons_view.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Suggestions de départ ; `paid` : action payante (proposition, analyse), sinon question gratuite.
-const _suggestions = [
+final _suggestions = [
   (
-    text: 'Faites-moi un coupon de 3 matchs avec une cote totale proche de 4',
+    text:
+        tr('Faites-moi un coupon de 3 matchs avec une cote totale proche de 4'),
     paid: true
   ),
-  (text: 'Je veux un coupon prudent pour demain', paid: true),
-  (text: 'Analyse les matchs de ce week-end', paid: true),
-  (text: 'Construis un coupon uniquement avec la Premier League', paid: true),
-  (text: 'Propose-moi trois versions d’un coupon équilibré', paid: true),
-  (text: 'C’est quoi la double chance ?', paid: false),
+  (text: tr('Je veux un coupon prudent pour demain'), paid: true),
+  (text: tr('Analyse les matchs de ce week-end'), paid: true),
+  (
+    text: tr('Construis un coupon uniquement avec la Premier League'),
+    paid: true
+  ),
+  (text: tr('Propose-moi trois versions d’un coupon équilibré'), paid: true),
+  (text: tr('C’est quoi la double chance ?'), paid: false),
 ];
 
 /// Mon Assistant IA : conversation en langage naturel. L'IA comprend la demande, le moteur
@@ -154,28 +159,34 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen>
           child: ActionChip(
             avatar: const Icon(Icons.bolt, size: 18),
             label: Text(credits.unlimited ? '∞' : '${credits.total}'),
-            tooltip: 'Crédits IA : ${credits.label}',
+            tooltip: trf('Crédits IA : {0}', [credits.label]),
             onPressed: () => showMessage(
               context,
               credits.unlimited
-                  ? 'Compte équipe : actions illimitées (journalisées).'
-                  : 'Forfait ${credits.plan} : ${credits.planCredits} crédit(s) du mois + ${credits.extraCredits} supplémentaire(s). '
-                      'Une proposition, une modification ou une analyse réussie coûte ${creditsLabel(cost)} ; les questions sont gratuites.',
+                  ? tr('Compte équipe : actions illimitées (journalisées).')
+                  : trf(
+                      'Forfait {0} : {1} crédit(s) du mois + {2} supplémentaire(s). Une proposition, une modification ou une analyse réussie coûte {3} ; les questions sont gratuites.',
+                      [
+                          credits.plan,
+                          credits.planCredits,
+                          credits.extraCredits,
+                          creditsLabel(cost)
+                        ]),
             ),
           ),
         ),
       if (!widget.embedded)
         IconButton(
-          tooltip: 'Mes coupons',
+          tooltip: tr('Mes coupons'),
           icon: const Icon(Icons.bookmarks_outlined),
           onPressed: () => context.push(AppRoutes.myCoupons),
         ),
       IconButton(
-          tooltip: 'Historique',
+          tooltip: tr('Historique'),
           icon: const Icon(Icons.history),
           onPressed: _showHistory),
       IconButton(
-          tooltip: 'Nouvelle conversation',
+          tooltip: tr('Nouvelle conversation'),
           icon: const Icon(Icons.add_comment_outlined),
           onPressed: _newConversation),
     ];
@@ -185,13 +196,13 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen>
           ? null
           : AppBar(
               leading: const DrawerMenuButton(),
-              title: const Text('Mon Assistant IA'),
+              title: Text(tr('Mon Assistant IA')),
               actions: actions,
             ),
       body: unavailable
-          ? const InfoMessage(
+          ? InfoMessage(
               icon: Icons.pause_circle_outline,
-              title: 'Assistant momentanément indisponible')
+              title: tr('Assistant momentanément indisponible'))
           : Column(
               children: [
                 if (widget.embedded)
@@ -201,8 +212,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen>
                       Expanded(
                         child: Text(
                             _conversationId == null
-                                ? 'Nouvelle conversation'
-                                : 'Conversation en cours',
+                                ? tr('Nouvelle conversation')
+                                : tr('Conversation en cours'),
                             style: theme.textTheme.labelLarge),
                       ),
                       ...actions,
@@ -216,13 +227,12 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen>
                             Icon(Icons.smart_toy_outlined,
                                 size: 48, color: theme.colorScheme.primary),
                             const SizedBox(height: 12),
-                            Text('Décrivez le coupon que vous voulez',
+                            Text(tr('Décrivez le coupon que vous voulez'),
                                 style: theme.textTheme.titleMedium,
                                 textAlign: TextAlign.center),
                             const SizedBox(height: 6),
                             Text(
-                              'L’IA comprend votre demande ; le moteur statistique choisit les sélections parmi les vrais '
-                              'matchs cotés et vérifie tout. Vous gardez la main : enregistrer, modifier, analyser.',
+                              tr('L’IA comprend votre demande ; le moteur statistique choisit les sélections parmi les vrais matchs cotés et vérifie tout. Vous gardez la main : enregistrer, modifier, analyser.'),
                               style: theme.textTheme.bodySmall,
                               textAlign: TextAlign.center,
                             ),
@@ -269,7 +279,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen>
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                     child: Text(
-                      'Questions gratuites · proposition, modification ou analyse : ${creditsLabel(cost)}',
+                      trf('Questions gratuites · proposition, modification ou analyse : {0}',
+                          [creditsLabel(cost)]),
                       style: theme.textTheme.labelSmall
                           ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
@@ -288,9 +299,9 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen>
                             maxLength: 600,
                             textInputAction: TextInputAction.send,
                             onSubmitted: _send,
-                            decoration: const InputDecoration(
-                              hintText:
-                                  'Ex. : 5 matchs, cote proche de 10, risque modéré',
+                            decoration: InputDecoration(
+                              hintText: tr(
+                                  'Ex. : 5 matchs, cote proche de 10, risque modéré'),
                               border: OutlineInputBorder(),
                               isDense: true,
                               counterText: '',
@@ -299,7 +310,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen>
                         ),
                         const SizedBox(width: 6),
                         IconButton.filled(
-                          tooltip: 'Envoyer',
+                          tooltip: tr('Envoyer'),
                           onPressed: _sending ? null : () => _send(_input.text),
                           icon: const Icon(Icons.send),
                         ),
@@ -317,7 +328,7 @@ class _Typing extends StatelessWidget {
   const _Typing();
 
   @override
-  Widget build(BuildContext context) => const Padding(
+  Widget build(BuildContext context) => Padding(
         padding: EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
@@ -326,7 +337,7 @@ class _Typing extends StatelessWidget {
                 height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2)),
             SizedBox(width: 10),
-            Text('L’assistant analyse les matchs…'),
+            Text(tr('L’assistant analyse les matchs…')),
           ],
         ),
       );
@@ -394,7 +405,10 @@ class _AssistantBubble extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
-                        '${creditsLabel(m.creditsCharged)} débité${m.creditsCharged > 1 ? 's' : ''}',
+                        trf('{0} débité{1}', [
+                          creditsLabel(m.creditsCharged),
+                          m.creditsCharged > 1 ? 's' : ''
+                        ]),
                         style: muted),
                   ),
               ],
@@ -445,12 +459,12 @@ class _DiagnosisCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            section('Sélections les plus fragiles', diagnosis.fragiles,
+            section(tr('Sélections les plus fragiles'), diagnosis.fragiles,
                 Icons.trending_down),
-            section(
-                'À vérifier', diagnosis.alerts, Icons.warning_amber_outlined),
-            section(
-                'Qualité des données', diagnosis.quality, Icons.info_outline),
+            section(tr('À vérifier'), diagnosis.alerts,
+                Icons.warning_amber_outlined),
+            section(tr('Qualité des données'), diagnosis.quality,
+                Icons.info_outline),
           ],
         ),
       ),
@@ -474,8 +488,15 @@ class _OpportunityTile extends StatelessWidget {
         onTap: () => context.push(AppRoutes.matchDetailFor(o.matchId)),
         title: Text('${o.match} · ${o.selection}'),
         subtitle: Text(
-          '${o.competition} · ${dayLabel(o.kickoffAt, DateTime.now())} ${timeLabel(o.kickoffAt)} · '
-          'modèle ${pct(o.modelProbability)}${o.impliedProbability == null ? '' : ' / marché ${pct(o.impliedProbability!)}'}',
+          trf('{0} · {1} {2} · modèle {3}{4}', [
+            o.competition,
+            dayLabel(o.kickoffAt, DateTime.now()),
+            timeLabel(o.kickoffAt),
+            pct(o.modelProbability),
+            o.impliedProbability == null
+                ? ''
+                : trf(' / marché {0}', [pct(o.impliedProbability!)])
+          ]),
         ),
         trailing: Text(decimal(o.odd),
             style: theme.textTheme.titleMedium
@@ -544,8 +565,13 @@ class _ProposalCard extends ConsumerWidget {
                   ),
                 const Divider(height: 16),
                 Text(
-                  'Cote ${decimal(c.totalOdd)} · probabilité estimée ${pct(c.combinedProbability)}'
-                  '${c.impliedProbability == null ? '' : ' (marché ${pct(c.impliedProbability!)})'}',
+                  trf('Cote {0} · probabilité estimée {1}{2}', [
+                    decimal(c.totalOdd),
+                    pct(c.combinedProbability),
+                    c.impliedProbability == null
+                        ? ''
+                        : trf(' (marché {0})', [pct(c.impliedProbability!)])
+                  ]),
                   style: theme.textTheme.labelLarge
                       ?.copyWith(color: theme.colorScheme.primary),
                 ),
@@ -559,9 +585,9 @@ class _ProposalCard extends ConsumerWidget {
                   runSpacing: 4,
                   children: [
                     c.isSaved
-                        ? const Chip(
+                        ? Chip(
                             avatar: Icon(Icons.check, size: 16),
-                            label: Text('Enregistré'))
+                            label: Text(tr('Enregistré')))
                         : FilledButton.tonalIcon(
                             onPressed: () async {
                               try {
@@ -579,13 +605,13 @@ class _ProposalCard extends ConsumerWidget {
                             },
                             icon: const Icon(Icons.bookmark_add_outlined,
                                 size: 18),
-                            label: const Text('Enregistrer'),
+                            label: Text(tr('Enregistrer')),
                           ),
                     OutlinedButton(
                       onPressed: busy
                           ? null
                           : () => onAction(
-                                  'Remplace les sélections les plus fragiles',
+                                  tr('Remplace les sélections les plus fragiles'),
                                   c.id, {
                                 'intent': 'modifier_coupon',
                                 'modification': {
@@ -593,19 +619,19 @@ class _ProposalCard extends ConsumerWidget {
                                       c.selections.length >= 4 ? 2 : 1
                                 },
                               }),
-                      child: Text(withCost('Remplacer les plus fragiles')),
+                      child: Text(withCost(tr('Remplacer les plus fragiles'))),
                     ),
                     OutlinedButton(
                       onPressed: busy
                           ? null
-                          : () => onAction('Analyse ce coupon', c.id,
+                          : () => onAction(tr('Analyse ce coupon'), c.id,
                               {'intent': 'analyser_coupon'}),
-                      child: Text(withCost('Analyser')),
+                      child: Text(withCost(tr('Analyser'))),
                     ),
                     TextButton(
                       onPressed: () =>
                           context.push(AppRoutes.myCouponFor(c.id)),
-                      child: const Text('Détail'),
+                      child: Text(tr('Détail')),
                     ),
                   ],
                 ),
@@ -631,21 +657,21 @@ class _HistorySheet extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text(userMessageFor(e))),
           data: (items) => items.isEmpty
-              ? const InfoMessage(
+              ? InfoMessage(
                   icon: Icons.forum_outlined,
-                  title: 'Aucune conversation pour l’instant')
+                  title: tr('Aucune conversation pour l’instant'))
               : ListView(
                   children: [
                     for (final c in items)
                       ListTile(
                         leading: const Icon(Icons.forum_outlined),
-                        title: Text(c.title,
+                        title: Text(trTitle(c.title),
                             maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: Text(
-                            '${shortDate(c.updatedAt)} à ${timeLabel(c.updatedAt)}'),
+                        subtitle: Text(trf('{0} à {1}',
+                            [shortDate(c.updatedAt), timeLabel(c.updatedAt)])),
                         onTap: () => Navigator.pop(context, c),
                         trailing: IconButton(
-                          tooltip: 'Supprimer',
+                          tooltip: tr('Supprimer'),
                           icon: const Icon(Icons.delete_outline),
                           onPressed: () async {
                             await ref

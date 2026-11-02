@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'notifications_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Valeurs publiques du projet Firebase, fournies à la compilation (google-services.json).
 class FirebaseConfig {
@@ -107,7 +108,7 @@ class PushService {
       final route = initial == null ? null : routeOf(initial.data);
       if (route != null) onOpen(route);
     } catch (e) {
-      debugPrint('Notifications indisponibles : $e');
+      debugPrint(trf('Notifications indisponibles : {0}', [e]));
     }
   }
 

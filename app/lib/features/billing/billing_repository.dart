@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/providers.dart';
 import '../assistant/data/assistant_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 int _i(Object? v) => (v as num?)?.toInt() ?? 0;
 
@@ -153,14 +154,14 @@ class PromoQuote {
 }
 
 String promoReasonMessage(String? reason) => switch (reason) {
-      'unknown' => 'Ce code n’existe pas.',
-      'inactive' => 'Ce code n’est plus actif.',
-      'not_started' => 'Ce code n’est pas encore valable.',
-      'expired' => 'Ce code a expiré.',
-      'exhausted' => 'Ce code a atteint son nombre d’utilisations.',
-      'already_used' => 'Vous avez déjà utilisé ce code.',
-      'not_applicable' => 'Ce code ne s’applique pas à cette offre.',
-      _ => 'Code non valable.',
+      'unknown' => tr('Ce code n’existe pas.'),
+      'inactive' => tr('Ce code n’est plus actif.'),
+      'not_started' => tr('Ce code n’est pas encore valable.'),
+      'expired' => tr('Ce code a expiré.'),
+      'exhausted' => tr('Ce code a atteint son nombre d’utilisations.'),
+      'already_used' => tr('Vous avez déjà utilisé ce code.'),
+      'not_applicable' => tr('Ce code ne s’applique pas à cette offre.'),
+      _ => tr('Code non valable.'),
     };
 
 class BillingException implements Exception {
@@ -198,18 +199,19 @@ class BillingRepository {
       final d = e.details is Map ? e.details as Map : const {};
       throw BillingException(switch (d['error']) {
         'provider_not_configured' =>
-          'Le paiement n’est pas encore ouvert. Réessayez bientôt.',
-        'too_many_pending' =>
-          'Vous avez déjà plusieurs paiements en attente. Terminez-les ou patientez quelques minutes.',
-        'feature_disabled' => 'Les achats sont momentanément indisponibles.',
-        'provider_error' =>
-          'L’opérateur de paiement n’a pas répondu. Réessayez dans un instant.',
+          tr('Le paiement n’est pas encore ouvert. Réessayez bientôt.'),
+        'too_many_pending' => tr(
+            'Vous avez déjà plusieurs paiements en attente. Terminez-les ou patientez quelques minutes.'),
+        'feature_disabled' =>
+          tr('Les achats sont momentanément indisponibles.'),
+        'provider_error' => tr(
+            'L’opérateur de paiement n’a pas répondu. Réessayez dans un instant.'),
         'invalid_promo' => promoReasonMessage(d['reason'] as String?),
         'invalid_plan' ||
         'invalid_quantity' ||
         'invalid_product' =>
-          'Offre indisponible.',
-        _ => 'Le paiement n’a pas pu démarrer. Réessayez.',
+          tr('Offre indisponible.'),
+        _ => tr('Le paiement n’a pas pu démarrer. Réessayez.'),
       });
     }
   }

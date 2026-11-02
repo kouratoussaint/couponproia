@@ -9,6 +9,7 @@ import '../matches/presentation/sports_widgets.dart';
 import '../simulator/data/stake_math.dart';
 import '../simulator/presentation/stake_simulator_sheet.dart';
 import '../system/system_providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 final platformPerformanceProvider = FutureProvider.autoDispose
     .family<Map<String, dynamic>, int?>((ref, days) async {
@@ -31,14 +32,14 @@ List<Map<String, dynamic>> _rows(Object? v) => [
         Map<String, dynamic>.from(x as Map)
     ];
 
-const _marketNames = {
-  '1X2': 'Résultat (1X2)',
-  'DC': 'Double chance',
-  'OU': 'Plus / moins',
-  'BTTS': 'Les deux marquent',
-  'DNB': 'Remboursé si nul',
-  'TTH': 'Buts domicile',
-  'TTA': 'Buts extérieur',
+final _marketNames = {
+  '1X2': tr('Résultat (1X2)'),
+  'DC': tr('Double chance'),
+  'OU': tr('Plus / moins'),
+  'BTTS': tr('Les deux marquent'),
+  'DNB': tr('Remboursé si nul'),
+  'TTH': tr('Buts domicile'),
+  'TTA': tr('Buts extérieur'),
 };
 
 /// Performances : coupons de la plateforme (publiés avant le coup d'envoi, réglés sur le score
@@ -52,9 +53,11 @@ class PerformanceScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Performances'),
-          bottom: const TabBar(
-              tabs: [Tab(text: 'Plateforme'), Tab(text: 'Mes coupons')]),
+          title: Text(tr('Performances')),
+          bottom: TabBar(tabs: [
+            Tab(text: tr('Plateforme')),
+            Tab(text: tr('Mes coupons'))
+          ]),
         ),
         body: const TabBarView(children: [_PlatformTab(), _MineTab()]),
       ),
@@ -85,10 +88,10 @@ class _PlatformTabState extends ConsumerState<_PlatformTab> {
             spacing: 8,
             children: [
               for (final (label, days) in [
-                ('Tout', null),
-                ('90 jours', 90),
-                ('30 jours', 30),
-                ('7 jours', 7)
+                (tr('Tout'), null),
+                (tr('90 jours'), 90),
+                (tr('30 jours'), 30),
+                (tr('7 jours'), 7)
               ])
                 ChoiceChip(
                     label: Text(label),
@@ -101,7 +104,7 @@ class _PlatformTabState extends ConsumerState<_PlatformTab> {
                 padding: EdgeInsets.all(24), child: LinearProgressIndicator()),
             error: (e, _) => InfoMessage(
                 icon: Icons.cloud_off_outlined,
-                title: 'Indisponible',
+                title: tr('Indisponible'),
                 body: userMessageFor(e)),
             data: (p) {
               final settled = _i(p['won']) + _i(p['lost']);
@@ -113,30 +116,30 @@ class _PlatformTabState extends ConsumerState<_PlatformTab> {
                       style: theme.textTheme.bodySmall),
                   _Totals(p: p),
                   if (settled == 0)
-                    const InfoMessage(
+                    InfoMessage(
                       icon: Icons.hourglass_empty,
-                      title: 'Pas encore de coupon réglé',
-                      body:
-                          'Les statistiques apparaîtront après les premiers matchs des coupons publiés.',
+                      title: tr('Pas encore de coupon réglé'),
+                      body: tr(
+                          'Les statistiques apparaîtront après les premiers matchs des coupons publiés.'),
                     )
                   else ...[
                     FixedStakeCard(p: p),
                     _Table(
-                      title: 'Par catégorie',
+                      title: tr('Par catégorie'),
                       rows: _rows(p['by_category']),
                       label: (r) => categoryLabels[r['key']] ?? '${r['key']}',
                       value: (r) =>
                           '${_i(r['won'])}/${_i(r['won']) + _i(r['lost'])} gagnés · ${_rate(r['win_rate'])} · cote moy. ${_odd(r['average_odd'])}',
                     ),
                     _Table(
-                      title: 'Par compétition (sélections)',
+                      title: tr('Par compétition (sélections)'),
                       rows: _rows(p['by_competition']),
                       label: (r) => '${r['key']}',
                       value: (r) =>
                           '${_i(r['won'])}/${_i(r['won']) + _i(r['lost'])} justes · ${_rate(r['hit_rate'])}',
                     ),
                     _Table(
-                      title: 'Par marché (sélections)',
+                      title: tr('Par marché (sélections)'),
                       rows: _rows(p['by_market']),
                       label: (r) => _marketNames[r['key']] ?? '${r['key']}',
                       value: (r) =>
@@ -147,9 +150,7 @@ class _PlatformTabState extends ConsumerState<_PlatformTab> {
                   ],
                   const SizedBox(height: 12),
                   Text(
-                    'Coupons réglés automatiquement sur le score à 90 minutes ; reports et annulations comptent pour 1,00. '
-                    'Les coupons retirés ne sont pas comptés. Les performances passées ne garantissent pas les performances futures ; '
-                    'aucun gain n’est garanti. Coupon Pro IA n’est pas un bookmaker : aucun pari réel n’est enregistré ici.',
+                    tr('Coupons réglés automatiquement sur le score à 90 minutes ; reports et annulations comptent pour 1,00. Les coupons retirés ne sont pas comptés. Les performances passées ne garantissent pas les performances futures ; aucun gain n’est garanti. Coupon Pro IA n’est pas un bookmaker : aucun pari réel n’est enregistré ici.'),
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     textAlign: TextAlign.center,
@@ -179,7 +180,7 @@ class _MineTab extends ConsumerWidget {
             loading: () => const LinearProgressIndicator(),
             error: (e, _) => InfoMessage(
                 icon: Icons.cloud_off_outlined,
-                title: 'Indisponible',
+                title: tr('Indisponible'),
                 body: userMessageFor(e)),
             data: (p) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -188,15 +189,15 @@ class _MineTab extends ConsumerWidget {
                     style: Theme.of(context).textTheme.bodySmall),
                 _Totals(p: p),
                 if (_i(p['coupons']) == 0)
-                  const InfoMessage(
+                  InfoMessage(
                     icon: Icons.bookmarks_outlined,
-                    title: 'Aucun coupon enregistré',
-                    body:
-                        'Enregistrez des coupons depuis l’assistant ou le Laboratoire pour suivre leurs résultats.',
+                    title: tr('Aucun coupon enregistré'),
+                    body: tr(
+                        'Enregistrez des coupons depuis l’assistant ou le Laboratoire pour suivre leurs résultats.'),
                   )
                 else ...[
                   _Table(
-                    title: 'Par marché (sélections)',
+                    title: tr('Par marché (sélections)'),
                     rows: _rows(p['by_market']),
                     label: (r) => _marketNames[r['key']] ?? '${r['key']}',
                     value: (r) =>
@@ -218,7 +219,7 @@ String _odd(Object? v) => v == null ? '—' : decimal((v as num).toDouble());
 String _signedPct(double? v) {
   if (v == null) return '—';
   final p = (v * 100).round();
-  return '${p > 0 ? '+' : p < 0 ? '−' : ''}${p.abs()} %';
+  return '${p > 0 ? '+' : p < 0 ? '−' : ''}${percentLabel(p.abs())}';
 }
 
 class _Totals extends StatelessWidget {
@@ -248,20 +249,21 @@ class _Totals extends StatelessWidget {
           children: [
             Row(
               children: [
-                tile('Coupons', '${_i(p['coupons'])}'),
-                tile('Gagnés', '${_i(p['won'])}', theme.colorScheme.primary),
-                tile('Perdus', '${_i(p['lost'])}', theme.colorScheme.error),
-                tile('Annulés', '${_i(p['void'])}'),
-                tile('En cours', '${_i(p['pending'])}'),
+                tile(tr('Coupons'), '${_i(p['coupons'])}'),
+                tile(
+                    tr('Gagnés'), '${_i(p['won'])}', theme.colorScheme.primary),
+                tile(tr('Perdus'), '${_i(p['lost'])}', theme.colorScheme.error),
+                tile(tr('Annulés'), '${_i(p['void'])}'),
+                tile(tr('En cours'), '${_i(p['pending'])}'),
               ],
             ),
             const Divider(height: 20),
             Row(
               children: [
-                tile('Taux de réussite', _rate(p['win_rate'])),
-                tile('Cote moyenne', _odd(p['average_odd'])),
+                tile(tr('Taux de réussite'), _rate(p['win_rate'])),
+                tile(tr('Cote moyenne'), _odd(p['average_odd'])),
                 if (p.containsKey('withdrawn'))
-                  tile('Retirés (non comptés)', '${_i(p['withdrawn'])}'),
+                  tile(tr('Retirés (non comptés)'), '${_i(p['withdrawn'])}'),
               ],
             ),
           ],
@@ -322,7 +324,7 @@ class _WeeklyChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionTitle('Évolution par semaine'),
+        SectionTitle(tr('Évolution par semaine')),
         Card(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
@@ -376,7 +378,7 @@ class _WeeklyChart extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                    'Vert : gagnés · rouge : perdus · gris : annulés ou en cours (semaine de publication)',
+                    tr('Vert : gagnés · rouge : perdus · gris : annulés ou en cours (semaine de publication)'),
                     style: theme.textTheme.labelSmall),
               ],
             ),
@@ -416,7 +418,7 @@ class _FixedStakeCardState extends ConsumerState<FixedStakeCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionTitle('Résultat à mise fixe'),
+        SectionTitle(tr('Résultat à mise fixe')),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -435,19 +437,22 @@ class _FixedStakeCardState extends ConsumerState<FixedStakeCard> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                    'Avec ${money(_stake, currency: cur)} sur chacun des $settled coupons réglés :',
+                    trf('Avec {0} sur chacun des {1} coupons réglés :',
+                        [money(_stake, currency: cur), settled]),
                     style: theme.textTheme.bodyMedium),
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    _cell(context, 'Misé', money(staked, currency: cur)),
-                    _cell(context, 'Retourné', money(back, currency: cur)),
-                    _cell(context, 'Net', signedMoney(net, currency: cur),
+                    _cell(context, tr('Misé'), money(staked, currency: cur)),
+                    _cell(context, tr('Retourné'), money(back, currency: cur)),
+                    _cell(context, tr('Net'), signedMoney(net, currency: cur),
                         color: tone(net)),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text('Rendement : ${_signedPct(_dn(p['theoretical_return']))}',
+                Text(
+                    trf('Rendement : {0}',
+                        [_signedPct(_dn(p['theoretical_return']))]),
                     style:
                         theme.textTheme.labelLarge?.copyWith(color: tone(net))),
                 const Divider(height: 24),
@@ -462,8 +467,8 @@ class _FixedStakeCardState extends ConsumerState<FixedStakeCard> {
                         child: Row(
                           children: [
                             Expanded(
-                              child: Text(
-                                  '${categoryLabels[r['key']] ?? r['key']} · $n réglés'),
+                              child: Text(trf('{0} · {1} réglés',
+                                  [categoryLabels[r['key']] ?? r['key'], n])),
                             ),
                             Text(signedMoney(rowNet, currency: cur),
                                 style: TextStyle(
@@ -474,9 +479,7 @@ class _FixedStakeCardState extends ConsumerState<FixedStakeCard> {
                       );
                     }),
                 const SizedBox(height: 8),
-                Text(
-                    'Calcul théorique sur les cotes publiées : coupon gagnant = mise × cote réglée, perdant = mise perdue. '
-                    'Aucun pari réel. Les résultats passés ne préjugent pas des suivants.',
+                Text(tr('Calcul théorique sur les cotes publiées : coupon gagnant = mise × cote réglée, perdant = mise perdue. Aucun pari réel. Les résultats passés ne préjugent pas des suivants.'),
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: scheme.onSurfaceVariant)),
               ],
@@ -536,7 +539,7 @@ class CalibrationChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionTitle('Calibration : annoncé contre constaté'),
+        SectionTitle(tr('Calibration : annoncé contre constaté')),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -547,12 +550,12 @@ class CalibrationChart extends StatelessWidget {
                   Row(mainAxisSize: MainAxisSize.min, children: [
                     Container(width: 12, height: 12, color: scheme.outline),
                     const SizedBox(width: 6),
-                    const Text('Annoncé par le modèle'),
+                    Text(tr('Annoncé par le modèle')),
                   ]),
                   Row(mainAxisSize: MainAxisSize.min, children: [
                     Container(width: 12, height: 12, color: scheme.primary),
                     const SizedBox(width: 6),
-                    const Text('Constaté'),
+                    Text(tr('Constaté')),
                   ]),
                 ]),
                 const SizedBox(height: 12),
@@ -575,7 +578,12 @@ class CalibrationChart extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                     textAlign: TextAlign.end,
-                                    '${_rate(predicted)} → ${_rate(observed)} · $n sél.${n < 20 ? ' (peu de données)' : ''}',
+                                    trf('{0} → {1} · {2} sél.{3}', [
+                                      _rate(predicted),
+                                      _rate(observed),
+                                      n,
+                                      n < 20 ? tr(' (peu de données)') : ''
+                                    ]),
                                     style: theme.textTheme.labelSmall),
                               ),
                             ],
@@ -588,10 +596,7 @@ class CalibrationChart extends StatelessWidget {
                       ),
                     );
                   }),
-                Text(
-                    'Sélections des coupons publiés, réglées sur le score à 90 minutes. Quand les deux barres se '
-                    'ressemblent, les pourcentages annoncés sont fiables ; un écart signale une estimation trop '
-                    'optimiste ou trop prudente.',
+                Text(tr('Sélections des coupons publiés, réglées sur le score à 90 minutes. Quand les deux barres se ressemblent, les pourcentages annoncés sont fiables ; un écart signale une estimation trop optimiste ou trop prudente.'),
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: scheme.onSurfaceVariant)),
               ],

@@ -3,17 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'system_providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Texte du dialogue de mise à jour.
 String updateMessage(UpdateKind kind, AppVersionInfo latest) {
   final parts = <String>[
     if (kind == UpdateKind.required)
-      'Cette version n’est plus prise en charge. Installez la version ${latest.versionName} pour continuer.',
+      trf('Cette version n’est plus prise en charge. Installez la version {0} pour continuer.',
+          [latest.versionName]),
     if ((latest.releaseNotes ?? '').trim().isNotEmpty)
       latest.releaseNotes!.trim(),
   ];
   return parts.isEmpty
-      ? 'Une nouvelle version est disponible.'
+      ? tr('Une nouvelle version est disponible.')
       : parts.join('\n\n');
 }
 
@@ -36,14 +38,14 @@ Future<void> checkForUpdate(BuildContext context, WidgetRef ref) async {
         canPop: optional,
         child: AlertDialog(
           title: Text(optional
-              ? 'Nouvelle version ${latest.versionName}'
-              : 'Mise à jour obligatoire'),
+              ? trf('Nouvelle version {0}', [latest.versionName])
+              : tr('Mise à jour obligatoire')),
           content: Text(updateMessage(kind, latest)),
           actions: [
             if (optional)
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('Plus tard'),
+                child: Text(tr('Plus tard')),
               ),
             FilledButton(
               onPressed: latest.downloadUrl == null
@@ -52,7 +54,7 @@ Future<void> checkForUpdate(BuildContext context, WidgetRef ref) async {
                         Uri.parse(latest.downloadUrl!),
                         mode: LaunchMode.externalApplication,
                       ),
-              child: const Text('Télécharger'),
+              child: Text(tr('Télécharger')),
             ),
           ],
         ),

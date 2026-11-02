@@ -10,6 +10,7 @@ import '../../matches/presentation/sports_widgets.dart';
 import '../../analysis/data/analysis_format.dart';
 import '../../matches/data/sports_format.dart';
 import '../data/coupon_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Pastille de risque estimé (jamais présentée comme une garantie).
 class RiskBadge extends StatelessWidget {
@@ -27,10 +28,10 @@ class RiskBadge extends StatelessWidget {
       _ => scheme.error,
     };
     final text = compact
-        ? const {
-              'prudent': 'Prudent',
-              'equilibre': 'Équilibré',
-              'audacieux': 'Audacieux'
+        ? {
+              'prudent': tr('Prudent'),
+              'equilibre': tr('Équilibré'),
+              'audacieux': tr('Audacieux')
             }[risk] ??
             risk
         : riskLabels[risk] ?? risk;
@@ -63,7 +64,7 @@ class ResultBadge extends StatelessWidget {
       _ => (scheme.onSurfaceVariant, Icons.schedule),
     };
     final label = result == null
-        ? 'En cours'
+        ? tr('En cours')
         : '${resultLabels[result] ?? result}${result == 'won' && odd != null ? ' · ${decimal(odd!)}' : ''}';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -146,7 +147,7 @@ class CouponCard extends StatelessWidget {
                       Icon(Icons.block,
                           size: 14, color: theme.colorScheme.onSurfaceVariant),
                       const SizedBox(width: 4),
-                      Text('Retiré',
+                      Text(tr('Retiré'),
                           style: theme.textTheme.labelMedium?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w700)),
@@ -156,7 +157,7 @@ class CouponCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              Text(c.title, style: theme.textTheme.titleMedium),
+              Text(trTitle(c.title), style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               if (c.locked)
                 Row(
@@ -166,7 +167,7 @@ class CouponCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                          'Réservé aux forfaits payants jusqu’à la fin des matchs',
+                          tr('Réservé aux forfaits payants jusqu’à la fin des matchs'),
                           style: theme.textTheme.bodySmall),
                     ),
                   ],
@@ -181,7 +182,7 @@ class CouponCard extends StatelessWidget {
                   ),
                 ),
               if (c.selections.length > 4)
-                Text('+ ${c.selections.length - 4} autre(s)',
+                Text(trf('+ {0} autre(s)', [c.selections.length - 4]),
                     style: theme.textTheme.bodySmall),
               const Divider(height: 18),
               // Passe sur deux lignes si l'écran est étroit ou le texte agrandi.
@@ -195,16 +196,17 @@ class CouponCard extends StatelessWidget {
                     spacing: 12,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Text('Cote ${decimal(c.totalOdd)}',
+                      Text(trf('Cote {0}', [decimal(c.totalOdd)]),
                           style: theme.textTheme.titleMedium
                               ?.copyWith(color: theme.colorScheme.primary)),
-                      Text('Estimation ${pct(c.combinedProbability)}',
+                      Text(trf('Estimation {0}', [pct(c.combinedProbability)]),
                           style: theme.textTheme.bodySmall),
                     ],
                   ),
                   trailing ??
                       Text(
-                        'Début ${couponDateLabel(c.firstKickoffAt, now)}',
+                        trf('Début {0}',
+                            [couponDateLabel(c.firstKickoffAt, now)]),
                         style: theme.textTheme.labelSmall,
                       ),
                 ],
@@ -216,7 +218,7 @@ class CouponCard extends StatelessWidget {
     );
     if (!c.isWithdrawn) return card;
     return Semantics(
-      label: 'Coupon retiré',
+      label: tr('Coupon retiré'),
       child: Opacity(
           opacity: 0.6,
           child: ColorFiltered(colorFilter: _greyscale, child: card)),
@@ -250,7 +252,11 @@ class SelectionCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                '${m.competition} · ${dayWithDate(m.kickoffAt, now)} à ${timeLabel(m.kickoffAt)}',
+                trf('{0} · {1} à {2}', [
+                  m.competition,
+                  dayWithDate(m.kickoffAt, now),
+                  timeLabel(m.kickoffAt)
+                ]),
                 style: theme.textTheme.labelSmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
@@ -297,14 +303,14 @@ class SelectionCard extends StatelessWidget {
                 children: [
                   ReliabilityChip(
                       reliability: Reliability.parse(s.reliability)),
-                  Text('Estimation ${pct(s.modelProbability)}',
+                  Text(trf('Estimation {0}', [pct(s.modelProbability)]),
                       style: theme.textTheme.labelMedium),
                   if (s.impliedProbability != null)
-                    Text('Marché ${pct(s.impliedProbability!)}',
+                    Text(trf('Marché {0}', [pct(s.impliedProbability!)]),
                         style: theme.textTheme.labelMedium),
                   if (s.edge != null)
                     Text(
-                      'Écart ${edgePoints(s.edge!)}',
+                      trf('Écart {0}', [edgePoints(s.edge!)]),
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: s.edge! > 0
                             ? theme.colorScheme.primary
@@ -317,8 +323,16 @@ class SelectionCard extends StatelessWidget {
               Text(s.justification, style: theme.textTheme.bodySmall),
               const SizedBox(height: 6),
               Text(
-                'Cote médiane de ${s.bookmakers ?? '?'} bookmakers relevée le ${shortDate(s.oddsCapturedAt)} à ${timeLabel(s.oddsCapturedAt)}'
-                '${changed ? ' · cote actuelle ${decimal(currentOdd!)} (la cote publiée est conservée)' : ''}',
+                trf('Cote médiane de {0} bookmakers relevée le {1} à {2}{3}', [
+                  s.bookmakers ?? '?',
+                  shortDate(s.oddsCapturedAt),
+                  timeLabel(s.oddsCapturedAt),
+                  changed
+                      ? trf(
+                          ' · cote actuelle {0} (la cote publiée est conservée)',
+                          [decimal(currentOdd!)])
+                      : ''
+                ]),
                 style: theme.textTheme.labelSmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
@@ -355,15 +369,14 @@ class LockedCouponNotice extends StatelessWidget {
                 Icon(Icons.lock_outline, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: Text('Coupon réservé',
+                    child: Text(tr('Coupon réservé'),
                         style: theme.textTheme.titleMedium)),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              'Les sélections et l’analyse de ce coupon sont accessibles à tout moment avec un forfait payant. '
-              'Avec le forfait FREE, elles deviennent visibles après les matchs '
-              '(vers ${shortDate(openAt)} à ${timeLabel(openAt)}).',
+              trf('Les sélections et l’analyse de ce coupon sont accessibles à tout moment avec un forfait payant. Avec le forfait FREE, elles deviennent visibles après les matchs (vers {0} à {1}).',
+                  [shortDate(openAt), timeLabel(openAt)]),
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 12),
@@ -372,7 +385,7 @@ class LockedCouponNotice extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: () => context.push(AppRoutes.billing),
                 icon: const Icon(Icons.workspace_premium_outlined),
-                label: const Text('Voir les forfaits'),
+                label: Text(tr('Voir les forfaits')),
               ),
             ),
           ],

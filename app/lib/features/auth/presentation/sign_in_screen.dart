@@ -8,6 +8,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/validators.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../data/auth_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -55,8 +56,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthScaffold(
-      title: 'Connexion',
-      subtitle: 'Retrouvez vos analyses et vos coupons.',
+      title: tr('Connexion'),
+      subtitle: tr('Retrouvez vos analyses et vos coupons.'),
       child: AutofillGroup(
         child: Form(
           key: _formKey,
@@ -69,8 +70,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 autofillHints: const [AutofillHints.email],
                 textInputAction: TextInputAction.next,
                 validator: Validators.email,
-                decoration: const InputDecoration(
-                  labelText: 'Adresse e-mail',
+                decoration: InputDecoration(
+                  labelText: tr('Adresse e-mail'),
                   prefixIcon: Icon(Icons.alternate_email),
                 ),
               ),
@@ -78,7 +79,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               PasswordField(
                 controller: _password,
                 validator: (v) => (v == null || v.isEmpty)
-                    ? 'Saisissez votre mot de passe.'
+                    ? tr('Saisissez votre mot de passe.')
                     : null,
                 onSubmitted: (_) => _submit(),
               ),
@@ -86,16 +87,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () => context.push(AppRoutes.forgotPassword),
-                  child: const Text('Mot de passe oublié ?'),
+                  child: Text(tr('Mot de passe oublié ?')),
                 ),
               ),
               const SizedBox(height: 8),
               BusyButton(
-                  label: 'Se connecter', busy: _busy, onPressed: _submit),
+                  label: tr('Se connecter'), busy: _busy, onPressed: _submit),
               const SizedBox(height: 16),
               OutlinedButton(
                 onPressed: _busy ? null : () => context.push(AppRoutes.signUp),
-                child: const Text('Créer un compte'),
+                child: Text(tr('Créer un compte')),
               ),
             ],
           ),

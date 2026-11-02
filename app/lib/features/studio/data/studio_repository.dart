@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers.dart';
 import 'studio_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 class StudioException implements Exception {
   const StudioException(this.message);
@@ -20,17 +21,19 @@ String studioErrorMessage(Object e) {
   if (e is PostgrestException) {
     switch (e.hint) {
       case 'quota_exceeded':
-        return '${e.message}. Les forfaits supérieurs en permettent davantage.';
+        return trf('{0}. Les forfaits supérieurs en permettent davantage.',
+            [e.message]);
       case 'template_locked':
-        return 'Ce modèle demande un forfait supérieur.';
+        return tr('Ce modèle demande un forfait supérieur.');
       case 'coupon_unavailable':
-        return 'Ce coupon n’est pas disponible pour un visuel (réservé ou introuvable).';
+        return tr(
+            'Ce coupon n’est pas disponible pour un visuel (réservé ou introuvable).');
       case 'feature_disabled':
-        return 'Le studio est momentanément indisponible.';
+        return tr('Le studio est momentanément indisponible.');
     }
     if (e.code == '22023' || e.code == '42501') return e.message;
   }
-  return 'Action impossible pour le moment. Réessayez.';
+  return tr('Action impossible pour le moment. Réessayez.');
 }
 
 class StudioRepository {
@@ -41,7 +44,7 @@ class StudioRepository {
 
   String get _uid {
     final id = _client.auth.currentUser?.id;
-    if (id == null) throw const StudioException('Connexion requise.');
+    if (id == null) throw StudioException(tr('Connexion requise.'));
     return id;
   }
 

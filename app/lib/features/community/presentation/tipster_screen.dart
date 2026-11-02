@@ -9,6 +9,7 @@ import '../../../core/widgets/form_widgets.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../data/community_repository.dart';
 import 'community_widgets.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Profil public d'un Tipster : présentation, statistiques vérifiées, publications.
 class TipsterScreen extends ConsumerWidget {
@@ -37,11 +38,11 @@ class TipsterScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tipster'),
+        title: Text(tr('Tipster')),
         actions: [
           if (isMe)
             IconButton(
-              tooltip: 'Modifier',
+              tooltip: tr('Modifier'),
               onPressed: () => context.push(AppRoutes.myTipsterProfile),
               icon: const Icon(Icons.edit_outlined),
             )
@@ -57,7 +58,8 @@ class TipsterScreen extends ConsumerWidget {
                     await ref.read(communityRepositoryProvider).block(userId);
                     ref.invalidate(feedProvider);
                     if (context.mounted) {
-                      showMessage(context, '${p.displayName} est bloqué.');
+                      showMessage(
+                          context, trf('{0} est bloqué.', [p.displayName]));
                       context.pop();
                     }
                   } catch (e) {
@@ -68,9 +70,9 @@ class TipsterScreen extends ConsumerWidget {
                   }
                 }
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'report', child: Text('Signaler')),
-                PopupMenuItem(value: 'block', child: Text('Bloquer')),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'report', child: Text(tr('Signaler'))),
+                PopupMenuItem(value: 'block', child: Text(tr('Bloquer'))),
               ],
             ),
         ],
@@ -79,11 +81,12 @@ class TipsterScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Indisponible',
+            title: tr('Indisponible'),
             body: userMessageFor(e)),
         data: (p) => p == null
-            ? const InfoMessage(
-                icon: Icons.person_off_outlined, title: 'Tipster introuvable')
+            ? InfoMessage(
+                icon: Icons.person_off_outlined,
+                title: tr('Tipster introuvable'))
             : RefreshIndicator(
                 onRefresh: refresh,
                 child: ListView(
@@ -112,7 +115,12 @@ class TipsterScreen extends ConsumerWidget {
                                           style: theme.textTheme.bodyMedium),
                                       if (stats.valueOrNull != null)
                                         Text(
-                                            '${stats.valueOrNull!.followers} abonné${stats.valueOrNull!.followers > 1 ? 's' : ''}',
+                                            trf('{0} abonné{1}', [
+                                              stats.valueOrNull!.followers,
+                                              stats.valueOrNull!.followers > 1
+                                                  ? 's'
+                                                  : ''
+                                            ]),
                                             style: theme.textTheme.bodySmall),
                                     ],
                                   ),
@@ -125,7 +133,7 @@ class TipsterScreen extends ConsumerWidget {
                             ],
                             if (!p.isActive) ...[
                               const SizedBox(height: 8),
-                              Text('Profil suspendu par la modération.',
+                              Text(tr('Profil suspendu par la modération.'),
                                   style: theme.textTheme.bodySmall?.copyWith(
                                       color: theme.colorScheme.error)),
                             ],
@@ -136,13 +144,13 @@ class TipsterScreen extends ConsumerWidget {
                                       onPressed: () =>
                                           _follow(context, ref, false),
                                       icon: const Icon(Icons.check),
-                                      label: const Text('Abonné'),
+                                      label: Text(tr('Abonné')),
                                     )
                                   : FilledButton.icon(
                                       onPressed: () =>
                                           _follow(context, ref, true),
                                       icon: const Icon(Icons.person_add_alt_1),
-                                      label: const Text('Suivre'),
+                                      label: Text(tr('Suivre')),
                                     ),
                             ],
                           ],
@@ -154,16 +162,16 @@ class TipsterScreen extends ConsumerWidget {
                       error: (e, _) => Text(userMessageFor(e)),
                       data: (s) => TipsterStatsCard(stats: s),
                     ),
-                    const SectionTitle('Publications'),
+                    SectionTitle(tr('Publications')),
                     ...posts.when(
                       loading: () => [const LinearProgressIndicator()],
                       error: (e, _) => [Text(userMessageFor(e))],
                       data: (list) => list.isEmpty
                           ? [
-                              const Padding(
+                              Padding(
                                   padding: EdgeInsets.all(12),
                                   child: Text(
-                                      'Aucune publication pour l’instant.'))
+                                      tr('Aucune publication pour l’instant.')))
                             ]
                           : [
                               for (final post in list)

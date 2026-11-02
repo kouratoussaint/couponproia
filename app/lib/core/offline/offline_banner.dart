@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'offline_http_client.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Bandeau discret en bas de l'écran quand l'app affiche des données enregistrées.
 class OfflineBanner extends StatelessWidget {
@@ -13,7 +14,11 @@ class OfflineBanner extends StatelessWidget {
     final time = '${two(at.hour)}:${two(at.minute)}';
     final sameDay =
         at.year == now.year && at.month == now.month && at.day == now.day;
-    return 'Hors connexion · données ${sameDay ? 'de $time' : 'du ${two(at.day)}/${two(at.month)} à $time'}';
+    return trf('Hors connexion · données {0}', [
+      sameDay
+          ? trf('de {0}', [time])
+          : trf('du {0}/{1} à {2}', [two(at.day), two(at.month), time])
+    ]);
   }
 
   @override

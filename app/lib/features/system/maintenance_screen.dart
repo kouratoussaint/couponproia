@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/widgets/app_logo.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Écran affiché quand l'administration active le flag `maintenance_mode`.
 class MaintenanceScreen extends StatelessWidget {
@@ -24,18 +25,18 @@ class MaintenanceScreen extends StatelessWidget {
                 Icon(Icons.construction_outlined,
                     size: 48, color: theme.colorScheme.secondary),
                 const SizedBox(height: 16),
-                Text('Maintenance en cours',
+                Text(tr('Maintenance en cours'),
                     style: theme.textTheme.headlineSmall,
                     textAlign: TextAlign.center),
                 const SizedBox(height: 12),
                 Text(
-                  'Coupon Pro IA est momentanément indisponible. Réessayez dans quelques minutes.',
+                  tr('Coupon Pro IA est momentanément indisponible. Réessayez dans quelques minutes.'),
                   style: theme.textTheme.bodyLarge,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
                 OutlinedButton(
-                    onPressed: onRetry, child: const Text('Réessayer')),
+                    onPressed: onRetry, child: Text(tr('Réessayer'))),
               ],
             ),
           ),

@@ -2,14 +2,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Codes des documents légaux, dans l'ordre d'affichage.
 const legalCodes = ['terms', 'privacy', 'community'];
 
-const legalTitles = {
-  'terms': 'Conditions générales d’utilisation',
-  'privacy': 'Politique de confidentialité',
-  'community': 'Règles de la communauté',
+final legalTitles = {
+  'terms': tr('Conditions générales d’utilisation'),
+  'privacy': tr('Politique de confidentialité'),
+  'community': tr('Règles de la communauté'),
 };
 
 class LegalDocument {
@@ -126,14 +127,16 @@ String fillLegalPlaceholders(String body, Map<String, dynamic> settings) {
   String field(String key) => (editor[key] as String? ?? '').trim();
   final email = (settings['app.support_email'] as String? ?? '').trim();
   final values = {
-    'editeur':
-        field('name').isEmpty ? 'l’éditeur de Coupon Pro IA' : field('name'),
+    'editeur': field('name').isEmpty
+        ? tr('l’éditeur de Coupon Pro IA')
+        : field('name'),
     'forme': field('legal_form'),
     'adresse': field('address'),
     'pays': field('country'),
     'immatriculation': field('registration'),
-    'contact':
-        email.isEmpty ? 'le support (Profil → Contacter le support)' : email,
+    'contact': email.isEmpty
+        ? tr('le support (Profil → Contacter le support)')
+        : email,
   };
   var out = body;
   values.forEach((k, v) => out = out.replaceAll('{{$k}}', v));

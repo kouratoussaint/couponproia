@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Emblème officiel (ballon + cerveau à circuits) suivi du nom « Coupon Pro IA ».
 /// Pour les barres d'application et les écrans système.
@@ -18,7 +19,7 @@ class AppLogo extends StatelessWidget {
       height: size,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.medium,
-      semanticLabel: 'Coupon Pro IA',
+      semanticLabel: tr('Coupon Pro IA'),
     );
     if (!showName) return emblem;
     final style = GoogleFonts.montserrat(
@@ -42,7 +43,7 @@ class AppLogo extends StatelessWidget {
             child: Text.rich(
               textScaler: TextScaler.noScaling,
               TextSpan(
-                text: 'Coupon Pro ',
+                text: tr('Coupon Pro '),
                 style: style,
                 children: [
                   TextSpan(
@@ -70,7 +71,7 @@ class AppFullLogo extends StatelessWidget {
       height: height,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.medium,
-      semanticLabel: 'Coupon Pro IA',
+      semanticLabel: tr('Coupon Pro IA'),
     );
   }
 }

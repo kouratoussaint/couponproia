@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,6 +23,7 @@ import '../../system/system_providers.dart';
 import '../data/profile_repository.dart';
 import '../../shell/app_drawer.dart';
 import '../../widget/home_widget_sync.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -36,8 +39,8 @@ class ProfileScreen extends ConsumerWidget {
     final version = ref.watch(installedPackageProvider).valueOrNull;
 
     return Scaffold(
-      appBar: AppBar(
-          leading: const DrawerMenuButton(), title: const Text('Profil')),
+      appBar:
+          AppBar(leading: const DrawerMenuButton(), title: Text(tr('Profil'))),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(myProfileProvider);
@@ -87,7 +90,7 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ),
                       IconButton(
-                        tooltip: 'Modifier le profil',
+                        tooltip: tr('Modifier le profil'),
                         icon: const Icon(Icons.edit_outlined),
                         onPressed: p == null
                             ? null
@@ -98,36 +101,36 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            const _GroupTitle('Mon jeu'),
+            _GroupTitle(tr('Mon jeu')),
             Card(
               child: Column(
                 children: [
                   ListTile(
                     leading: const Icon(Icons.menu_book_outlined),
-                    title: const Text('Mon carnet de paris'),
-                    subtitle:
-                        const Text('Vos mises notées et votre bilan réel'),
+                    title: Text(tr('Mon carnet de paris')),
+                    subtitle: Text(tr('Vos mises notées et votre bilan réel')),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.journal),
                   ),
                   ListTile(
                     leading: const Icon(Icons.star_outline),
-                    title: const Text('Équipes suivies'),
+                    title: Text(tr('Équipes suivies')),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.favoriteTeams),
                   ),
                   ListTile(
                     leading: const Icon(Icons.tune),
-                    title: const Text('Mes préférences'),
+                    title: Text(tr('Mes préférences')),
                     subtitle: Text(() {
                       final p = ref.watch(myPreferencesProvider).valueOrNull;
                       final n = p?.favoriteCompetitions.length ?? 0;
                       return [
                         n == 0
-                            ? 'Aucune compétition suivie'
-                            : '$n compétition${n > 1 ? 's' : ''} suivie${n > 1 ? 's' : ''}',
+                            ? tr('Aucune compétition suivie')
+                            : trf('{0} compétition{1} suivie{2}',
+                                [n, n > 1 ? 's' : '', n > 1 ? 's' : '']),
                         if (p?.level != null)
-                          'niveau ${p!.level!.label.toLowerCase()}',
+                          trf('niveau {0}', [p!.level!.label.toLowerCase()]),
                       ].join(' · ');
                     }()),
                     trailing: const Icon(Icons.chevron_right),
@@ -135,29 +138,37 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   ListTile(
                     leading: const Icon(Icons.health_and_safety_outlined),
-                    title: const Text('Jeu responsable'),
-                    subtitle: const Text(
-                        'Budget mensuel, plafond par pari, conseils'),
+                    title: Text(tr('Jeu responsable')),
+                    subtitle:
+                        Text(tr('Budget mensuel, plafond par pari, conseils')),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.responsibleGaming),
                   ),
                 ],
               ),
             ),
-            const _GroupTitle('Mon compte'),
+            _GroupTitle(tr('Mon compte')),
             Card(
               child: Column(
                 children: [
                   ListTile(
                     leading: const Icon(Icons.workspace_premium_outlined),
-                    title: const Text('Abonnement'),
+                    title: Text(tr('Abonnement')),
                     subtitle: Text(
                       ref.watch(entitlementsProvider).when(
                             data: (e) => e.periodEnd == null
-                                ? 'Forfait ${e.plan.replaceAll('_', ' ')}'
-                                : 'Forfait ${e.plan.replaceAll('_', ' ')} · jusqu’au ${e.periodEnd!.day.toString().padLeft(2, '0')}/${e.periodEnd!.month.toString().padLeft(2, '0')}/${e.periodEnd!.year}',
+                                ? trf('Forfait {0}',
+                                    [e.plan.replaceAll('_', ' ')])
+                                : trf('Forfait {0} · jusqu’au {1}/{2}/{3}', [
+                                    e.plan.replaceAll('_', ' '),
+                                    e.periodEnd!.day.toString().padLeft(2, '0'),
+                                    e.periodEnd!.month
+                                        .toString()
+                                        .padLeft(2, '0'),
+                                    e.periodEnd!.year
+                                  ]),
                             loading: () => '…',
-                            error: (_, __) => 'Forfait indisponible',
+                            error: (_, __) => tr('Forfait indisponible'),
                           ),
                     ),
                     trailing: const Icon(Icons.chevron_right),
@@ -165,30 +176,32 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   ListTile(
                     leading: const Icon(Icons.bolt),
-                    title: const Text('Crédits IA'),
+                    title: Text(tr('Crédits IA')),
                     subtitle: Text(
                       ref.watch(myCreditsProvider).when(
                             data: (c) => c.unlimited
-                                ? 'Illimités (compte équipe)'
-                                : '${c.total} disponible(s) · ${c.planCredits} du forfait ce mois-ci + ${c.extraCredits} supplémentaire(s)',
+                                ? tr('Illimités (compte équipe)')
+                                : trf(
+                                    '{0} disponible(s) · {1} du forfait ce mois-ci + {2} supplémentaire(s)',
+                                    [c.total, c.planCredits, c.extraCredits]),
                             loading: () => '…',
-                            error: (_, __) => 'Solde indisponible',
+                            error: (_, __) => tr('Solde indisponible'),
                           ),
                     ),
                   ),
                   ListTile(
                     leading: const Icon(Icons.notifications_none),
-                    title: const Text('Notifications'),
-                    subtitle: const Text('Ce que je reçois, heures calmes'),
+                    title: Text(tr('Notifications')),
+                    subtitle: Text(tr('Ce que je reçois, heures calmes')),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.notificationSettings),
                   ),
                   if (permissions.contains('admin.access'))
                     ListTile(
                       leading: const Icon(Icons.admin_panel_settings_outlined),
-                      title: const Text('Console d’administration'),
-                      subtitle: const Text(
-                          'Utilisateurs, coupons, paiements, réglages'),
+                      title: Text(tr('Console d’administration')),
+                      subtitle: Text(
+                          tr('Utilisateurs, coupons, paiements, réglages')),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push(AppRoutes.adminConsole),
                     ),
@@ -202,25 +215,29 @@ class ProfileScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Apparence', style: theme.textTheme.titleMedium),
+                    Text(tr('Apparence'), style: theme.textTheme.titleMedium),
                     const SizedBox(height: 12),
+                    Text(tr('Langue'), style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 8),
+                    const LanguageSelector(),
+                    const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
                       child: SegmentedButton<ThemeMode>(
-                        segments: const [
+                        segments: [
                           ButtonSegment(
                             value: ThemeMode.system,
-                            label: Text('Système'),
+                            label: Text(tr('Système')),
                             icon: Icon(Icons.brightness_auto_outlined),
                           ),
                           ButtonSegment(
                             value: ThemeMode.light,
-                            label: Text('Clair'),
+                            label: Text(tr('Clair')),
                             icon: Icon(Icons.light_mode_outlined),
                           ),
                           ButtonSegment(
                             value: ThemeMode.dark,
-                            label: Text('Sombre'),
+                            label: Text(tr('Sombre')),
                             icon: Icon(Icons.dark_mode_outlined),
                           ),
                         ],
@@ -231,7 +248,8 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Text('Taille du texte', style: theme.textTheme.titleSmall),
+                    Text(tr('Taille du texte'),
+                        style: theme.textTheme.titleSmall),
                     const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
@@ -255,7 +273,8 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${ref.watch(textSizeProvider).label} : voici à quoi ressemble le texte de l’app.',
+                      trf('{0} : voici à quoi ressemble le texte de l’app.',
+                          [ref.watch(textSizeProvider).label]),
                       style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 8),
@@ -263,14 +282,14 @@ class ProfileScreen extends ConsumerWidget {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.widgets_outlined),
-                      title: const Text('Widget sur l’écran d’accueil'),
-                      subtitle: const Text(
-                          'Coupon du jour, matchs du jour et en direct, sans ouvrir l’app'),
+                      title: Text(tr('Widget sur l’écran d’accueil')),
+                      subtitle: Text(tr(
+                          'Coupon du jour, matchs du jour et en direct, sans ouvrir l’app')),
                       onTap: () async {
                         final ok = await requestHomeWidget();
                         if (!ok && context.mounted) {
                           showMessage(context,
-                              'Ajout manuel : appui long sur l’écran d’accueil → Widgets → Coupon Pro IA.');
+                              tr('Ajout manuel : appui long sur l’écran d’accueil → Widgets → Coupon Pro IA.'));
                         }
                       },
                     ),
@@ -278,50 +297,50 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            const _GroupTitle('Communauté'),
+            _GroupTitle(tr('Communauté')),
             Card(
               child: Column(
                 children: [
                   ListTile(
                     leading: const Icon(Icons.forum_outlined),
-                    title: const Text('Mon profil Tipster'),
+                    title: Text(tr('Mon profil Tipster')),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.myTipsterProfile),
                   ),
                   ListTile(
                     leading: const Icon(Icons.block),
-                    title: const Text('Utilisateurs bloqués'),
+                    title: Text(tr('Utilisateurs bloqués')),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.blockedUsers),
                   ),
                 ],
               ),
             ),
-            const _GroupTitle('Aide'),
+            _GroupTitle(tr('Aide')),
             Card(
               child: Column(
                 children: [
                   ListTile(
                     leading: const Icon(Icons.help_outline),
-                    title: const Text('Aide et questions fréquentes'),
-                    subtitle: const Text(
-                        'Crédits, coupons, analyses, forfaits, widget…'),
+                    title: Text(tr('Aide et questions fréquentes')),
+                    subtitle: Text(
+                        tr('Crédits, coupons, analyses, forfaits, widget…')),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.help),
                   ),
                   ListTile(
                     leading: const Icon(Icons.support_agent),
-                    title: const Text('Contacter le support'),
-                    subtitle: const Text(
-                        'Signaler un problème ou poser une question'),
+                    title: Text(tr('Contacter le support')),
+                    subtitle:
+                        Text(tr('Signaler un problème ou poser une question')),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => contactSupport(context, ref),
                   ),
                   ListTile(
                     leading: const Icon(Icons.gavel_outlined),
-                    title: const Text('Conditions et mentions'),
-                    subtitle: const Text(
-                        'CGU, confidentialité, règles de la communauté, avertissements'),
+                    title: Text(tr('Conditions et mentions')),
+                    subtitle: Text(tr(
+                        'CGU, confidentialité, règles de la communauté, avertissements')),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.legal),
                   ),
@@ -335,7 +354,7 @@ class ProfileScreen extends ConsumerWidget {
                       const WidgetStatePropertyAll(Size.fromHeight(48))),
               onPressed: () => _confirmDeletion(context, ref),
               icon: const Icon(Icons.delete_forever_outlined),
-              label: const Text('Supprimer mon compte'),
+              label: Text(tr('Supprimer mon compte')),
             ),
             const SizedBox(height: 12),
             FilledButton.icon(
@@ -347,14 +366,15 @@ class ProfileScreen extends ConsumerWidget {
                 await ref.read(authRepositoryProvider).signOut();
               },
               icon: const Icon(Icons.logout),
-              label: const Text('Se déconnecter'),
+              label: Text(tr('Se déconnecter')),
             ),
             const SizedBox(height: 24),
             Center(
               child: Text(
                 version == null
                     ? ''
-                    : 'Version ${version.version} (${version.buildNumber})',
+                    : trf('Version {0} ({1})',
+                        [version.version, version.buildNumber]),
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
@@ -373,7 +393,9 @@ class ProfileScreen extends ConsumerWidget {
     if (confirmed != true || !context.mounted) return;
     try {
       await ref.read(profileRepositoryProvider).deleteAccount();
-      if (context.mounted) showMessage(context, 'Votre compte a été supprimé.');
+      if (context.mounted) {
+        showMessage(context, tr('Votre compte a été supprimé.'));
+      }
     } catch (e) {
       if (context.mounted) showMessage(context, userMessageFor(e), error: true);
     }
@@ -418,29 +440,28 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
   Widget build(BuildContext context) {
     final ready = _controller.text.trim() == 'SUPPRIMER';
     return AlertDialog(
-      title: const Text('Supprimer mon compte ?'),
+      title: Text(tr('Supprimer mon compte ?')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Votre profil, vos préférences et votre historique seront effacés définitivement. '
-            'Cette action est irréversible.',
+          Text(
+            tr('Votre profil, vos préférences et votre historique seront effacés définitivement. Cette action est irréversible.'),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _controller,
             onChanged: (_) => setState(() {}),
             textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(
-                labelText: 'Tapez SUPPRIMER pour confirmer'),
+            decoration: InputDecoration(
+                labelText: tr('Tapez SUPPRIMER pour confirmer')),
           ),
         ],
       ),
       actions: [
         TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler')),
+            child: Text(tr('Annuler'))),
         FilledButton(
           style: FilledButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.error,
@@ -448,9 +469,84 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
             minimumSize: const Size(0, 44),
           ),
           onPressed: ready ? () => Navigator.of(context).pop(true) : null,
-          child: const Text('Supprimer'),
+          child: Text(tr('Supprimer')),
         ),
       ],
+    );
+  }
+}
+
+/// Choix de la langue (français ou anglais). La langue est appliquée au redémarrage :
+/// elle est enregistrée sur le téléphone et sur le profil, puis l'app propose de se fermer.
+class LanguageSelector extends ConsumerStatefulWidget {
+  const LanguageSelector({super.key});
+
+  @override
+  ConsumerState<LanguageSelector> createState() => _LanguageSelectorState();
+}
+
+class _LanguageSelectorState extends ConsumerState<LanguageSelector> {
+  SharedPreferences? get _prefs {
+    try {
+      return ref.read(sharedPreferencesProvider);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _choose(String lang) async {
+    await _prefs?.setString(languagePrefKey, lang);
+    final uid = ref.read(currentUserProvider)?.id;
+    if (uid != null) {
+      try {
+        await ref
+            .read(supabaseClientProvider)
+            .from('profiles')
+            .update({'locale': lang}).eq('id', uid);
+      } catch (_) {
+        // Hors ligne : la langue reste enregistrée sur le téléphone.
+      }
+    }
+    if (!mounted) return;
+    setState(() {});
+    final en = lang == 'en';
+    final restart = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text(en
+            ? 'Close the app to apply the language?'
+            : 'Fermer l’application pour appliquer la langue ?'),
+        content: Text(en
+            ? 'The language will be applied when the app restarts. Then reopen Coupon Pro IA.'
+            : 'La langue sera appliquée au redémarrage de l’application. Rouvrez ensuite Coupon Pro IA.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(d, false),
+              child: Text(en ? 'Later' : 'Plus tard')),
+          FilledButton(
+              onPressed: () => Navigator.pop(d, true),
+              child: Text(en ? 'Restart now' : 'Redémarrer maintenant')),
+        ],
+      ),
+    );
+    if (restart == true) await SystemNavigator.pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final saved = _prefs?.getString(languagePrefKey) ?? appLanguage;
+    return SizedBox(
+      width: double.infinity,
+      child: SegmentedButton<String>(
+        segments: [
+          for (final e in appLanguages.entries)
+            ButtonSegment(value: e.key, label: Text(e.value)),
+        ],
+        selected: {saved},
+        onSelectionChanged: (sel) {
+          if (sel.first != saved) _choose(sel.first);
+        },
+      ),
     );
   }
 }
@@ -474,9 +570,9 @@ class _ErrorReportsSwitchState extends ConsumerState<ErrorReportsSwitch> {
     }
     return SwitchListTile(
       contentPadding: EdgeInsets.zero,
-      title: const Text('Rapports d’erreurs'),
-      subtitle: const Text(
-          'Envoyer les plantages et lenteurs pour nous aider à corriger l’app. Aucun contenu personnel.'),
+      title: Text(tr('Rapports d’erreurs')),
+      subtitle: Text(tr(
+          'Envoyer les plantages et lenteurs pour nous aider à corriger l’app. Aucun contenu personnel.')),
       value: reporter.enabled,
       onChanged: (v) async {
         await reporter.setEnabled(v);

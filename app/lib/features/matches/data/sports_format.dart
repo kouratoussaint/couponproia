@@ -1,5 +1,6 @@
 // Mise en forme et calculs d'affichage (fonctions pures, testées unitairement).
 import 'sports_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 const _weekdays = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
 
@@ -20,13 +21,13 @@ String shortDate(DateTime local) => '${two(local.day)}/${two(local.month)}';
 
 /// « 31/10/2026 à 18:05 » : date complète avec l'année et l'heure.
 String dateTimeLabel(DateTime local) =>
-    '${shortDate(local)}/${local.year} à ${timeLabel(local)}';
+    trf('{0}/{1} à {2}', [shortDate(local), local.year, timeLabel(local)]);
 
 String dayLabel(DateTime day, DateTime today) {
   final diff = dateOnly(day).difference(dateOnly(today)).inDays;
-  if (diff == 0) return 'Aujourd’hui';
-  if (diff == 1) return 'Demain';
-  if (diff == -1) return 'Hier';
+  if (diff == 0) return tr('Aujourd’hui');
+  if (diff == 1) return tr('Demain');
+  if (diff == -1) return tr('Hier');
   final year = day.year == today.year ? '' : '/${day.year}';
   return '${_weekdays[day.weekday - 1]} ${shortDate(day)}$year';
 }
@@ -48,23 +49,23 @@ String statusLabel(MatchSummary m) {
     case MatchStatus.scheduled:
       return timeLabel(m.kickoffAt);
     case MatchStatus.live:
-      if (m.statusShort == 'HT') return 'Mi-temps';
-      if (m.statusShort == 'P') return 'Tirs au but';
-      return m.elapsed == null ? 'En cours' : '${m.elapsed}’';
+      if (m.statusShort == 'HT') return tr('Mi-temps');
+      if (m.statusShort == 'P') return tr('Tirs au but');
+      return m.elapsed == null ? tr('En cours') : '${m.elapsed}’';
     case MatchStatus.finished:
-      if (m.statusShort == 'AET') return 'Terminé (a.p.)';
-      if (m.statusShort == 'PEN') return 'Terminé (t.a.b.)';
-      return 'Terminé';
+      if (m.statusShort == 'AET') return tr('Terminé (a.p.)');
+      if (m.statusShort == 'PEN') return tr('Terminé (t.a.b.)');
+      return tr('Terminé');
     case MatchStatus.postponed:
-      return 'Reporté';
+      return tr('Reporté');
     case MatchStatus.cancelled:
-      return 'Annulé';
+      return tr('Annulé');
     case MatchStatus.abandoned:
-      return 'Arrêté';
+      return tr('Arrêté');
     case MatchStatus.interrupted:
-      return 'Interrompu';
+      return tr('Interrompu');
     case MatchStatus.awarded:
-      return 'Sur tapis vert';
+      return tr('Sur tapis vert');
     case MatchStatus.unknown:
       return '—';
   }
@@ -109,7 +110,7 @@ List<(CompetitionRef, List<MatchSummary>)> groupByCompetition(
   return [for (final id in order) byId[id]!];
 }
 
-const _accents = {
+final _accents = {
   'à': 'a',
   'â': 'a',
   'ä': 'a',
@@ -153,9 +154,11 @@ bool matchesQuery(MatchSummary m, String query) {
 }
 
 /// Cote au format français : 1,95.
-String formatOdd(double odd) => odd.toStringAsFixed(2).replaceAll('.', ',');
+String formatOdd(double odd) =>
+    odd.toStringAsFixed(2).replaceAll('.', decimalSeparator);
 
-String formatLine(double line) => line.toStringAsFixed(1).replaceAll('.', ',');
+String formatLine(double line) =>
+    line.toStringAsFixed(1).replaceAll('.', decimalSeparator);
 
 /// Libellé court d'une issue (dans le contexte de son marché).
 String outcomeLabel(OddsLine o) {
@@ -167,26 +170,30 @@ String outcomeLabel(OddsLine o) {
       return o.outcomeCode;
     case 'OU':
       final line = o.line == null ? '' : ' ${formatLine(o.line!)}';
-      return o.outcomeCode == 'OVER' ? 'Plus de$line' : 'Moins de$line';
+      return o.outcomeCode == 'OVER'
+          ? trf('Plus de{0}', [line])
+          : trf('Moins de{0}', [line]);
     case 'BTTS':
-      return o.outcomeCode == 'YES' ? 'Oui' : 'Non';
+      return o.outcomeCode == 'YES' ? tr('Oui') : tr('Non');
     case 'DNB':
       return o.outcomeCode == 'HOME' ? '1' : '2';
     case 'TTH' || 'TTA':
       final line = o.line == null ? '' : ' ${formatLine(o.line!)}';
-      return o.outcomeCode == 'OVER' ? 'Plus de$line' : 'Moins de$line';
+      return o.outcomeCode == 'OVER'
+          ? trf('Plus de{0}', [line])
+          : trf('Moins de{0}', [line]);
   }
   return o.outcomeCode;
 }
 
-const marketTitles = {
-  '1X2': 'Résultat du match',
-  'DC': 'Double chance',
-  'OU': 'Plus / moins de buts',
-  'BTTS': 'Les deux équipes marquent',
-  'DNB': 'Remboursé si nul',
-  'TTH': 'Buts de l’équipe à domicile',
-  'TTA': 'Buts de l’équipe à l’extérieur',
+final marketTitles = {
+  '1X2': tr('Résultat du match'),
+  'DC': tr('Double chance'),
+  'OU': tr('Plus / moins de buts'),
+  'BTTS': tr('Les deux équipes marquent'),
+  'DNB': tr('Remboursé si nul'),
+  'TTH': tr('Buts de l’équipe à domicile'),
+  'TTA': tr('Buts de l’équipe à l’extérieur'),
 };
 
 const _outcomeOrder = [

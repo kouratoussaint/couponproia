@@ -8,11 +8,12 @@ import '../../../core/widgets/form_widgets.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../data/community_models.dart';
 import '../data/community_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
-const _targetLabels = {
-  'post': 'Publication',
-  'comment': 'Commentaire',
-  'tipster': 'Profil Tipster'
+final _targetLabels = {
+  'post': tr('Publication'),
+  'comment': tr('Commentaire'),
+  'tipster': tr('Profil Tipster')
 };
 
 /// File des signalements (permission moderation.manage, vérifiée par le serveur).
@@ -24,7 +25,7 @@ class ModerationScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final queue = ref.watch(moderationQueueProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Modération')),
+      appBar: AppBar(title: Text(tr('Modération'))),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(moderationQueueProvider);
@@ -35,14 +36,14 @@ class ModerationScreen extends ConsumerWidget {
           error: (e, _) => ListView(children: [
             InfoMessage(
                 icon: Icons.lock_outline,
-                title: 'Accès refusé',
+                title: tr('Accès refusé'),
                 body: userMessageFor(e))
           ]),
           data: (items) => items.isEmpty
-              ? ListView(children: const [
+              ? ListView(children: [
                   InfoMessage(
                       icon: Icons.task_alt,
-                      title: 'Aucun signalement en attente')
+                      title: tr('Aucun signalement en attente'))
                 ])
               : ListView(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
@@ -56,7 +57,9 @@ class ModerationScreen extends ConsumerWidget {
                             children: [
                               Text(
                                 '${_targetLabels[m.targetType] ?? m.targetType} · ${reportReasons[m.reason] ?? m.reason}'
-                                '${m.reportsOnTarget > 1 ? ' · ${m.reportsOnTarget} signalements' : ''}',
+                                '${m.reportsOnTarget > 1 ? trf(' · {0} signalements', [
+                                        m.reportsOnTarget
+                                      ]) : ''}',
                                 style: theme.textTheme.titleSmall
                                     ?.copyWith(fontWeight: FontWeight.w700),
                               ),
@@ -64,7 +67,7 @@ class ModerationScreen extends ConsumerWidget {
                                   style: theme.textTheme.bodySmall),
                               if ((m.details ?? '').isNotEmpty) ...[
                                 const SizedBox(height: 6),
-                                Text('Précisions : ${m.details}',
+                                Text(trf('Précisions : {0}', [m.details]),
                                     style: theme.textTheme.bodyMedium),
                               ],
                               const SizedBox(height: 8),
@@ -75,8 +78,8 @@ class ModerationScreen extends ConsumerWidget {
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
-                                  '${m.previewAuthor ?? 'Auteur inconnu'} : ${m.previewText ?? '(contenu supprimé)'}'
-                                  '${m.previewStatus == 'hidden' || m.previewStatus == 'suspended' ? '\n(déjà masqué)' : ''}',
+                                  '${m.previewAuthor ?? tr('Auteur inconnu')} : ${m.previewText ?? tr('(contenu supprimé)')}'
+                                  '${m.previewStatus == 'hidden' || m.previewStatus == 'suspended' ? tr('\n(déjà masqué)') : ''}',
                                   maxLines: 6,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -89,20 +92,20 @@ class ModerationScreen extends ConsumerWidget {
                                   OutlinedButton(
                                     onPressed: () => _act(context, ref, m,
                                         m.targetType, m.targetId, 'dismiss'),
-                                    child: const Text('Rejeter'),
+                                    child: Text(tr('Rejeter')),
                                   ),
                                   if (m.targetType != 'tipster')
                                     FilledButton.tonal(
                                       onPressed: () => _act(context, ref, m,
                                           m.targetType, m.targetId, 'hide'),
-                                      child: const Text('Masquer'),
+                                      child: Text(tr('Masquer')),
                                     ),
                                   if (m.targetType == 'post')
                                     TextButton(
                                       onPressed: () => context.push(
                                           AppRoutes.postFor(
                                               int.parse(m.targetId))),
-                                      child: const Text('Voir'),
+                                      child: Text(tr('Voir')),
                                     ),
                                   if (m.previewAuthorId != null &&
                                       m.targetType != 'comment')
@@ -117,7 +120,7 @@ class ModerationScreen extends ConsumerWidget {
                                           'tipster',
                                           m.previewAuthorId!,
                                           'suspend'),
-                                      child: const Text('Suspendre le Tipster'),
+                                      child: Text(tr('Suspendre le Tipster')),
                                     ),
                                 ],
                               ),
@@ -139,20 +142,20 @@ class ModerationScreen extends ConsumerWidget {
       context: context,
       builder: (c) => AlertDialog(
         title: Text(switch (action) {
-          'dismiss' => 'Rejeter le signalement ?',
-          'hide' => 'Masquer ce contenu ?',
-          _ => 'Suspendre ce Tipster ?',
+          'dismiss' => tr('Rejeter le signalement ?'),
+          'hide' => tr('Masquer ce contenu ?'),
+          _ => tr('Suspendre ce Tipster ?'),
         }),
         content: TextField(
             controller: note,
-            decoration: const InputDecoration(labelText: 'Motif (journalisé)')),
+            decoration: InputDecoration(labelText: tr('Motif (journalisé)'))),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
-              child: const Text('Annuler')),
+              child: Text(tr('Annuler'))),
           FilledButton(
               onPressed: () => Navigator.pop(c, true),
-              child: const Text('Confirmer')),
+              child: Text(tr('Confirmer'))),
         ],
       ),
     );
@@ -164,7 +167,7 @@ class ModerationScreen extends ConsumerWidget {
         ref.invalidate(moderationQueueProvider);
         ref.invalidate(communityRightsProvider);
         ref.invalidate(feedProvider);
-        if (context.mounted) showMessage(context, 'Action enregistrée.');
+        if (context.mounted) showMessage(context, tr('Action enregistrée.'));
       } catch (e) {
         if (context.mounted) {
           showMessage(context, communityErrorMessage(e), error: true);
@@ -183,16 +186,16 @@ class BlockedUsersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final list = ref.watch(blockedUsersProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Utilisateurs bloqués')),
+      appBar: AppBar(title: Text(tr('Utilisateurs bloqués'))),
       body: list.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Indisponible',
+            title: tr('Indisponible'),
             body: userMessageFor(e)),
         data: (users) => users.isEmpty
-            ? const InfoMessage(
-                icon: Icons.block, title: 'Aucun utilisateur bloqué')
+            ? InfoMessage(
+                icon: Icons.block, title: tr('Aucun utilisateur bloqué'))
             : ListView(
                 padding: const EdgeInsets.all(12),
                 children: [
@@ -216,7 +219,7 @@ class BlockedUsersScreen extends ConsumerWidget {
                               }
                             }
                           },
-                          child: const Text('Débloquer'),
+                          child: Text(tr('Débloquer')),
                         ),
                       ),
                     ),
@@ -235,20 +238,19 @@ class FavoriteTeamsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final teams = ref.watch(favoriteTeamsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Équipes suivies')),
+      appBar: AppBar(title: Text(tr('Équipes suivies'))),
       body: teams.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Indisponible',
+            title: tr('Indisponible'),
             body: userMessageFor(e)),
         data: (map) => map.isEmpty
-            ? const InfoMessage(
+            ? InfoMessage(
                 icon: Icons.star_border,
-                title: 'Aucune équipe suivie',
-                body:
-                    'Dans la fiche d’un match, touchez l’étoile à côté d’une équipe pour la suivre : '
-                    'ses matchs passeront en premier sur l’accueil.')
+                title: tr('Aucune équipe suivie'),
+                body: tr(
+                    'Dans la fiche d’un match, touchez l’étoile à côté d’une équipe pour la suivre : ses matchs passeront en premier sur l’accueil.'))
             : ListView(
                 padding: const EdgeInsets.all(12),
                 children: [
@@ -264,7 +266,7 @@ class FavoriteTeamsScreen extends ConsumerWidget {
                                 .setFavoriteTeam(e.key, false);
                             ref.invalidate(favoriteTeamsProvider);
                           },
-                          child: const Text('Ne plus suivre'),
+                          child: Text(tr('Ne plus suivre')),
                         ),
                       ),
                     ),

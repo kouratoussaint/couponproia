@@ -10,6 +10,7 @@ import '../../core/widgets/form_widgets.dart';
 import '../matches/data/sports_format.dart';
 import '../system/system_providers.dart';
 import 'legal_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Documents vus et acceptés à l'inscription : acceptés automatiquement à la première connexion.
 const legalSignupKey = 'legal_signup_ids';
@@ -85,7 +86,7 @@ class LegalDocumentScreen extends ConsumerWidget {
         const <String, dynamic>{};
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(legalTitles[code] ?? 'Document')),
+      appBar: AppBar(title: Text(legalTitles[code] ?? tr('Document'))),
       body: doc.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
@@ -93,12 +94,13 @@ class LegalDocumentScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(24),
                 child: Text(userMessageFor(e), textAlign: TextAlign.center))),
         data: (d) => d == null
-            ? const Center(child: Text('Document indisponible.'))
+            ? Center(child: Text(tr('Document indisponible.')))
             : ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                 children: [
                   Text(
-                      'Version du ${shortDate(d.publishedAt)}/${d.publishedAt.year}',
+                      trf('Version du {0}/{1}',
+                          [shortDate(d.publishedAt), d.publishedAt.year]),
                       style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant)),
                   LegalText(fillLegalPlaceholders(d.body, settings)),
@@ -129,19 +131,19 @@ class LegalConsentText extends StatelessWidget {
     return Text.rich(TextSpan(
       style: theme.textTheme.bodyMedium,
       children: [
-        TextSpan(text: prefix),
+        TextSpan(text: tr(prefix)),
         TextSpan(
-            text: 'Conditions générales d’utilisation',
+            text: tr('Conditions générales d’utilisation'),
             style: link,
             recognizer: TapGestureRecognizer()
               ..onTap = () => openLegalDocument(context, 'terms')),
-        const TextSpan(text: ' et la '),
+        TextSpan(text: tr(' et la ')),
         TextSpan(
-            text: 'Politique de confidentialité',
+            text: tr('Politique de confidentialité'),
             style: link,
             recognizer: TapGestureRecognizer()
               ..onTap = () => openLegalDocument(context, 'privacy')),
-        TextSpan(text: withAge ? ', et je confirme être majeur(e).' : '.'),
+        TextSpan(text: withAge ? tr(', et je confirme être majeur(e).') : '.'),
       ],
     ));
   }
@@ -206,13 +208,12 @@ class _LegalAcceptanceScreenState extends ConsumerState<LegalAcceptanceScreen> {
             Icon(Icons.gavel_outlined,
                 size: 48, color: theme.colorScheme.primary),
             const SizedBox(height: 12),
-            Text('Conditions d’utilisation',
+            Text(tr('Conditions d’utilisation'),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall),
             const SizedBox(height: 12),
             Text(
-              'Coupon Pro IA fournit des analyses et des estimations. Aucun pari n’est pris dans l’application '
-              'et aucun gain n’est garanti. Merci de lire et d’accepter les documents suivants pour continuer.',
+              tr('Coupon Pro IA fournit des analyses et des estimations. Aucun pari n’est pris dans l’application et aucun gain n’est garanti. Merci de lire et d’accepter les documents suivants pour continuer.'),
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -223,7 +224,7 @@ class _LegalAcceptanceScreenState extends ConsumerState<LegalAcceptanceScreen> {
                   ListTile(
                     leading: const Icon(Icons.description_outlined),
                     title: Text(p.title),
-                    subtitle: Text('Version du ${_day(p.version)}'),
+                    subtitle: Text(trf('Version du {0}', [_day(p.version)])),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => openLegalDocument(context, p.code),
                   ),
@@ -241,12 +242,12 @@ class _LegalAcceptanceScreenState extends ConsumerState<LegalAcceptanceScreen> {
             const SizedBox(height: 8),
             FilledButton(
               onPressed: _checked && !_busy ? _accept : null,
-              child: const Text('Accepter et continuer'),
+              child: Text(tr('Accepter et continuer')),
             ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: _busy ? null : widget.onSignOut,
-              child: const Text('Se déconnecter'),
+              child: Text(tr('Se déconnecter')),
             ),
           ],
         ),

@@ -9,6 +9,7 @@ import '../../analysis/data/analysis_format.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../data/community_repository.dart';
 import 'community_widgets.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Communauté : fil des Tipsters suivis, découverte, annuaire des Tipsters.
 class CommunityScreen extends ConsumerWidget {
@@ -21,11 +22,11 @@ class CommunityScreen extends ConsumerWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Communauté'),
+          title: Text(tr('Communauté')),
           actions: [
             if (rights?.canModerate ?? false)
               IconButton(
-                tooltip: 'Modération',
+                tooltip: tr('Modération'),
                 onPressed: () => context.push(AppRoutes.moderation),
                 icon: Badge(
                   isLabelVisible: (rights?.openReports ?? 0) > 0,
@@ -34,28 +35,28 @@ class CommunityScreen extends ConsumerWidget {
                 ),
               ),
             IconButton(
-              tooltip: 'Mon profil Tipster',
+              tooltip: tr('Mon profil Tipster'),
               onPressed: () => context.push(AppRoutes.myTipsterProfile),
               icon: const Icon(Icons.account_circle_outlined),
             ),
           ],
-          bottom: const TabBar(tabs: [
-            Tab(text: 'Abonnements'),
-            Tab(text: 'Découvrir'),
-            Tab(text: 'Tipsters'),
+          bottom: TabBar(tabs: [
+            Tab(text: tr('Abonnements')),
+            Tab(text: tr('Découvrir')),
+            Tab(text: tr('Tipsters')),
           ]),
         ),
         floatingActionButton: (rights?.isTipster ?? false)
             ? FloatingActionButton.extended(
                 onPressed: () => showComposer(context, ref),
                 icon: const Icon(Icons.edit_outlined),
-                label: const Text('Publier'),
+                label: Text(tr('Publier')),
               )
             : null,
         body: rights != null && !rights.communityEnabled
-            ? const InfoMessage(
+            ? InfoMessage(
                 icon: Icons.construction,
-                title: 'Communauté momentanément indisponible')
+                title: tr('Communauté momentanément indisponible'))
             : const TabBarView(children: [
                 _Feed(scope: 'following'),
                 _Feed(scope: 'all'),
@@ -79,11 +80,11 @@ Future<void> showComposer(BuildContext context, WidgetRef ref) async {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Nouvelle publication', style: Theme.of(c).textTheme.titleLarge),
+          Text(tr('Nouvelle publication'),
+              style: Theme.of(c).textTheme.titleLarge),
           const SizedBox(height: 4),
           Text(
-            'Pour publier un coupon, ouvrez-le dans « Mes coupons » puis « Publier ». '
-            'Pas de promesse de résultat : « sûr », « garanti », « gain »… sont refusés.',
+            tr('Pour publier un coupon, ouvrez-le dans « Mes coupons » puis « Publier ». Pas de promesse de résultat : « sûr », « garanti », « gain »… sont refusés.'),
             style: Theme.of(c).textTheme.bodySmall,
           ),
           const SizedBox(height: 12),
@@ -93,13 +94,13 @@ Future<void> showComposer(BuildContext context, WidgetRef ref) async {
             maxLength: 1000,
             maxLines: 5,
             minLines: 3,
-            decoration: const InputDecoration(
-                hintText: 'Votre analyse, votre avis sur la journée…'),
+            decoration: InputDecoration(
+                hintText: tr('Votre analyse, votre avis sur la journée…')),
           ),
           const SizedBox(height: 8),
           FilledButton(
               onPressed: () => Navigator.pop(c, true),
-              child: const Text('Publier')),
+              child: Text(tr('Publier'))),
         ],
       ),
     ),
@@ -108,7 +109,7 @@ Future<void> showComposer(BuildContext context, WidgetRef ref) async {
     try {
       await ref.read(communityRepositoryProvider).createTextPost(text.text);
       ref.invalidate(feedProvider);
-      if (context.mounted) showMessage(context, 'Publié.');
+      if (context.mounted) showMessage(context, tr('Publié.'));
     } catch (e) {
       if (context.mounted) {
         showMessage(context, communityErrorMessage(e), error: true);
@@ -137,7 +138,7 @@ class _Feed extends ConsumerWidget {
         error: (e, _) => ListView(children: [
           InfoMessage(
               icon: Icons.cloud_off_outlined,
-              title: 'Indisponible',
+              title: tr('Indisponible'),
               body: userMessageFor(e))
         ]),
         data: (posts) => posts.isEmpty
@@ -147,11 +148,13 @@ class _Feed extends ConsumerWidget {
                       ? Icons.people_outline
                       : Icons.forum_outlined,
                   title: scope == 'following'
-                      ? 'Aucune publication de vos Tipsters'
-                      : 'Aucune publication pour l’instant',
+                      ? tr('Aucune publication de vos Tipsters')
+                      : tr('Aucune publication pour l’instant'),
                   body: scope == 'following'
-                      ? 'Suivez des Tipsters depuis l’onglet « Tipsters » : leurs coupons et analyses apparaîtront ici.'
-                      : 'Les coupons publiés par les Tipsters apparaîtront ici, avec leurs résultats réels.',
+                      ? tr(
+                          'Suivez des Tipsters depuis l’onglet « Tipsters » : leurs coupons et analyses apparaîtront ici.')
+                      : tr(
+                          'Les coupons publiés par les Tipsters apparaîtront ici, avec leurs résultats réels.'),
                 ),
               ])
             : ListView(
@@ -191,14 +194,14 @@ class _DirectoryState extends ConsumerState<_Directory> {
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
         children: [
           TextField(
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
                 prefixIcon: Icon(Icons.search),
-                hintText: 'Rechercher un Tipster'),
+                hintText: tr('Rechercher un Tipster')),
             onSubmitted: (v) => setState(() => _query = v.trim()),
           ),
           const SizedBox(height: 6),
           Text(
-              'Classés par nombre de coupons réglés sur 30 jours (résultats vérifiés par la plateforme).',
+              tr('Classés par nombre de coupons réglés sur 30 jours (résultats vérifiés par la plateforme).'),
               style: theme.textTheme.bodySmall),
           const SizedBox(height: 6),
           ...list.when(
@@ -206,9 +209,9 @@ class _DirectoryState extends ConsumerState<_Directory> {
             error: (e, _) => [Text(userMessageFor(e))],
             data: (all) => all.isEmpty
                 ? [
-                    const Padding(
+                    Padding(
                         padding: EdgeInsets.all(16),
-                        child: Text('Aucun Tipster pour l’instant.'))
+                        child: Text(tr('Aucun Tipster pour l’instant.')))
                   ]
                 : [
                     for (final t in all)
@@ -219,11 +222,22 @@ class _DirectoryState extends ConsumerState<_Directory> {
                               style:
                                   const TextStyle(fontWeight: FontWeight.w700)),
                           subtitle: Text([
-                            '@${t.profile.handle} · ${t.followers} abonné${t.followers > 1 ? 's' : ''}',
+                            trf('@{0} · {1} abonné{2}', [
+                              t.profile.handle,
+                              t.followers,
+                              t.followers > 1 ? 's' : ''
+                            ]),
                             t.settled30d == 0
-                                ? 'aucun coupon réglé sur 30 jours'
-                                : '${t.settled30d} réglé${t.settled30d > 1 ? 's' : ''} sur 30 j'
-                                    '${t.stats30d.winRate != null && t.settled30d >= 10 ? ' · réussite ${pct(t.stats30d.winRate!)}' : ''}',
+                                ? tr('aucun coupon réglé sur 30 jours')
+                                : trf('{0} réglé{1} sur 30 j{2}', [
+                                    t.settled30d,
+                                    t.settled30d > 1 ? 's' : '',
+                                    t.stats30d.winRate != null &&
+                                            t.settled30d >= 10
+                                        ? trf(' · réussite {0}',
+                                            [pct(t.stats30d.winRate!)])
+                                        : ''
+                                  ]),
                           ].join('\n')),
                           isThreeLine: true,
                           trailing: t.iFollow

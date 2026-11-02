@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Filtre d'historique : résultat (tout, gagnés, perdus, en cours) et période (7 j, 30 j, tout).
 /// Les pertes ne sont jamais masquées par défaut.
@@ -52,19 +53,19 @@ class HistoryFilterBar extends StatelessWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          for (final (r, label) in const [
-            (ResultFilter.all, 'Tout'),
-            (ResultFilter.won, 'Gagnés'),
-            (ResultFilter.lost, 'Perdus'),
-            (ResultFilter.pending, 'En cours'),
+          for (final (r, label) in [
+            (ResultFilter.all, tr('Tout')),
+            (ResultFilter.won, tr('Gagnés')),
+            (ResultFilter.lost, tr('Perdus')),
+            (ResultFilter.pending, tr('En cours')),
           ])
             chip(label, value.result == r,
                 () => onChanged(value.copyWith(result: r))),
           const VerticalDivider(width: 16, indent: 10, endIndent: 10),
-          for (final (d, label) in const [
-            (7, '7 j'),
-            (30, '30 j'),
-            (null, 'Tout')
+          for (final (d, label) in [
+            (7, tr('7 j')),
+            (30, tr('30 j')),
+            (null, tr('Tout'))
           ])
             chip(label, value.days == d,
                 () => onChanged(value.copyWith(days: () => d))),

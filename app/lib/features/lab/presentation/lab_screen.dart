@@ -15,6 +15,7 @@ import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../../help/help_screens.dart';
 import '../data/lab_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Laboratoire IA : générateur manuel, puis analyse, optimisation, simulation et comparaison
 /// de vos coupons. Tout est recalculé par le serveur ; les simulations sont signalées comme telles.
@@ -81,7 +82,8 @@ class _LabScreenState extends ConsumerState<LabScreen> {
           _couponId = id;
           _clearResults();
         });
-        showMessage(context, 'Coupon vérifié et enregistré dans Mes coupons.');
+        showMessage(
+            context, tr('Coupon vérifié et enregistré dans Mes coupons.'));
       });
 
   Future<void> _apply(UserCoupon coupon, Alternative a) => _run(() async {
@@ -102,7 +104,7 @@ class _LabScreenState extends ConsumerState<LabScreen> {
           _clearResults();
         });
         showMessage(context,
-            'Nouvelle version enregistrée (l’originale est conservée).');
+            tr('Nouvelle version enregistrée (l’originale est conservée).'));
       });
 
   @override
@@ -115,11 +117,11 @@ class _LabScreenState extends ConsumerState<LabScreen> {
         appBar: widget.embedded
             ? null
             : AppBar(
-                title: const Text('Laboratoire IA'),
+                title: Text(tr('Laboratoire IA')),
                 actions: const [HelpButton('laboratoire')]),
-        body: const InfoMessage(
+        body: InfoMessage(
             icon: Icons.pause_circle_outline,
-            title: 'Laboratoire momentanément indisponible'),
+            title: tr('Laboratoire momentanément indisponible')),
       );
     }
     final picks = ref.watch(manualCouponProvider);
@@ -134,12 +136,12 @@ class _LabScreenState extends ConsumerState<LabScreen> {
 
     return Scaffold(
       appBar:
-          widget.embedded ? null : AppBar(title: const Text('Laboratoire IA')),
+          widget.embedded ? null : AppBar(title: Text(tr('Laboratoire IA'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
           if (_busy) const LinearProgressIndicator(),
-          const SectionTitle('Générateur manuel'),
+          SectionTitle(tr('Générateur manuel')),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -148,7 +150,7 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                 children: [
                   if (picks.isEmpty)
                     Text(
-                      'Ouvrez un match (onglet Matchs) et touchez une cote pour l’ajouter. Une sélection par match.',
+                      tr('Ouvrez un match (onglet Matchs) et touchez une cote pour l’ajouter. Une sélection par match.'),
                       style: theme.textTheme.bodyMedium,
                     )
                   else ...[
@@ -164,7 +166,7 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                             Text(decimal(p.odd),
                                 style: theme.textTheme.titleSmall),
                             IconButton(
-                              tooltip: 'Retirer',
+                              tooltip: tr('Retirer'),
                               icon: const Icon(Icons.close),
                               onPressed: () => ref
                                   .read(manualCouponProvider.notifier)
@@ -174,10 +176,12 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                         ),
                       ),
                     const Divider(),
-                    Text('Cote indicative : ${decimal(indicativeOdd(picks))}',
+                    Text(
+                        trf('Cote indicative : {0}',
+                            [decimal(indicativeOdd(picks))]),
                         style: theme.textTheme.titleMedium),
                     Text(
-                        'Le serveur relit les cotes, vérifie chaque match et recalcule tout à l’enregistrement.',
+                        tr('Le serveur relit les cotes, vérifie chaque match et recalcule tout à l’enregistrement.'),
                         style: muted),
                     const SizedBox(height: 10),
                     Align(
@@ -190,12 +194,12 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                         TextButton(
                             onPressed: () =>
                                 ref.read(manualCouponProvider.notifier).clear(),
-                            child: const Text('Vider')),
+                            child: Text(tr('Vider'))),
                         const Spacer(),
                         FilledButton.icon(
                           onPressed: _busy ? null : () => _saveManual(picks),
                           icon: const Icon(Icons.verified_outlined),
-                          label: const Text('Vérifier et enregistrer'),
+                          label: Text(tr('Vérifier et enregistrer')),
                         ),
                       ],
                     ),
@@ -204,14 +208,13 @@ class _LabScreenState extends ConsumerState<LabScreen> {
               ),
             ),
           ),
-          const SectionTitle('Analyser un de mes coupons'),
+          SectionTitle(tr('Analyser un de mes coupons')),
           if (cost > 0)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
-                  'Composition manuelle gratuite. Avec le forfait FREE, chaque calcul '
-                  '(analyser, optimiser, simuler, comparer) coûte ${creditsLabel(cost)} ; '
-                  'gratuit avec un forfait payant.',
+                  trf('Composition manuelle gratuite. Avec le forfait FREE, chaque calcul (analyser, optimiser, simuler, comparer) coûte {0} ; gratuit avec un forfait payant.',
+                      [creditsLabel(cost)]),
                   style: muted),
             ),
           saved.when(
@@ -220,7 +223,7 @@ class _LabScreenState extends ConsumerState<LabScreen> {
             data: (list) {
               if (list.isEmpty) {
                 return Text(
-                    'Enregistrez d’abord un coupon (assistant ou générateur manuel).',
+                    tr('Enregistrez d’abord un coupon (assistant ou générateur manuel).'),
                     style: theme.textTheme.bodyMedium);
               }
               final current = list.where((c) => c.id == _couponId).firstOrNull;
@@ -231,8 +234,8 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                     key: ValueKey(current?.id),
                     initialValue: current?.id,
                     isExpanded: true,
-                    decoration: const InputDecoration(
-                        labelText: 'Coupon',
+                    decoration: InputDecoration(
+                        labelText: tr('Coupon'),
                         border: OutlineInputBorder(),
                         isDense: true),
                     items: [
@@ -263,7 +266,7 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                                     if (mounted) setState(() => _diagnosis = d);
                                   }, priced: true),
                           icon: const Icon(Icons.manage_search),
-                          label: Text(withCost('Analyser')),
+                          label: Text(withCost(tr('Analyser'))),
                         ),
                         OutlinedButton.icon(
                           onPressed: _busy
@@ -277,7 +280,7 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                                     }
                                   }, priced: true),
                           icon: const Icon(Icons.tune),
-                          label: Text(withCost('Optimiser')),
+                          label: Text(withCost(tr('Optimiser'))),
                         ),
                         OutlinedButton.icon(
                           onPressed: _busy
@@ -291,12 +294,12 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                                     }
                                   }, priced: true),
                           icon: const Icon(Icons.casino_outlined),
-                          label: Text(withCost('Simuler')),
+                          label: Text(withCost(tr('Simuler'))),
                         ),
                         TextButton(
                             onPressed: () =>
                                 context.push(AppRoutes.myCouponFor(current.id)),
-                            child: const Text('Détail')),
+                            child: Text(tr('Détail'))),
                       ],
                     ),
                     if (_diagnosis != null)
@@ -313,10 +316,10 @@ class _LabScreenState extends ConsumerState<LabScreen> {
               );
             },
           ),
-          const SectionTitle('Comparer des coupons'),
+          SectionTitle(tr('Comparer des coupons')),
           saved.maybeWhen(
             data: (list) => list.length < 2
-                ? Text('Il faut au moins deux coupons enregistrés.',
+                ? Text(tr('Il faut au moins deux coupons enregistrés.'),
                     style: theme.textTheme.bodyMedium)
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -345,8 +348,8 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                                       .compare(_compareIds.toList());
                                   if (mounted) setState(() => _comparison = r);
                                 }, priced: true),
-                        child: Text(
-                            withCost('Comparer (${_compareIds.length}/3)')),
+                        child: Text(withCost(
+                            trf('Comparer ({0}/3)', [_compareIds.length]))),
                       ),
                       if (_comparison != null)
                         _ComparisonView(rows: _comparison!),
@@ -394,14 +397,21 @@ class _DiagnosisView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Cote ${decimal((diagnosis['total_odd'] as num).toDouble())} · probabilité estimée '
-              '${pct((diagnosis['combined_probability'] as num).toDouble())}'
-              '${diagnosis['implied_probability'] == null ? '' : ' (marché ${pct((diagnosis['implied_probability'] as num).toDouble())})'}',
+              trf('Cote {0} · probabilité estimée {1}{2}', [
+                decimal((diagnosis['total_odd'] as num).toDouble()),
+                pct((diagnosis['combined_probability'] as num).toDouble()),
+                diagnosis['implied_probability'] == null
+                    ? ''
+                    : trf(' (marché {0})', [
+                        pct((diagnosis['implied_probability'] as num)
+                            .toDouble())
+                      ])
+              ]),
               style: theme.textTheme.titleSmall,
             ),
-            section('Sélections les plus fragiles', list('fragiles')),
-            section('À vérifier', list('alertes')),
-            section('Qualité des données', list('qualite')),
+            section(tr('Sélections les plus fragiles'), list('fragiles')),
+            section(tr('À vérifier'), list('alertes')),
+            section(tr('Qualité des données'), list('qualite')),
           ],
         ),
       ),
@@ -421,10 +431,10 @@ class _AlternativesView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     if (alternatives.isEmpty) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.only(top: 10),
-        child: Text(
-            'Aucune alternative plus probable selon le modèle pour les sélections les plus fragiles.'),
+        child: Text(tr(
+            'Aucune alternative plus probable selon le modèle pour les sélections les plus fragiles.')),
       );
     }
     return Card(
@@ -434,20 +444,28 @@ class _AlternativesView extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-            child: Text('Alternatives plus probables selon le modèle',
+            child: Text(tr('Alternatives plus probables selon le modèle'),
                 style: theme.textTheme.labelLarge),
           ),
           for (final a in alternatives)
             ListTile(
               title: Text('${a.selection} (${a.match})'),
               subtitle: Text(
-                'Remplace n° ${a.replacePosition} : ${a.replaced}\n'
-                'Cote ${decimal(a.odd)} · modèle ${pct(a.modelProbability)} → coupon ${decimal(a.newTotalOdd)}, '
-                'probabilité ${pct(a.newCombinedProbability)}${a.sameMatch ? ' · même match' : ''}',
+                trf(
+                    'Remplace n° {0} : {1}\nCote {2} · modèle {3} → coupon {4}, probabilité {5}{6}',
+                    [
+                      a.replacePosition,
+                      a.replaced,
+                      decimal(a.odd),
+                      pct(a.modelProbability),
+                      decimal(a.newTotalOdd),
+                      pct(a.newCombinedProbability),
+                      a.sameMatch ? tr(' · même match') : ''
+                    ]),
               ),
               isThreeLine: true,
               trailing: IconButton(
-                tooltip: 'Créer cette version',
+                tooltip: tr('Créer cette version'),
                 onPressed: busy ? null : () => onApply(a),
                 icon: const Icon(Icons.call_split),
               ),
@@ -455,7 +473,7 @@ class _AlternativesView extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
             child: Text(
-                'Appliquer crée une nouvelle version vérifiée par le serveur ; l’originale est conservée.',
+                tr('Appliquer crée une nouvelle version vérifiée par le serveur ; l’originale est conservée.'),
                 style: theme.textTheme.bodySmall),
           ),
         ],
@@ -495,12 +513,14 @@ class _SimulationView extends StatelessWidget {
             Text(s.label, style: theme.textTheme.bodySmall),
             const SizedBox(height: 10),
             Text(
-                'Probabilité que toutes les sélections passent (modèle) : ${pct(s.probabilityAllCorrect)}',
+                trf('Probabilité que toutes les sélections passent (modèle) : {0}',
+                    [pct(s.probabilityAllCorrect)]),
                 style: theme.textTheme.titleSmall),
-            Text(
-                'Sur ${s.runs} coupons simulés : ${s.simulatedWins} gagnants (fourchette attendue ${s.winsLow} à ${s.winsHigh}).'),
-            Text(
-                'Sélections justes en moyenne : ${decimal(s.expectedCorrect)} sur $n.'),
+            Text(trf(
+                'Sur {0} coupons simulés : {1} gagnants (fourchette attendue {2} à {3}).',
+                [s.runs, s.simulatedWins, s.winsLow, s.winsHigh])),
+            Text(trf('Sélections justes en moyenne : {0} sur {1}.',
+                [decimal(s.expectedCorrect), n])),
             const SizedBox(height: 8),
             for (var k = n; k >= 0; k--)
               Padding(
@@ -509,7 +529,9 @@ class _SimulationView extends StatelessWidget {
                   children: [
                     SizedBox(
                         width: 110,
-                        child: Text('$k juste${k > 1 ? 's' : ''} sur $n',
+                        child: Text(
+                            trf('{0} juste{1} sur {2}',
+                                [k, k > 1 ? 's' : '', n]),
                             style: theme.textTheme.bodySmall)),
                     Expanded(
                       child: LinearProgressIndicator(
@@ -528,8 +550,8 @@ class _SimulationView extends StatelessWidget {
               ),
             const SizedBox(height: 8),
             Text(
-              'Selon le modèle, pour 1 misé sur ce coupon, retour moyen estimé : ${decimal(s.modelReturnPerUnit)} '
-              '(en dessous de 1, le coupon perd en moyenne). Estimation, pas une promesse.',
+              trf('Selon le modèle, pour 1 misé sur ce coupon, retour moyen estimé : {0} (en dessous de 1, le coupon perd en moyenne). Estimation, pas une promesse.',
+                  [decimal(s.modelReturnPerUnit)]),
               style: theme.textTheme.bodySmall,
             ),
           ],
@@ -563,22 +585,22 @@ class _ComparisonView extends StatelessWidget {
           columns: [
             const DataColumn(label: Text('')),
             for (var i = 0; i < rows.length; i++)
-              DataColumn(label: Text('Coupon ${i + 1}')),
+              DataColumn(label: Text(trf('Coupon {0}', [i + 1]))),
           ],
           rows: [
-            row('Sélections', (r) => '${r.selections}'),
-            row('Cote totale', (r) => decimal(r.totalOdd)),
-            row('Probabilité (modèle)', (r) => pct(r.combinedProbability)),
+            row(tr('Sélections'), (r) => '${r.selections}'),
+            row(tr('Cote totale'), (r) => decimal(r.totalOdd)),
+            row(tr('Probabilité (modèle)'), (r) => pct(r.combinedProbability)),
             row(
-                'Probabilité (marché)',
+                tr('Probabilité (marché)'),
                 (r) => r.impliedProbability == null
                     ? '—'
                     : pct(r.impliedProbability!)),
-            row('Compétitions', (r) => '${r.competitions}'),
-            row('Paires liées', (r) => '${r.correlatedPairs}'),
-            row('Fiabilité faible', (r) => '${r.lowReliability}'),
-            row('Marchés non validés', (r) => '${r.unvalidatedMarkets}'),
-            row('Plus fragile', (r) => r.weakest ?? '—'),
+            row(tr('Compétitions'), (r) => '${r.competitions}'),
+            row(tr('Paires liées'), (r) => '${r.correlatedPairs}'),
+            row(tr('Fiabilité faible'), (r) => '${r.lowReliability}'),
+            row(tr('Marchés non validés'), (r) => '${r.unvalidatedMarkets}'),
+            row(tr('Plus fragile'), (r) => r.weakest ?? '—'),
           ],
         ),
       ),

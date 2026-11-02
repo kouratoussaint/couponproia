@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers.dart';
 import 'assistant_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 const _userCouponColumns =
     'id, status, title, total_odd, combined_probability, implied_probability, risk_level, '
@@ -60,11 +61,12 @@ class AssistantRepository {
     } on FunctionException catch (e) {
       final body = e.details is Map ? e.details as Map : const {};
       throw AssistantException(switch (body['error']) {
-        'daily_limit' =>
-          'Limite de ${body['limit']} messages par jour atteinte. Revenez demain.',
-        'feature_disabled' => 'L’assistant est momentanément désactivé.',
-        'unauthorized' => 'Session expirée : reconnectez-vous.',
-        _ => 'L’assistant n’a pas pu répondre. Réessayez dans un instant.',
+        'daily_limit' => trf(
+            'Limite de {0} messages par jour atteinte. Revenez demain.',
+            [body['limit']]),
+        'feature_disabled' => tr('L’assistant est momentanément désactivé.'),
+        'unauthorized' => tr('Session expirée : reconnectez-vous.'),
+        _ => tr('L’assistant n’a pas pu répondre. Réessayez dans un instant.'),
       });
     }
   }

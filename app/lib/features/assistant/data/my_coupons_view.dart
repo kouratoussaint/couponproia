@@ -1,6 +1,7 @@
 // Mes coupons : présentation (fonctions pures, testées unitairement).
 import '../../matches/data/sports_format.dart';
 import 'assistant_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 enum CouponOrigin { assistant, manual, optimized }
 
@@ -11,12 +12,12 @@ CouponOrigin originOf(UserCoupon c) {
 }
 
 String originLabel(CouponOrigin o) => switch (o) {
-      CouponOrigin.assistant => 'Coupon de l’assistant',
-      CouponOrigin.manual => 'Coupon manuel',
-      CouponOrigin.optimized => 'Version optimisée',
+      CouponOrigin.assistant => tr('Coupon de l’assistant'),
+      CouponOrigin.manual => tr('Coupon manuel'),
+      CouponOrigin.optimized => tr('Version optimisée'),
     };
 
-String selectionsLabel(int n) => '$n sélection${n > 1 ? 's' : ''}';
+String selectionsLabel(int n) => trf('{0} sélection{1}', [n, n > 1 ? 's' : '']);
 
 /// Anciens titres automatiques (« Mon coupon · 3 sélections · cote 3,66 »,
 /// « Coupon 3 sélections · cote 4,10 ») : remplacés par l'origine.
@@ -26,7 +27,7 @@ final _legacyTitle =
 /// Titre affiché : votre nom s'il a été choisi, sinon l'origine et le nombre de sélections.
 String displayTitle(UserCoupon c) => _legacyTitle.hasMatch(c.title.trim())
     ? '${originLabel(originOf(c))} · ${selectionsLabel(c.selections.length)}'
-    : c.title;
+    : trTitle(c.title);
 
 /// Équipes du coupon, deux matchs au plus puis « +N matchs ».
 String matchesLine(UserCoupon c, {int max = 2}) {
@@ -35,15 +36,20 @@ String matchesLine(UserCoupon c, {int max = 2}) {
   ];
   if (names.length <= max) return names.join(' · ');
   final rest = names.length - max;
-  return '${names.take(max).join(' · ')} · +$rest match${rest > 1 ? 's' : ''}';
+  return trf('{0} · +{1} match{2}',
+      [names.take(max).join(' · '), rest, rest > 1 ? 's' : '']);
 }
 
 /// « Créé le 01/11/2026 à 14:32 » puis, si décidé, « Payé le … » ou « Terminé le … ».
 String myCouponDateLine(UserCoupon c) {
-  final parts = ['Créé le ${dateTimeLabel(c.createdAt)}'];
+  final parts = [
+    trf('Créé le {0}', [dateTimeLabel(c.createdAt)])
+  ];
   if (c.result != null && c.settledAt != null) {
-    parts.add(
-        '${c.result == 'won' ? 'Payé' : 'Terminé'} le ${dateTimeLabel(c.settledAt!)}');
+    parts.add(trf('{0} le {1}', [
+      c.result == 'won' ? tr('Payé') : tr('Terminé'),
+      dateTimeLabel(c.settledAt!)
+    ]));
   }
   return parts.join(' · ');
 }

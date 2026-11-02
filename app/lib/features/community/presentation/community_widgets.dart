@@ -9,6 +9,7 @@ import '../../analysis/data/analysis_format.dart';
 import '../../matches/data/sports_format.dart';
 import '../data/community_models.dart';
 import '../data/community_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 class TipsterAvatar extends ConsumerWidget {
   const TipsterAvatar({super.key, required this.profile, this.radius = 20});
@@ -55,12 +56,12 @@ class PostResultBadge extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final (label, color) = switch (result) {
       'won' => (
-          'Gagné${odd != null ? ' · ${decimal(odd!)}' : ''}',
+          trf('Gagné{0}', [odd != null ? ' · ${decimal(odd!)}' : '']),
           BrandColors.vertIA
         ),
-      'lost' => ('Perdu', BrandColors.rouge),
-      'void' => ('Annulé', scheme.onSurfaceVariant),
-      _ => ('En cours', BrandColors.orange),
+      'lost' => (tr('Perdu'), BrandColors.rouge),
+      'void' => (tr('Annulé'), scheme.onSurfaceVariant),
+      _ => (tr('En cours'), BrandColors.orange),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -101,7 +102,7 @@ class _CouponBlock extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                  child: Text(coupon.title,
+                  child: Text(trTitle(coupon.title),
                       style: theme.textTheme.titleSmall
                           ?.copyWith(fontWeight: FontWeight.w700))),
               PostResultBadge(result: coupon.result, odd: coupon.settledOdd),
@@ -155,13 +156,14 @@ class _CouponBlock extends StatelessWidget {
           const Divider(height: 14),
           Row(
             children: [
-              Text('Cote ${decimal(coupon.totalOdd)}',
+              Text(trf('Cote {0}', [decimal(coupon.totalOdd)]),
                   style: theme.textTheme.titleMedium?.copyWith(
                       color: scheme.primary, fontWeight: FontWeight.w800)),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                    'Estimation du modèle ${pct(coupon.combinedProbability)}',
+                    trf('Estimation du modèle {0}',
+                        [pct(coupon.combinedProbability)]),
                     textAlign: TextAlign.end,
                     style: theme.textTheme.bodySmall),
               ),
@@ -231,7 +233,7 @@ class PostCard extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 6, right: 8),
                   child: Text(
-                      'Masquée par la modération : visible par vous seul.',
+                      tr('Masquée par la modération : visible par vous seul.'),
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: BrandColors.orange)),
                 ),
@@ -276,7 +278,7 @@ class PostCard extends ConsumerWidget {
                   if (post.isCoupon && post.coupon != null)
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
-                      child: Text('Publié avant le coup d’envoi',
+                      child: Text(tr('Publié avant le coup d’envoi'),
                           style: theme.textTheme.labelSmall
                               ?.copyWith(color: scheme.onSurfaceVariant)),
                     ),
@@ -299,7 +301,7 @@ class PostMenu extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return PopupMenuButton<String>(
-      tooltip: 'Options',
+      tooltip: tr('Options'),
       onSelected: (action) async {
         final repo = ref.read(communityRepositoryProvider);
         try {
@@ -310,15 +312,15 @@ class PostMenu extends ConsumerWidget {
               if (await confirmBlock(context, post.author.displayName)) {
                 await repo.block(post.author.userId);
                 if (context.mounted) {
-                  showMessage(
-                      context, '${post.author.displayName} est bloqué.');
+                  showMessage(context,
+                      trf('{0} est bloqué.', [post.author.displayName]));
                 }
                 onChanged?.call();
               }
             case 'delete':
               await repo.deletePost(post.id);
               if (context.mounted) {
-                showMessage(context, 'Publication supprimée.');
+                showMessage(context, tr('Publication supprimée.'));
               }
               onChanged?.call();
           }
@@ -330,17 +332,18 @@ class PostMenu extends ConsumerWidget {
       },
       itemBuilder: (_) => [
         if (post.isMine && !post.isCoupon)
-          const PopupMenuItem(value: 'delete', child: Text('Supprimer')),
+          PopupMenuItem(value: 'delete', child: Text(tr('Supprimer'))),
         if (!post.isMine)
-          const PopupMenuItem(value: 'report', child: Text('Signaler')),
+          PopupMenuItem(value: 'report', child: Text(tr('Signaler'))),
         if (!post.isMine)
           PopupMenuItem(
               value: 'block',
-              child: Text('Bloquer ${post.author.displayName}')),
+              child: Text(trf('Bloquer {0}', [post.author.displayName]))),
         if (post.isMine && post.isCoupon)
-          const PopupMenuItem(
+          PopupMenuItem(
               enabled: false,
-              child: Text('Un coupon publié reste visible, pertes comprises')),
+              child:
+                  Text(tr('Un coupon publié reste visible, pertes comprises'))),
       ],
     );
   }
@@ -350,17 +353,16 @@ Future<bool> confirmBlock(BuildContext context, String name) async =>
     await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: Text('Bloquer $name ?'),
-        content: const Text(
-            'Vous ne verrez plus ses publications ni ses commentaires, et il ne pourra plus '
-            'commenter les vôtres. Vous pourrez le débloquer depuis votre profil.'),
+        title: Text(trf('Bloquer {0} ?', [name])),
+        content: Text(tr(
+            'Vous ne verrez plus ses publications ni ses commentaires, et il ne pourra plus commenter les vôtres. Vous pourrez le débloquer depuis votre profil.')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
-              child: const Text('Annuler')),
+              child: Text(tr('Annuler'))),
           FilledButton(
               onPressed: () => Navigator.pop(c, true),
-              child: const Text('Bloquer')),
+              child: Text(tr('Bloquer'))),
         ],
       ),
     ) ??
@@ -382,7 +384,7 @@ Future<void> showReportSheet(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Signaler', style: Theme.of(c).textTheme.titleLarge),
+            Text(tr('Signaler'), style: Theme.of(c).textTheme.titleLarge),
             const SizedBox(height: 8),
             RadioGroup<String>(
               groupValue: reason,
@@ -402,12 +404,12 @@ Future<void> showReportSheet(
               maxLength: 500,
               maxLines: 2,
               decoration:
-                  const InputDecoration(labelText: 'Précisions (facultatif)'),
+                  InputDecoration(labelText: tr('Précisions (facultatif)')),
             ),
             const SizedBox(height: 8),
             FilledButton(
                 onPressed: () => Navigator.pop(c, true),
-                child: const Text('Envoyer le signalement')),
+                child: Text(tr('Envoyer le signalement'))),
           ],
         ),
       ),
@@ -420,7 +422,7 @@ Future<void> showReportSheet(
         .report(type, id, reason, details.text);
     if (context.mounted) {
       showMessage(context,
-          'Merci : l’équipe de modération va examiner ce signalement.');
+          tr('Merci : l’équipe de modération va examiner ce signalement.'));
     }
   } catch (e) {
     if (context.mounted) {
@@ -462,23 +464,28 @@ class TipsterStatsCard extends StatelessWidget {
                     ?.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 8),
             Row(children: [
-              tile('publiés', '${n.published}'),
-              tile('gagnés', '${n.won}'),
-              tile('perdus', '${n.lost}'),
-              tile('en cours', '${n.pending}'),
+              tile(tr('publiés'), '${n.published}'),
+              tile(tr('gagnés'), '${n.won}'),
+              tile(tr('perdus'), '${n.lost}'),
+              tile(tr('en cours'), '${n.pending}'),
             ]),
             const SizedBox(height: 8),
             Text(
               stats.rateShown(n)
                   ? [
-                      'Réussite ${pct(n.winRate ?? 0)} sur ${n.settled} coupons réglés',
+                      trf('Réussite {0} sur {1} coupons réglés',
+                          [pct(n.winRate ?? 0), n.settled]),
                       if (n.averageOdd != null)
-                        'cote moyenne ${decimal(n.averageOdd!)}',
+                        trf('cote moyenne {0}', [decimal(n.averageOdd!)]),
                       if (n.theoreticalReturn != null)
-                        'rendement ${n.theoreticalReturn! >= 0 ? '+' : ''}${pct(n.theoreticalReturn!)}',
+                        trf('rendement {0}{1}', [
+                          n.theoreticalReturn! >= 0 ? '+' : '',
+                          pct(n.theoreticalReturn!)
+                        ]),
                     ].join(' · ')
-                  : 'Taux de réussite affiché à partir de ${stats.minSettledForRate} coupons réglés '
-                      '(${n.settled} pour l’instant).',
+                  : trf(
+                      'Taux de réussite affiché à partir de {0} coupons réglés ({1} pour l’instant).',
+                      [stats.minSettledForRate, n.settled]),
               style: theme.textTheme.bodyMedium,
             ),
           ],
@@ -494,7 +501,7 @@ class TipsterStatsCard extends StatelessWidget {
                 Icon(Icons.verified_outlined, color: scheme.primary, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: Text('Statistiques vérifiées',
+                    child: Text(tr('Statistiques vérifiées'),
                         style: theme.textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w800))),
               ],
@@ -504,9 +511,9 @@ class TipsterStatsCard extends StatelessWidget {
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 14),
-            block('30 derniers jours', stats.last30Days),
+            block(tr('30 derniers jours'), stats.last30Days),
             const Divider(height: 28),
-            block('Depuis le début', stats.allTime),
+            block(tr('Depuis le début'), stats.allTime),
             if (stats.allTime.lastResults.isNotEmpty) ...[
               const SizedBox(height: 12),
               Wrap(
@@ -545,7 +552,8 @@ class TipsterStatsCard extends StatelessWidget {
             ],
             const SizedBox(height: 10),
             Text(
-                '${stats.stakeNote}. Les résultats passés ne garantissent pas les résultats futurs.',
+                trf('{0}. Les résultats passés ne garantissent pas les résultats futurs.',
+                    [stats.stakeNote]),
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: scheme.onSurfaceVariant)),
           ],
@@ -569,8 +577,8 @@ class PublishedBadge extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              'Publié sur votre profil Tipster le ${shortDate(publishedAt)} à ${timeLabel(publishedAt)} : '
-              'il ne peut plus être modifié ni supprimé.',
+              trf('Publié sur votre profil Tipster le {0} à {1} : il ne peut plus être modifié ni supprimé.',
+                  [shortDate(publishedAt), timeLabel(publishedAt)]),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),

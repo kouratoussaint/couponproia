@@ -13,6 +13,7 @@ import '../../matches/data/sports_models.dart';
 import '../../matches/data/sports_repository.dart';
 import '../../system/system_providers.dart';
 import '../data/analysis_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Forfait payant, crédits suffisants ou compte de l'équipe : même règle que le serveur.
 bool canAnalyzeWith(Credits? c, {int cost = 1}) =>
@@ -43,7 +44,7 @@ final analysisChargeProvider =
 
 /// « Analyser » ou « Analyser · 1 crédit ».
 String analyzeLabel(int cost) =>
-    cost > 0 ? 'Analyser · ${creditsLabel(cost)}' : 'Analyser';
+    cost > 0 ? trf('Analyser · {0}', [creditsLabel(cost)]) : tr('Analyser');
 
 /// Matchs d'un jour qui ont déjà une analyse (une seule requête par jour affiché).
 final analyzedOfDayProvider =
@@ -86,14 +87,13 @@ Future<void> showAnalysisLocked(BuildContext context) =>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Analyse réservée', style: Theme.of(c).textTheme.titleLarge),
+              Text(tr('Analyse réservée'),
+                  style: Theme.of(c).textTheme.titleLarge),
               const SizedBox(height: 8),
               Consumer(
-                builder: (_, ref, __) => Text(
-                    'Une analyse s’obtient avec un forfait payant, ou avec '
-                    '${creditsLabel(ref.watch(analysisCostProvider))} IA au forfait FREE : '
-                    'un pack de crédits suffit, sans abonnement. Une fois obtenue, l’analyse reste '
-                    'consultable par vous seul ; l’analyse offerte du jour reste gratuite pour tous.'),
+                builder: (_, ref, __) => Text(trf(
+                    'Une analyse s’obtient avec un forfait payant, ou avec {0} IA au forfait FREE : un pack de crédits suffit, sans abonnement. Une fois obtenue, l’analyse reste consultable par vous seul ; l’analyse offerte du jour reste gratuite pour tous.',
+                    [creditsLabel(ref.watch(analysisCostProvider))])),
               ),
               const SizedBox(height: 16),
               FilledButton(
@@ -101,14 +101,14 @@ Future<void> showAnalysisLocked(BuildContext context) =>
                   Navigator.pop(c);
                   context.push(AppRoutes.billing);
                 },
-                child: const Text('Voir les forfaits et les crédits'),
+                child: Text(tr('Voir les forfaits et les crédits')),
               ),
               TextButton(
                 onPressed: () {
                   Navigator.pop(c);
                   context.push(AppRoutes.helpArticleFor('analyser'));
                 },
-                child: const Text('Comment fonctionnent les analyses ?'),
+                child: Text(tr('Comment fonctionnent les analyses ?')),
               ),
             ],
           ),
@@ -134,7 +134,7 @@ class AnalyzeMatchButton extends ConsumerWidget {
       void open() => context.push(AppRoutes.matchDetailFor(match.id));
       if (compact) {
         return IconButton.filled(
-          tooltip: 'Voir l’analyse',
+          tooltip: tr('Voir l’analyse'),
           visualDensity: VisualDensity.compact,
           style: solidIconButtonStyle(context, SolidTone.orange),
           onPressed: open,
@@ -145,7 +145,7 @@ class AnalyzeMatchButton extends ConsumerWidget {
         style: solidButtonStyle(context, SolidTone.orange, compact: true),
         onPressed: open,
         icon: const Icon(Icons.visibility_outlined, size: 16),
-        label: const Text('Voir l’analyse'),
+        label: Text(tr('Voir l’analyse')),
       );
     }
     if (match.status != MatchStatus.scheduled) return const SizedBox.shrink();
@@ -165,8 +165,10 @@ class AnalyzeMatchButton extends ConsumerWidget {
     if (compact) {
       final button = IconButton.filled(
         tooltip: allowed
-            ? (cost > 0 ? 'Analyser (${creditsLabel(cost)})' : 'Analyser')
-            : 'Analyse réservée : forfait payant ou crédits',
+            ? (cost > 0
+                ? trf('Analyser ({0})', [creditsLabel(cost)])
+                : tr('Analyser'))
+            : tr('Analyse réservée : forfait payant ou crédits'),
         visualDensity: VisualDensity.compact,
         style: solidIconButtonStyle(context, tone),
         onPressed: go,
@@ -183,7 +185,7 @@ class AnalyzeMatchButton extends ConsumerWidget {
         style: solidButtonStyle(context, tone, compact: true),
         onPressed: go,
         icon: Icon(icon, size: 16),
-        label: Text(allowed ? analyzeLabel(cost) : 'Analyser'),
+        label: Text(allowed ? analyzeLabel(cost) : tr('Analyser')),
       ),
     );
   }

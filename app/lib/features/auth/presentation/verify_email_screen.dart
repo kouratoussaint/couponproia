@@ -8,6 +8,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/validators.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../data/auth_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 class VerifyEmailScreen extends ConsumerStatefulWidget {
   const VerifyEmailScreen({super.key, required this.email});
@@ -50,7 +51,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     try {
       await ref.read(authRepositoryProvider).resendSignUpCode(widget.email);
       if (mounted) {
-        showMessage(context, 'Nouveau code envoyé à ${widget.email}.');
+        showMessage(context, trf('Nouveau code envoyé à {0}.', [widget.email]));
       }
     } catch (e) {
       if (mounted) showMessage(context, userMessageFor(e), error: true);
@@ -63,11 +64,12 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   Widget build(BuildContext context) {
     final missingEmail = widget.email.isEmpty;
     return AuthScaffold(
-      title: 'Confirmez votre adresse e-mail',
+      title: tr('Confirmez votre adresse e-mail'),
       subtitle: missingEmail
-          ? 'Adresse inconnue : recommencez depuis la connexion.'
-          : 'Saisissez le code à 6 chiffres envoyé à ${widget.email} (pensez aux spams). '
-              'Si l’e-mail contient un lien au lieu d’un code, ouvrez-le, puis revenez vous connecter.',
+          ? tr('Adresse inconnue : recommencez depuis la connexion.')
+          : trf(
+              'Saisissez le code à 6 chiffres envoyé à {0} (pensez aux spams). Si l’e-mail contient un lien au lieu d’un code, ouvrez-le, puis revenez vous connecter.',
+              [widget.email]),
       child: Form(
         key: _formKey,
         child: Column(
@@ -89,22 +91,22 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                   .headlineSmall
                   ?.copyWith(letterSpacing: 8),
               decoration:
-                  const InputDecoration(labelText: 'Code de confirmation'),
+                  InputDecoration(labelText: tr('Code de confirmation')),
               onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 24),
             BusyButton(
-                label: 'Confirmer',
+                label: tr('Confirmer'),
                 busy: _busy,
                 onPressed: missingEmail ? null : _submit),
             const SizedBox(height: 12),
             TextButton(
               onPressed: missingEmail || _resending ? null : _resend,
-              child: Text(_resending ? 'Envoi…' : 'Renvoyer le code'),
+              child: Text(_resending ? tr('Envoi…') : tr('Renvoyer le code')),
             ),
             OutlinedButton(
               onPressed: () => context.go(AppRoutes.signIn),
-              child: const Text('J’ai confirmé par le lien : me connecter'),
+              child: Text(tr('J’ai confirmé par le lien : me connecter')),
             ),
           ],
         ),

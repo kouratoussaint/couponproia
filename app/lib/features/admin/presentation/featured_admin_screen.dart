@@ -11,6 +11,7 @@ import '../../matches/data/sports_repository.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/admin_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Match offert d'un jour : identifiant, heure du choix, choisi par l'équipe ou automatiquement.
 typedef FeaturedChoice = ({int matchId, DateTime chosenAt, bool manual});
@@ -71,8 +72,15 @@ class _FeaturedAdminScreenState extends ConsumerState<FeaturedAdminScreen> {
       ref.invalidate(featuredChoiceProvider(_day));
       ref.invalidate(featuredMatchProvider);
       if (mounted) {
-        showMessage(context,
-            '${m.home.name} – ${m.away.name} : analyse offerte ${_tomorrow ? 'demain' : 'aujourd’hui'}. Elle sera préparée dans les 15 minutes.');
+        showMessage(
+            context,
+            trf(
+                '{0} – {1} : analyse offerte {2}. Elle sera préparée dans les 15 minutes.',
+                [
+                  m.home.name,
+                  m.away.name,
+                  _tomorrow ? 'demain' : tr('aujourd’hui')
+                ]));
       }
     } catch (e) {
       if (mounted) showMessage(context, adminErrorMessage(e), error: true);
@@ -87,7 +95,7 @@ class _FeaturedAdminScreenState extends ConsumerState<FeaturedAdminScreen> {
           .read(adminRepositoryProvider)
           .setSetting('featured.auto_pick_hour', h);
       ref.invalidate(featuredAutoHourProvider);
-      if (mounted) showMessage(context, 'Choix automatique à $h h.');
+      if (mounted) showMessage(context, trf('Choix automatique à {0} h.', [h]));
     } catch (e) {
       if (mounted) showMessage(context, adminErrorMessage(e), error: true);
     }
@@ -101,10 +109,10 @@ class _FeaturedAdminScreenState extends ConsumerState<FeaturedAdminScreen> {
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!perms.contains('featured.manage')) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Analyse offerte')),
-        body: const InfoMessage(
+        appBar: AppBar(title: Text(tr('Analyse offerte'))),
+        body: InfoMessage(
             icon: Icons.lock_outline,
-            title: 'Écran réservé au super administrateur'),
+            title: tr('Écran réservé au super administrateur')),
       );
     }
     final day = _day;
@@ -126,14 +134,14 @@ class _FeaturedAdminScreenState extends ConsumerState<FeaturedAdminScreen> {
         return p != 0 ? p : a.kickoffAt.compareTo(b.kickoffAt);
       });
     return Scaffold(
-      appBar: AppBar(title: const Text('Analyse offerte du jour')),
+      appBar: AppBar(title: Text(tr('Analyse offerte du jour'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
           SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(value: false, label: Text('Aujourd’hui')),
-              ButtonSegment(value: true, label: Text('Demain')),
+            segments: [
+              ButtonSegment(value: false, label: Text(tr('Aujourd’hui'))),
+              ButtonSegment(value: true, label: Text(tr('Demain'))),
             ],
             selected: {_tomorrow},
             onSelectionChanged: (s) => setState(() => _tomorrow = s.first),
@@ -154,10 +162,19 @@ class _FeaturedAdminScreenState extends ConsumerState<FeaturedAdminScreen> {
                   Expanded(
                     child: Text(
                       choice == null
-                          ? 'Aucun match choisi. Sans choix de votre part, l’application en choisira un à $hour h.'
-                          : '${chosen == null ? 'Match n° ${choice.matchId}' : '${chosen.home.name} – ${chosen.away.name}'}\n'
-                              '${choice.manual ? 'Choisi par l’équipe' : 'Choisi automatiquement'} le '
-                              '${shortDate(choice.chosenAt)} à ${timeLabel(choice.chosenAt)}.',
+                          ? trf(
+                              'Aucun match choisi. Sans choix de votre part, l’application en choisira un à {0} h.',
+                              [hour])
+                          : trf('{0}\n{1} le {2} à {3}.', [
+                              chosen == null
+                                  ? trf('Match n° {0}', [choice.matchId])
+                                  : '${chosen.home.name} – ${chosen.away.name}',
+                              choice.manual
+                                  ? tr('Choisi par l’équipe')
+                                  : tr('Choisi automatiquement'),
+                              shortDate(choice.chosenAt),
+                              timeLabel(choice.chosenAt)
+                            ]),
                       style: theme.textTheme.bodyMedium,
                     ),
                   ),
@@ -169,15 +186,16 @@ class _FeaturedAdminScreenState extends ConsumerState<FeaturedAdminScreen> {
           Card(
             child: ListTile(
               leading: const Icon(Icons.schedule),
-              title: const Text('Choix automatique'),
-              subtitle: Text(
-                  'Sans choix avant $hour h (heure locale), le match le plus suivi avec des cotes est retenu.'),
+              title: Text(tr('Choix automatique')),
+              subtitle: Text(trf(
+                  'Sans choix avant {0} h (heure locale), le match le plus suivi avec des cotes est retenu.',
+                  [hour])),
               trailing: DropdownButton<int>(
                 value: hour,
                 underline: const SizedBox.shrink(),
                 items: [
                   for (var h = 5; h <= 20; h++)
-                    DropdownMenuItem(value: h, child: Text('$h h')),
+                    DropdownMenuItem(value: h, child: Text(trf('{0} h', [h]))),
                 ],
                 onChanged: (h) {
                   if (h != null && h != hour) _setHour(h);
@@ -185,16 +203,16 @@ class _FeaturedAdminScreenState extends ConsumerState<FeaturedAdminScreen> {
               ),
             ),
           ),
-          const SectionTitle('Choisir le match'),
+          SectionTitle(tr('Choisir le match')),
           ...matches.when(
             loading: () => [const LinearProgressIndicator()],
             error: (e, _) => [Text(userMessageFor(e))],
             data: (_) => open.isEmpty
                 ? [
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.all(12),
-                      child: Text(
-                          'Aucun match programmé à plus de 30 minutes du coup d’envoi ce jour-là.'),
+                      child: Text(tr(
+                          'Aucun match programmé à plus de 30 minutes du coup d’envoi ce jour-là.')),
                     )
                   ]
                 : [
@@ -222,7 +240,7 @@ class _FeaturedAdminScreenState extends ConsumerState<FeaturedAdminScreen> {
                                           height: 16,
                                           child: CircularProgressIndicator(
                                               strokeWidth: 2))
-                                      : const Text('Choisir'),
+                                      : Text(tr('Choisir')),
                                 ),
                         ),
                       ),
@@ -230,8 +248,7 @@ class _FeaturedAdminScreenState extends ConsumerState<FeaturedAdminScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Le match offert reste modifiable tant qu’il n’a pas commencé. Son analyse est préparée '
-            'automatiquement et ouverte à tous, sans crédit.',
+            tr('Le match offert reste modifiable tant qu’il n’a pas commencé. Son analyse est préparée automatiquement et ouverte à tous, sans crédit.'),
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: scheme.onSurfaceVariant),
           ),

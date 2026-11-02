@@ -11,64 +11,64 @@ import '../../journal/data/journal_repository.dart';
 import '../../simulator/data/stake_math.dart';
 import '../../simulator/presentation/stake_simulator_sheet.dart';
 import '../../system/system_providers.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Jeu responsable : repères simples, sans jugement, et outils disponibles dans l'app.
 class ResponsibleGamingScreen extends StatelessWidget {
   const ResponsibleGamingScreen({super.key});
 
-  static const _tips = [
+  static final _tips = [
     (
-      'Fixez un budget',
-      'Décidez à l’avance d’une somme que vous pouvez perdre sans conséquence, et arrêtez-vous quand elle est atteinte.'
+      tr('Fixez un budget'),
+      tr('Décidez à l’avance d’une somme que vous pouvez perdre sans conséquence, et arrêtez-vous quand elle est atteinte.')
     ),
     (
-      'Ne courez pas après vos pertes',
-      'Augmenter les mises pour « se refaire » mène presque toujours à des pertes plus grandes.'
+      tr('Ne courez pas après vos pertes'),
+      tr('Augmenter les mises pour « se refaire » mène presque toujours à des pertes plus grandes.')
     ),
     (
-      'Pas d’argent nécessaire',
-      'Ne pariez jamais l’argent du loyer, de la nourriture, de l’école ou des dettes.'
+      tr('Pas d’argent nécessaire'),
+      tr('Ne pariez jamais l’argent du loyer, de la nourriture, de l’école ou des dettes.')
     ),
     (
-      'Faites des pauses',
-      'Le football reste un plaisir : prenez des jours sans paris.'
+      tr('Faites des pauses'),
+      tr('Le football reste un plaisir : prenez des jours sans paris.')
     ),
     (
-      'Gardez l’esprit critique',
-      'Nos chiffres sont des estimations. Un coupon peut perdre même quand l’analyse est juste.'
+      tr('Gardez l’esprit critique'),
+      tr('Nos chiffres sont des estimations. Un coupon peut perdre même quand l’analyse est juste.')
     ),
   ];
 
-  static const _signs = [
-    'Vous pariez plus que prévu, ou de plus en plus souvent.',
-    'Vous cachez vos paris à vos proches.',
-    'Vous empruntez ou vendez des biens pour parier.',
-    'Le jeu vous rend nerveux, irritable ou vous empêche de dormir.',
+  static final _signs = [
+    tr('Vous pariez plus que prévu, ou de plus en plus souvent.'),
+    tr('Vous cachez vos paris à vos proches.'),
+    tr('Vous empruntez ou vendez des biens pour parier.'),
+    tr('Le jeu vous rend nerveux, irritable ou vous empêche de dormir.'),
   ];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Jeu responsable')),
+      appBar: AppBar(title: Text(tr('Jeu responsable'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           Text(
-            'Coupon Pro IA propose des analyses et des estimations. Nous ne prenons aucun pari et aucun gain '
-            'n’est garanti. Les paris sportifs sont interdits aux moins de 18 ans.',
+            tr('Coupon Pro IA propose des analyses et des estimations. Nous ne prenons aucun pari et aucun gain n’est garanti. Les paris sportifs sont interdits aux moins de 18 ans.'),
             style: theme.textTheme.bodyLarge,
           ),
-          const SectionTitle('Mon budget'),
+          SectionTitle(tr('Mon budget')),
           const BudgetCard(),
-          const SectionTitle('Bonnes pratiques'),
+          SectionTitle(tr('Bonnes pratiques')),
           for (final (title, text) in _tips)
             Card(
                 child: ListTile(
                     leading: const Icon(Icons.check_circle_outline),
                     title: Text(title),
                     subtitle: Text(text))),
-          const SectionTitle('Signes d’alerte'),
+          SectionTitle(tr('Signes d’alerte')),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -85,8 +85,7 @@ class ResponsibleGamingScreen extends StatelessWidget {
                     ),
                   const SizedBox(height: 6),
                   Text(
-                    'Si vous vous reconnaissez, parlez-en à un proche ou à un professionnel de santé. Demander de l’aide '
-                    'est une bonne décision.',
+                    tr('Si vous vous reconnaissez, parlez-en à un proche ou à un professionnel de santé. Demander de l’aide est une bonne décision.'),
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),
@@ -94,22 +93,22 @@ class ResponsibleGamingScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SectionTitle('Dans l’app'),
+          SectionTitle(tr('Dans l’app')),
           Card(
             child: Column(
               children: [
                 ListTile(
                   leading: const Icon(Icons.notifications_off_outlined),
-                  title: const Text('Couper les notifications'),
+                  title: Text(tr('Couper les notifications')),
                   subtitle:
-                      const Text('Toutes, ou seulement les nouveaux coupons'),
+                      Text(tr('Toutes, ou seulement les nouveaux coupons')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push(AppRoutes.notificationSettings),
                 ),
                 ListTile(
                   leading: const Icon(Icons.delete_outline),
-                  title: const Text('Supprimer mon compte'),
-                  subtitle: const Text('Depuis l’écran Profil, à tout moment'),
+                  title: Text(tr('Supprimer mon compte')),
+                  subtitle: Text(tr('Depuis l’écran Profil, à tout moment')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.go(AppRoutes.profile),
                 ),
@@ -128,14 +127,16 @@ Future<void> contactSupport(BuildContext context, WidgetRef ref) async {
       ref.read(publicSettingsProvider).valueOrNull ?? const <String, dynamic>{};
   final email = settings['app.support_email'];
   if (email is! String || !email.contains('@')) {
-    showMessage(context, 'Contact indisponible pour le moment.');
+    showMessage(context, tr('Contact indisponible pour le moment.'));
     return;
   }
   final ok = await launchUrl(Uri(
       scheme: 'mailto',
       path: email,
-      queryParameters: {'subject': 'Coupon Pro IA : demande d’aide'}));
-  if (!ok && context.mounted) showMessage(context, 'Écrivez-nous à $email');
+      queryParameters: {'subject': tr('Coupon Pro IA : demande d’aide')}));
+  if (!ok && context.mounted) {
+    showMessage(context, trf('Écrivez-nous à {0}', [email]));
+  }
 }
 
 /// Plafond par pari (rappelé dans le simulateur) et budget mensuel (suivi dans le carnet, alerte à
@@ -148,31 +149,30 @@ class BudgetCard extends ConsumerWidget {
     final limits = ref.watch(stakeLimitsProvider);
     final cur = currencyLabel(ref.watch(publicSettingsProvider).valueOrNull);
     final l = limits.valueOrNull ?? const StakeLimits();
-    String show(int? v) => v == null ? 'Aucun' : money(v, currency: cur);
+    String show(int? v) => v == null ? tr('Aucun') : money(v, currency: cur);
     return Card(
       child: Column(
         children: [
           ListTile(
             leading: const Icon(Icons.calendar_month_outlined),
-            title: const Text('Budget mensuel'),
-            subtitle:
-                Text('${show(l.monthlyBudget)} · alerte à 80 % puis à 100 %'),
+            title: Text(tr('Budget mensuel')),
+            subtitle: Text(trf(
+                '{0} · alerte à 80 % puis à 100 %', [show(l.monthlyBudget)])),
             trailing: const Icon(Icons.edit_outlined),
             onTap: () => _edit(context, ref, l, monthly: true, cur: cur),
           ),
           ListTile(
             leading: const Icon(Icons.front_hand_outlined),
-            title: const Text('Plafond par pari'),
-            subtitle: Text(
-                '${show(l.stakeLimit)} · rappelé dans le simulateur de mise'),
+            title: Text(tr('Plafond par pari')),
+            subtitle: Text(trf('{0} · rappelé dans le simulateur de mise',
+                [show(l.stakeLimit)])),
             trailing: const Icon(Icons.edit_outlined),
             onTap: () => _edit(context, ref, l, monthly: false, cur: cur),
           ),
           ListTile(
             leading: const Icon(Icons.menu_book_outlined),
-            title: const Text('Mon carnet de paris'),
-            subtitle:
-                const Text('Vos mises notées et votre bilan réel du mois'),
+            title: Text(tr('Mon carnet de paris')),
+            subtitle: Text(tr('Vos mises notées et votre bilan réel du mois')),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(AppRoutes.journal),
           ),
@@ -188,28 +188,28 @@ class BudgetCard extends ConsumerWidget {
     final result = await showDialog<(bool, int?)>(
       context: context,
       builder: (d) => AlertDialog(
-        title: Text(monthly ? 'Budget mensuel' : 'Plafond par pari'),
+        title: Text(monthly ? tr('Budget mensuel') : tr('Plafond par pari')),
         content: TextField(
           controller: controller,
           autofocus: true,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
-              labelText: 'Montant',
+              labelText: tr('Montant'),
               suffixText: cur,
-              helperText: 'Au moins 100'),
+              helperText: tr('Au moins 100')),
         ),
         actions: [
           if (current != null)
             TextButton(
                 onPressed: () => Navigator.pop(d, (true, null)),
-                child: const Text('Retirer')),
+                child: Text(tr('Retirer'))),
           TextButton(
-              onPressed: () => Navigator.pop(d), child: const Text('Annuler')),
+              onPressed: () => Navigator.pop(d), child: Text(tr('Annuler'))),
           FilledButton(
               onPressed: () =>
                   Navigator.pop(d, (true, parseStake(controller.text))),
-              child: const Text('Enregistrer')),
+              child: Text(tr('Enregistrer'))),
         ],
       ),
     );
@@ -217,7 +217,7 @@ class BudgetCard extends ConsumerWidget {
     if (result == null || !context.mounted) return;
     final value = result.$2;
     if (value != null && value < 100) {
-      showMessage(context, 'Montant minimum : 100.', error: true);
+      showMessage(context, tr('Montant minimum : 100.'), error: true);
       return;
     }
     try {
@@ -226,10 +226,10 @@ class BudgetCard extends ConsumerWidget {
             stakeLimit: monthly ? l.stakeLimit : value,
           ));
       ref.invalidate(stakeLimitsProvider);
-      if (context.mounted) showMessage(context, 'Enregistré.');
+      if (context.mounted) showMessage(context, tr('Enregistré.'));
     } catch (_) {
       if (context.mounted) {
-        showMessage(context, 'Enregistrement impossible pour le moment.',
+        showMessage(context, tr('Enregistrement impossible pour le moment.'),
             error: true);
       }
     }

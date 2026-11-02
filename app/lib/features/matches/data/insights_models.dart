@@ -1,3 +1,4 @@
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 // Données de l'onglet Stats d'un match (fonction match_insights) et probabilités 1/N/2 du marché.
 // Tout vient des résultats enregistrés et des cotes relevées : rien n'est estimé ici.
 
@@ -102,17 +103,19 @@ String zoneLabel(String? description) {
   final d = (description ?? '').toLowerCase();
   if (d.isEmpty) return '';
   if (d.contains('relegation')) {
-    return d.contains('play') ? 'Barrage de relégation' : 'Zone de relégation';
+    return d.contains('play')
+        ? tr('Barrage de relégation')
+        : tr('Zone de relégation');
   }
   if (d.contains('champions league')) {
     return d.contains('qualif')
-        ? 'Qualification Ligue des champions'
-        : 'Place en Ligue des champions';
+        ? tr('Qualification Ligue des champions')
+        : tr('Place en Ligue des champions');
   }
-  if (d.contains('europa league')) return 'Place en Ligue Europa';
-  if (d.contains('conference league')) return 'Place en Ligue Conférence';
-  if (d.contains('promotion')) return 'Zone de promotion';
-  if (d.contains('play')) return 'Barrages';
+  if (d.contains('europa league')) return tr('Place en Ligue Europa');
+  if (d.contains('conference league')) return tr('Place en Ligue Conférence');
+  if (d.contains('promotion')) return tr('Zone de promotion');
+  if (d.contains('play')) return tr('Barrages');
   return description!;
 }
 
@@ -211,18 +214,18 @@ class Streak {
   final DateTime? to;
 
   String get label {
-    final cap = atLeast ? 'Au moins $length' : '$length';
+    final cap = atLeast ? trf('Au moins {0}', [length]) : '$length';
     return switch (key) {
-      'scored' =>
-        'A marqué lors ${atLeast ? 'd’au moins' : 'de'} $length matchs de suite',
-      'unbeaten' => '$cap matchs sans défaite',
-      'wins' => '$cap victoires de suite',
-      'losses' => '$cap défaites de suite',
-      'winless' => '$cap matchs sans victoire',
-      'clean_sheets' => '$cap matchs sans encaisser de but',
-      'conceded' =>
-        'A encaissé lors ${atLeast ? 'd’au moins' : 'de'} $length matchs de suite',
-      _ => '$cap matchs',
+      'scored' => trf('A marqué lors {0} {1} matchs de suite',
+          [atLeast ? tr('d’au moins') : 'de', length]),
+      'unbeaten' => trf('{0} matchs sans défaite', [cap]),
+      'wins' => trf('{0} victoires de suite', [cap]),
+      'losses' => trf('{0} défaites de suite', [cap]),
+      'winless' => trf('{0} matchs sans victoire', [cap]),
+      'clean_sheets' => trf('{0} matchs sans encaisser de but', [cap]),
+      'conceded' => trf('A encaissé lors {0} {1} matchs de suite',
+          [atLeast ? tr('d’au moins') : 'de', length]),
+      _ => trf('{0} matchs', [cap]),
     };
   }
 }

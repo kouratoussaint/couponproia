@@ -10,23 +10,24 @@ import '../matches/presentation/sports_widgets.dart';
 import '../system/system_providers.dart';
 import 'billing_repository.dart';
 import '../help/help_screens.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 String fcfa(int amount) {
   final s = amount.toString();
   final b = StringBuffer();
   for (var i = 0; i < s.length; i++) {
-    if (i > 0 && (s.length - i) % 3 == 0) b.write(' ');
+    if (i > 0 && (s.length - i) % 3 == 0) b.write(thousandsSeparator);
     b.write(s[i]);
   }
-  return '$b FCFA';
+  return trf('{0} FCFA', [b]);
 }
 
-const _statusLabels = {
-  'pending': 'En attente',
-  'succeeded': 'Confirmé',
-  'failed': 'Échoué',
-  'cancelled': 'Abandonné',
-  'refunded': 'Remboursé'
+final _statusLabels = {
+  'pending': tr('En attente'),
+  'succeeded': tr('Confirmé'),
+  'failed': tr('Échoué'),
+  'cancelled': tr('Abandonné'),
+  'refunded': tr('Remboursé')
 };
 
 /// Abonnement et crédits : forfaits (mensuel ou annuel), packs de crédits, paiement Mobile Money
@@ -92,7 +93,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
       final ok = await launchUrl(Uri.parse(r.paymentUrl),
           mode: LaunchMode.externalApplication);
       if (!ok && mounted) {
-        showMessage(context, 'Impossible d’ouvrir la page de paiement.',
+        showMessage(context, tr('Impossible d’ouvrir la page de paiement.'),
             error: true);
       }
     } catch (e) {
@@ -115,17 +116,17 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
     final ok = await showDialog<bool>(
       context: context,
       builder: (d) => AlertDialog(
-        title: Text('Renouveler ${offer.name}'),
-        content: Text(
-            '${annual ? '12 mois' : '1 mois'} pour ${fcfa(price)}. Vous serez redirigé vers la page de paiement '
-            'sécurisée de l’opérateur ; la durée s’ajoute à la fin de votre forfait actuel.'),
+        title: Text(trf('Renouveler {0}', [offer.name])),
+        content: Text(trf(
+            '{0} pour {1}. Vous serez redirigé vers la page de paiement sécurisée de l’opérateur ; la durée s’ajoute à la fin de votre forfait actuel.',
+            [annual ? tr('12 mois') : tr('1 mois'), fcfa(price)])),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(d, false),
-              child: const Text('Plus tard')),
+              child: Text(tr('Plus tard'))),
           FilledButton(
               onPressed: () => Navigator.pop(d, true),
-              child: const Text('Renouveler')),
+              child: Text(tr('Renouveler'))),
         ],
       ),
     );
@@ -145,7 +146,8 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
       final q = await ref.read(billingRepositoryProvider).checkPromo(code);
       if (!mounted) return;
       setState(() => _promo = q);
-      showMessage(context, 'Code ${q.code} appliqué : −${q.percentOff} %.');
+      showMessage(
+          context, trf('Code {0} appliqué : −{1} %.', [q.code, q.percentOff]));
     } catch (e) {
       if (mounted) {
         showMessage(
@@ -172,16 +174,17 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
       switch (status) {
         case 'succeeded':
           _pendingPaymentId = null;
-          showMessage(context, 'Paiement confirmé : votre achat est actif.');
+          showMessage(
+              context, tr('Paiement confirmé : votre achat est actif.'));
         case 'failed':
         case 'cancelled':
           _pendingPaymentId = null;
           showMessage(context,
-              'Paiement non abouti : aucun montant n’a été pris en compte.',
+              tr('Paiement non abouti : aucun montant n’a été pris en compte.'),
               error: true);
         default:
           showMessage(context,
-              'Paiement pas encore confirmé par l’opérateur. Il sera vérifié automatiquement ; revenez dans quelques minutes.');
+              tr('Paiement pas encore confirmé par l’opérateur. Il sera vérifié automatiquement ; revenez dans quelques minutes.'));
       }
     } catch (e) {
       if (mounted) {
@@ -225,7 +228,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
 
     return Scaffold(
       appBar: AppBar(
-          title: const Text('Abonnement et crédits'),
+          title: Text(tr('Abonnement et crédits')),
           actions: const [HelpButton('forfaits')]),
       body: RefreshIndicator(
         onRefresh: () async => _refreshAll(),
@@ -240,12 +243,14 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
                 child: ListTile(
                   leading: Icon(Icons.workspace_premium,
                       color: theme.colorScheme.primary),
-                  title: Text('Forfait ${e.plan.replaceAll('_', ' ')}'),
+                  title:
+                      Text(trf('Forfait {0}', [e.plan.replaceAll('_', ' ')])),
                   subtitle: Text(
                     [
                       if (e.periodEnd != null)
-                        'Actif jusqu’au ${shortDate(e.periodEnd!)}/${e.periodEnd!.year}',
-                      'Crédits IA : ${e.credits.label}',
+                        trf('Actif jusqu’au {0}/{1}',
+                            [shortDate(e.periodEnd!), e.periodEnd!.year]),
+                      trf('Crédits IA : {0}', [e.credits.label]),
                     ].join(' · '),
                   ),
                 ),
@@ -256,12 +261,12 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
                 color: theme.colorScheme.secondaryContainer,
                 child: ListTile(
                   leading: const Icon(Icons.hourglass_top),
-                  title: const Text('Paiement en cours de confirmation'),
-                  subtitle: const Text(
-                      'Après avoir validé sur votre téléphone, revenez ici.'),
+                  title: Text(tr('Paiement en cours de confirmation')),
+                  subtitle: Text(tr(
+                      'Après avoir validé sur votre téléphone, revenez ici.')),
                   trailing: TextButton(
                       onPressed: _busy ? null : _verify,
-                      child: const Text('Vérifier')),
+                      child: Text(tr('Vérifier'))),
                 ),
               ),
             _PromoCard(
@@ -274,14 +279,15 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
                 _promoCtrl.clear();
               }),
             ),
-            const SectionTitle('Forfaits'),
+            SectionTitle(tr('Forfaits')),
             SegmentedButton<bool>(
               segments: [
-                const ButtonSegment(value: false, label: Text('Mensuel')),
+                ButtonSegment(value: false, label: Text(tr('Mensuel'))),
                 ButtonSegment(
                     value: true,
-                    label: Text(
-                        discount > 0 ? 'Annuel (−$discount %)' : 'Annuel')),
+                    label: Text(discount > 0
+                        ? trf('Annuel (−{0} %)', [discount])
+                        : tr('Annuel'))),
               ],
               selected: {_annual},
               onSelectionChanged: (s) => setState(() => _annual = s.first),
@@ -301,27 +307,34 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
                                   style: theme.textTheme.titleMedium)),
                           _Price(
                             label: p.monthlyXof == 0
-                                ? 'Gratuit'
-                                : '${fcfa(p.priceFor(annual: _annual, discountPercent: discount))} / ${_annual ? 'an' : 'mois'}',
+                                ? tr('Gratuit')
+                                : '${fcfa(p.priceFor(annual: _annual, discountPercent: discount))} / ${_annual ? tr('an') : tr('mois')}',
                             promoLabel: p.monthlyXof > 0 &&
                                     _promo != null &&
                                     _promo!.appliesToPlan(p.code)
-                                ? '${fcfa(_promo!.discounted(p.priceFor(annual: _annual, discountPercent: discount)))} / ${_annual ? 'an' : 'mois'}'
+                                ? '${fcfa(_promo!.discounted(p.priceFor(annual: _annual, discountPercent: discount)))} / ${_annual ? tr('an') : tr('mois')}'
                                 : null,
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text('• ${p.aiCredits} crédits IA par mois'),
+                      Text(trf('• {0} crédits IA par mois', [p.aiCredits])),
                       Text(p.allCoupons
-                          ? '• Tous les coupons et leurs résultats, à tout moment'
-                          : '• Coupons et résultats visibles après les matchs'),
+                          ? tr(
+                              '• Tous les coupons et leurs résultats, à tout moment')
+                          : tr(
+                              '• Coupons et résultats visibles après les matchs')),
                       if (p.monthlyXof == 0)
-                        Text(
-                            '• Analyse IA d’un match : ${creditCost == 0 ? 'gratuite' : '$creditCost crédit${creditCost > 1 ? 's' : ''}'}')
+                        Text(trf('• Analyse IA d’un match : {0}', [
+                          creditCost == 0
+                              ? 'gratuite'
+                              : trf('{0} crédit{1}',
+                                  [creditCost, creditCost > 1 ? 's' : ''])
+                        ]))
                       else if (p.analysesPerDay != null)
-                        Text(
-                            '• ${p.analysesPerDay} analyses IA de match par jour, sans crédit'),
+                        Text(trf(
+                            '• {0} analyses IA de match par jour, sans crédit',
+                            [p.analysesPerDay])),
                       if (p.monthlyXof > 0) ...[
                         const SizedBox(height: 8),
                         Align(
@@ -338,8 +351,8 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
                                             ? _promo!.code
                                             : null)),
                             child: Text(current?.plan == p.code
-                                ? 'Prolonger'
-                                : 'Choisir'),
+                                ? tr('Prolonger')
+                                : tr('Choisir')),
                           ),
                         ),
                       ],
@@ -348,7 +361,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
                 ),
               ),
             if (pack != null) ...[
-              const SectionTitle('Crédits IA supplémentaires'),
+              SectionTitle(tr('Crédits IA supplémentaires')),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(14),
@@ -368,7 +381,13 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '${(pack['credits'] as num).toInt() * _packs} crédits · ${fcfa(_promo != null && _promo!.appliesToCredits ? _promo!.discounted((pack['price_xof'] as num).toInt() * _packs) : (pack['price_xof'] as num).toInt() * _packs)}',
+                          trf('{0} crédits · {1}', [
+                            (pack['credits'] as num).toInt() * _packs,
+                            fcfa(_promo != null && _promo!.appliesToCredits
+                                ? _promo!.discounted(
+                                    (pack['price_xof'] as num).toInt() * _packs)
+                                : (pack['price_xof'] as num).toInt() * _packs)
+                          ]),
                           style: theme.textTheme.bodyLarge,
                         ),
                       ),
@@ -382,22 +401,23 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
                                             _promo!.appliesToCredits
                                         ? _promo!.code
                                         : null)),
-                        child: const Text('Acheter'),
+                        child: Text(tr('Acheter')),
                       ),
                     ],
                   ),
                 ),
               ),
               Text(
-                  'Les crédits achetés n’expirent pas à la fin du mois ; ceux du forfait se renouvellent chaque mois.',
+                  tr('Les crédits achetés n’expirent pas à la fin du mois ; ceux du forfait se renouvellent chaque mois.'),
                   style: theme.textTheme.bodySmall),
             ],
-            const SectionTitle('Historique des paiements'),
+            SectionTitle(tr('Historique des paiements')),
             payments.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text(userMessageFor(e)),
               data: (list) => list.isEmpty
-                  ? Text('Aucun paiement.', style: theme.textTheme.bodyMedium)
+                  ? Text(tr('Aucun paiement.'),
+                      style: theme.textTheme.bodyMedium)
                   : Card(
                       child: Column(
                         children: [
@@ -405,10 +425,17 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
                             ListTile(
                               dense: true,
                               title: Text(p.kind == 'subscription'
-                                  ? 'Forfait ${p.planCode?.replaceAll('_', ' ')} · ${p.period == 'annual' ? '12 mois' : '1 mois'}'
-                                  : '${p.credits} crédits IA'),
+                                  ? trf('Forfait {0} · {1}', [
+                                      p.planCode?.replaceAll('_', ' '),
+                                      p.period == 'annual'
+                                          ? tr('12 mois')
+                                          : tr('1 mois')
+                                    ])
+                                  : trf('{0} crédits IA', [p.credits])),
                               subtitle: Text(
-                                  '${shortDate(p.createdAt)}/${p.createdAt.year} · ${fcfa(p.amountXof)}${p.promoCode != null ? ' · code ${p.promoCode}' : ''}'),
+                                  '${shortDate(p.createdAt)}/${p.createdAt.year} · ${fcfa(p.amountXof)}${p.promoCode != null ? trf(' · code {0}', [
+                                          p.promoCode
+                                        ]) : ''}'),
                               trailing:
                                   Text(_statusLabels[p.status] ?? p.status),
                             ),
@@ -418,9 +445,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'Paiement Orange Money ou Moov Money par un agrégateur agréé (LigdiCash ou CinetPay). Votre abonnement ou vos crédits ne sont activés qu’après '
-              'confirmation de l’opérateur, vérifiée par notre serveur. Coupon Pro IA vend un service d’analyse : aucun '
-              'pari n’est pris et aucun gain n’est garanti.',
+              tr('Paiement Orange Money ou Moov Money par un agrégateur agréé (LigdiCash ou CinetPay). Votre abonnement ou vos crédits ne sont activés qu’après confirmation de l’opérateur, vérifiée par notre serveur. Coupon Pro IA vend un service d’analyse : aucun pari n’est pris et aucun gain n’est garanti.'),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
@@ -480,25 +505,28 @@ class _PromoCard extends StatelessWidget {
     if (q != null) {
       final scope = switch (q.appliesTo) {
         'subscription' => q.planCodes.isEmpty
-            ? 'sur les forfaits'
-            : 'sur ${q.planCodes.map((c) => c.replaceAll('_', ' ')).join(', ')}',
-        'credits' => 'sur les crédits IA',
-        _ => 'sur tous les achats',
+            ? tr('sur les forfaits')
+            : trf('sur {0}',
+                [q.planCodes.map((c) => c.replaceAll('_', ' ')).join(', ')]),
+        'credits' => tr('sur les crédits IA'),
+        _ => tr('sur tous les achats'),
       };
       return Card(
         color: theme.colorScheme.primaryContainer,
         child: ListTile(
           leading: Icon(Icons.local_offer_outlined,
               color: theme.colorScheme.onPrimaryContainer),
-          title: Text('Code ${q.code} : −${q.percentOff} % $scope'),
+          title:
+              Text(trf('Code {0} : −{1} % {2}', [q.code, q.percentOff, scope])),
           subtitle: Text([
             if (q.description.isNotEmpty) q.description,
             if (q.endsAt != null)
-              'Valable jusqu’au ${shortDate(q.endsAt!)}/${q.endsAt!.year}',
-            'Une seule utilisation par compte.',
+              trf('Valable jusqu’au {0}/{1}',
+                  [shortDate(q.endsAt!), q.endsAt!.year]),
+            tr('Une seule utilisation par compte.'),
           ].join(' · ')),
           trailing: IconButton(
-              tooltip: 'Retirer le code',
+              tooltip: tr('Retirer le code'),
               onPressed: onClear,
               icon: const Icon(Icons.close)),
         ),
@@ -513,8 +541,8 @@ class _PromoCard extends StatelessWidget {
               child: TextField(
                 controller: controller,
                 textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(
-                  labelText: 'Code promo',
+                decoration: InputDecoration(
+                  labelText: tr('Code promo'),
                   border: InputBorder.none,
                   prefixIcon: Icon(Icons.local_offer_outlined),
                 ),
@@ -522,8 +550,7 @@ class _PromoCard extends StatelessWidget {
               ),
             ),
             TextButton(
-                onPressed: busy ? null : onApply,
-                child: const Text('Appliquer')),
+                onPressed: busy ? null : onApply, child: Text(tr('Appliquer'))),
           ],
         ),
       ),

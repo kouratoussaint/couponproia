@@ -1,5 +1,6 @@
 import '../../analysis/data/analysis_format.dart';
 import '../../coupons/data/coupon_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 Map<String, dynamic> _map(Object? v) =>
     v is Map ? Map<String, dynamic>.from(v) : const <String, dynamic>{};
@@ -255,7 +256,7 @@ class PostComment {
         body: j['body'] as String,
         createdAt: _date(j['created_at']),
         authorId: j['author_id'] as String,
-        author: j['author'] as String? ?? 'Utilisateur',
+        author: j['author'] as String? ?? tr('Utilisateur'),
         isMine: j['is_mine'] == true,
         authorIsTipster: j['author_is_tipster'] == true,
         hidden: j['status'] == 'hidden',
@@ -387,25 +388,25 @@ class BlockedUser {
 
   factory BlockedUser.fromJson(Map<String, dynamic> j) => BlockedUser(
       userId: j['user_id'] as String,
-      name: j['name'] as String? ?? 'Utilisateur');
+      name: j['name'] as String? ?? tr('Utilisateur'));
 
   final String userId;
   final String name;
 }
 
-const reportReasons = {
-  'spam': 'Spam ou publicité',
-  'arnaque': 'Arnaque ou promesse de gain',
-  'insulte': 'Insulte ou harcèlement',
-  'faux_resultats': 'Résultats trompeurs',
-  'autre': 'Autre',
+final reportReasons = {
+  'spam': tr('Spam ou publicité'),
+  'arnaque': tr('Arnaque ou promesse de gain'),
+  'insulte': tr('Insulte ou harcèlement'),
+  'faux_resultats': tr('Résultats trompeurs'),
+  'autre': tr('Autre'),
 };
 
 /// Identifiant : 3 à 20 caractères, minuscules, chiffres ou « _ ».
 String? validateHandle(String? v) {
   final s = (v ?? '').trim().toLowerCase();
   if (!RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(s)) {
-    return '3 à 20 caractères : lettres sans accent, chiffres ou « _ ».';
+    return tr('3 à 20 caractères : lettres sans accent, chiffres ou « _ ».');
   }
   return null;
 }
@@ -413,9 +414,9 @@ String? validateHandle(String? v) {
 /// « il y a 3 h », « il y a 2 j », sinon la date.
 String relativeTime(DateTime t, DateTime now) {
   final d = now.difference(t);
-  if (d.inMinutes < 1) return 'à l’instant';
-  if (d.inMinutes < 60) return 'il y a ${d.inMinutes} min';
-  if (d.inHours < 24) return 'il y a ${d.inHours} h';
-  if (d.inDays < 7) return 'il y a ${d.inDays} j';
+  if (d.inMinutes < 1) return tr('à l’instant');
+  if (d.inMinutes < 60) return trf('il y a {0} min', [d.inMinutes]);
+  if (d.inHours < 24) return trf('il y a {0} h', [d.inHours]);
+  if (d.inDays < 7) return trf('il y a {0} j', [d.inDays]);
   return '${t.day.toString().padLeft(2, '0')}/${t.month.toString().padLeft(2, '0')}/${t.year}';
 }

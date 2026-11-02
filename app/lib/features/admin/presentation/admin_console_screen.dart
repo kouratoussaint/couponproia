@@ -9,6 +9,7 @@ import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
 import '../data/admin_repository.dart';
 import 'health_admin_screen.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Console d'administration : chaque section n'apparaît qu'avec la permission correspondante,
 /// et chaque action est de toute façon vérifiée par le serveur.
@@ -60,9 +61,9 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!perms.contains('admin.access')) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Console d’administration')),
-        body: const InfoMessage(
-            icon: Icons.lock_outline, title: 'Accès réservé à l’équipe'),
+        appBar: AppBar(title: Text(tr('Console d’administration'))),
+        body: InfoMessage(
+            icon: Icons.lock_outline, title: tr('Accès réservé à l’équipe')),
       );
     }
     final dash = ref.watch(adminDashboardProvider(_days));
@@ -72,134 +73,138 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
     final payments = asMap(asMap(d['billing'])['payments']);
     final families = <(String, List<ConsoleEntry>)>[
       (
-        'Pilotage',
+        tr('Pilotage'),
         [
           if (perms.contains('users.manage'))
-            const ConsoleEntry(
-                'Utilisateurs',
-                'Fiches, forfaits, crédits, rôles',
+            ConsoleEntry(
+                tr('Utilisateurs'),
+                tr('Fiches, forfaits, crédits, rôles'),
                 Icons.people_alt_outlined,
                 ConsoleColors.users,
                 AppRoutes.adminUsers),
           if (perms.contains('generation.manage'))
             ConsoleEntry(
-                'Coupons et générations',
-                'Validation, publication, profils',
+                tr('Coupons et générations'),
+                tr('Validation, publication, profils'),
                 Icons.confirmation_number_outlined,
                 ConsoleColors.coupons,
                 AppRoutes.generationsAdmin,
                 badge: asInt(coupons['pending_review'])),
           if (perms.contains('featured.manage'))
-            const ConsoleEntry(
-                'Analyse offerte',
-                'Choisir le match du jour',
+            ConsoleEntry(
+                tr('Analyse offerte'),
+                tr('Choisir le match du jour'),
                 Icons.card_giftcard,
                 ConsoleColors.money,
                 AppRoutes.adminFeatured),
           if (perms.contains('campaigns.send'))
-            const ConsoleEntry(
-                'Notifications ciblées',
-                'Un message à un segment',
+            ConsoleEntry(
+                tr('Notifications ciblées'),
+                tr('Un message à un segment'),
                 Icons.campaign_outlined,
                 ConsoleColors.users,
                 AppRoutes.adminCampaigns),
           if (perms.contains('moderation.manage'))
             ConsoleEntry(
-                'Modération',
-                'Signalements de la communauté',
+                tr('Modération'),
+                tr('Signalements de la communauté'),
                 Icons.shield_outlined,
                 ConsoleColors.errors,
                 AppRoutes.moderation,
                 badge: asInt(community['open_reports'])),
           if (perms.contains('audit.read'))
-            const ConsoleEntry(
-                'Journal d’audit',
-                'Toutes les actions sensibles',
+            ConsoleEntry(
+                tr('Journal d’audit'),
+                tr('Toutes les actions sensibles'),
                 Icons.history,
                 ConsoleColors.audit,
                 AppRoutes.adminAudit),
         ]
       ),
       (
-        'IA et données',
+        tr('IA et données'),
         [
           if (perms.contains('ai.providers'))
-            const ConsoleEntry(
-                'Fournisseurs d’IA',
-                'Principale, secours, quotas',
+            ConsoleEntry(
+                tr('Fournisseurs d’IA'),
+                tr('Principale, secours, quotas'),
                 Icons.hub_outlined,
                 ConsoleColors.ai,
                 AppRoutes.adminAi),
           if (perms.contains('ai.configure'))
-            const ConsoleEntry(
-                'Moteur et IA',
-                'Évaluation, prompts, journal',
+            ConsoleEntry(
+                tr('Moteur et IA'),
+                tr('Évaluation, prompts, journal'),
                 Icons.psychology_outlined,
                 ConsoleColors.engine,
                 AppRoutes.engineAdmin),
           if (perms.contains('sports.configure'))
-            const ConsoleEntry(
-                'Données sportives',
-                'Compétitions, synchronisations',
+            ConsoleEntry(
+                tr('Données sportives'),
+                tr('Compétitions, synchronisations'),
                 Icons.sync_alt,
                 ConsoleColors.sports,
                 AppRoutes.sportsAdmin),
         ]
       ),
       (
-        'Argent',
+        tr('Argent'),
         [
           if (perms.contains('billing.manage')) ...[
             ConsoleEntry(
-                'Paiements',
-                'LigdiCash, CinetPay, remboursements',
+                tr('Paiements'),
+                tr('LigdiCash, CinetPay, remboursements'),
                 Icons.payments_outlined,
                 ConsoleColors.money,
                 AppRoutes.adminPayments,
                 badge: asInt(payments['pending'])),
-            const ConsoleEntry(
-                'Codes promo',
-                'Réductions et durée',
+            ConsoleEntry(
+                tr('Codes promo'),
+                tr('Réductions et durée'),
                 Icons.local_offer_outlined,
                 ConsoleColors.promo,
                 AppRoutes.adminPromos),
             if (perms.contains('growth.read'))
-              const ConsoleEntry(
-                  'Conversion et rétention',
-                  'Entonnoir, J7, J30, renouvellements',
+              ConsoleEntry(
+                  tr('Conversion et rétention'),
+                  tr('Entonnoir, J7, J30, renouvellements'),
                   Icons.trending_up,
                   ConsoleColors.money,
                   AppRoutes.adminGrowth),
-            const ConsoleEntry('Coûts', 'Coût par utilisateur actif',
+            ConsoleEntry(tr('Coûts'), tr('Coût par utilisateur actif'),
                 Icons.query_stats, ConsoleColors.costs, AppRoutes.adminCosts),
           ],
         ]
       ),
       (
-        'Plateforme',
+        tr('Plateforme'),
         [
           if (perms.contains('ops.monitor'))
             ConsoleEntry(
-                'Santé de l’application',
-                'Alertes, plantages et lenteurs',
+                tr('Santé de l’application'),
+                tr('Alertes, plantages et lenteurs'),
                 Icons.monitor_heart_outlined,
                 ConsoleColors.errors,
                 AppRoutes.adminHealth,
                 badge: ref.watch(openOpsAlertsProvider).valueOrNull ?? 0),
           if (perms.contains('settings.manage'))
-            const ConsoleEntry('Réglages et forfaits', 'Prix, crédits, limites',
-                Icons.tune, ConsoleColors.settings, AppRoutes.adminSettings),
+            ConsoleEntry(
+                tr('Réglages et forfaits'),
+                tr('Prix, crédits, limites'),
+                Icons.tune,
+                ConsoleColors.settings,
+                AppRoutes.adminSettings),
           if (perms.contains('flags.manage'))
-            const ConsoleEntry(
-                'Modules',
-                'Activer sans nouvelle version',
+            ConsoleEntry(
+                tr('Modules'),
+                tr('Activer sans nouvelle version'),
                 Icons.toggle_on_outlined,
                 ConsoleColors.modules,
                 AppRoutes.adminFlags),
           if (perms.contains('settings.manage'))
-            const ConsoleEntry(
-                'Documents légaux',
-                'CGU, confidentialité, règles',
+            ConsoleEntry(
+                tr('Documents légaux'),
+                tr('CGU, confidentialité, règles'),
                 Icons.description_outlined,
                 ConsoleColors.legal,
                 AppRoutes.adminLegal),
@@ -217,7 +222,7 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
             .textTheme
             .titleMedium
             ?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
-        title: const Text('Console d’administration'),
+        title: Text(tr('Console d’administration')),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -231,8 +236,8 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
                 ),
                 child: Text(
                     perms.contains('ai.providers')
-                        ? 'Super admin'
-                        : 'Administrateur',
+                        ? tr('Super admin')
+                        : tr('Administrateur'),
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
@@ -270,7 +275,7 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
                   const SizedBox(height: 10),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text('Gestion',
+                    child: Text(tr('Gestion'),
                         style: Theme.of(context)
                             .textTheme
                             .titleLarge
@@ -308,18 +313,23 @@ class ConsoleHeader extends StatelessWidget {
     final kpis = [
       (
         d == null ? '–' : '${asMap(d['users'])['active'] ?? 0}',
-        'utilisateurs actifs'
+        tr('utilisateurs actifs')
       ),
       (
         d == null ? '–' : '${asMap(d['coupons'])['published'] ?? 0}',
-        'coupons publiés'
+        tr('coupons publiés')
       ),
       (
         d == null ? '–' : fcfa(asInt(asMap(d['billing'])['revenue_xof'])),
         'revenus'
       ),
     ];
-    const periods = [(1, '24 h'), (7, '7 j'), (30, '30 j'), (90, '90 j')];
+    final periods = [
+      (1, tr('24 h')),
+      (7, tr('7 j')),
+      (30, tr('30 j')),
+      (90, tr('90 j'))
+    ];
     return Container(
       color: ConsoleColors.navy,
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 18),
@@ -523,59 +533,64 @@ class DashboardView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         MetricGroup(
-          title: 'Utilisateurs',
+          title: tr('Utilisateurs'),
           icon: Icons.people_alt_outlined,
           color: ConsoleColors.users,
           badge: asInt(users['new']) > 0
-              ? '+${users['new']} sur la période'
+              ? trf('+{0} sur la période', [users['new']])
               : null,
           tiles: [
-            ('au total', '${users['total']}', Icons.groups_outlined),
-            ('nouveaux', '${users['new']}', Icons.person_add_alt),
-            ('actifs', '${users['active']}', Icons.monitor_heart_outlined),
-            ('Tipsters', '${users['tipsters']}', Icons.star_outline),
-            ('suspendus', '${users['suspended']}', Icons.block),
+            (tr('au total'), '${users['total']}', Icons.groups_outlined),
+            (tr('nouveaux'), '${users['new']}', Icons.person_add_alt),
+            (tr('actifs'), '${users['active']}', Icons.monitor_heart_outlined),
+            (tr('Tipsters'), '${users['tipsters']}', Icons.star_outline),
+            (tr('suspendus'), '${users['suspended']}', Icons.block),
           ],
         ),
         MetricGroup(
-          title: 'Coupons',
+          title: tr('Coupons'),
           icon: Icons.confirmation_number_outlined,
           color: ConsoleColors.coupons,
           badge: won + lost > 0
-              ? '$won gagné${won > 1 ? 's' : ''} · $lost perdu${lost > 1 ? 's' : ''}'
+              ? trf('{0} gagné{1} · {2} perdu{3}',
+                  [won, won > 1 ? 's' : '', lost, lost > 1 ? 's' : ''])
               : null,
           tiles: [
-            ('générés', '${coupons['generated']}', Icons.auto_awesome),
-            ('publiés', '${coupons['published']}', Icons.send_outlined),
-            ('gagnés', '${coupons['won']}', Icons.check_circle_outline),
-            ('perdus', '${coupons['lost']}', Icons.cancel_outlined),
-            ('à valider', '${coupons['pending_review']}', Icons.schedule),
+            (tr('générés'), '${coupons['generated']}', Icons.auto_awesome),
+            (tr('publiés'), '${coupons['published']}', Icons.send_outlined),
+            (tr('gagnés'), '${coupons['won']}', Icons.check_circle_outline),
+            (tr('perdus'), '${coupons['lost']}', Icons.cancel_outlined),
+            (tr('à valider'), '${coupons['pending_review']}', Icons.schedule),
             (
-              'par les Tipsters',
+              tr('par les Tipsters'),
               '${coupons['tipster_published']}',
               Icons.forum_outlined
             ),
           ],
         ),
         MetricGroup(
-          title: 'IA et crédits',
+          title: tr('IA et crédits'),
           icon: Icons.auto_awesome,
           color: ConsoleColors.ai,
           badge:
-              '${(ai['cost_usd'] as num? ?? 0).toStringAsFixed(2).replaceAll('.', ',')} \$',
+              '${(ai['cost_usd'] as num? ?? 0).toStringAsFixed(2).replaceAll('.', decimalSeparator)} \$',
           tiles: [
-            ('appels IA', '${ai['requests']}', Icons.bolt),
-            ('analyses', '${ai['match_analyses']}', Icons.psychology_outlined),
+            (tr('appels IA'), '${ai['requests']}', Icons.bolt),
             (
-              'crédits utilisés',
+              tr('analyses'),
+              '${ai['match_analyses']}',
+              Icons.psychology_outlined
+            ),
+            (
+              tr('crédits utilisés'),
               '${ai['credits_consumed']}',
               Icons.toll_outlined
             ),
-            ('erreurs IA', '${ai['errors']}', Icons.error_outline),
+            (tr('erreurs IA'), '${ai['errors']}', Icons.error_outline),
           ],
         ),
         MetricGroup(
-          title: 'Ventes',
+          title: tr('Ventes'),
           icon: Icons.payments_outlined,
           color: ConsoleColors.money,
           tiles: [
@@ -590,22 +605,26 @@ class DashboardView extends StatelessWidget {
               Icons.workspace_premium_outlined
             ),
             (
-              'confirmés',
+              tr('confirmés'),
               '${payments['succeeded'] ?? 0}',
               Icons.check_circle_outline
             ),
-            ('en attente', '${payments['pending'] ?? 0}', Icons.schedule),
-            ('échoués', '${payments['failed'] ?? 0}', Icons.cancel_outlined),
+            (tr('en attente'), '${payments['pending'] ?? 0}', Icons.schedule),
+            (
+              tr('échoués'),
+              '${payments['failed'] ?? 0}',
+              Icons.cancel_outlined
+            ),
           ],
         ),
         MetricGroup(
-          title: 'Données et communauté',
+          title: tr('Données et communauté'),
           icon: Icons.storage_outlined,
           color: ConsoleColors.sports,
           tiles: [
-            ('requêtes API', '${sports['requests_used']}', Icons.sync_alt),
+            (tr('requêtes API'), '${sports['requests_used']}', Icons.sync_alt),
             (
-              'aujourd’hui',
+              tr('aujourd’hui'),
               '${sports['requests_today']}',
               Icons.today_outlined
             ),
@@ -614,7 +633,7 @@ class DashboardView extends StatelessWidget {
               '${sports['requests_remaining'] ?? '–'}',
               Icons.hourglass_bottom
             ),
-            ('publications', '${community['posts']}', Icons.forum_outlined),
+            (tr('publications'), '${community['posts']}', Icons.forum_outlined),
             (
               'signalements',
               '${community['open_reports']}',
@@ -623,19 +642,19 @@ class DashboardView extends StatelessWidget {
           ],
         ),
         MetricGroup(
-          title: 'Erreurs système',
+          title: tr('Erreurs système'),
           icon: Icons.warning_amber_rounded,
           color: ConsoleColors.errors,
           badge: totalErrors == 0 ? 'aucune' : '$totalErrors',
           tiles: [
             ('IA', '${errors['ai']}', Icons.auto_awesome),
-            ('synchro', '${errors['sync']}', Icons.sync_alt),
+            (tr('synchro'), '${errors['sync']}', Icons.sync_alt),
             (
-              'génération',
+              tr('génération'),
               '${errors['generation']}',
               Icons.confirmation_number_outlined
             ),
-            ('paiements', '${errors['payments']}', Icons.payments_outlined),
+            (tr('paiements'), '${errors['payments']}', Icons.payments_outlined),
           ],
         ),
         if (daily.isNotEmpty) _DailyChart(daily: daily),
@@ -661,7 +680,7 @@ class _DailyChart extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Nouveaux utilisateurs par jour',
+            Text(tr('Nouveaux utilisateurs par jour'),
                 style: theme.textTheme.titleSmall
                     ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 12),
@@ -691,7 +710,8 @@ class _DailyChart extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text('Maximum : $max par jour', style: theme.textTheme.bodySmall),
+            Text(trf('Maximum : {0} par jour', [max]),
+                style: theme.textTheme.bodySmall),
           ],
         ),
       ),

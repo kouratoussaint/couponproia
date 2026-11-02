@@ -7,28 +7,29 @@ import '../../../core/router/app_routes.dart';
 import '../../billing/billing_screen.dart';
 import '../data/admin_repository.dart';
 import 'admin_console_screen.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Taille lisible (o, Ko, Mo, Go).
 String bytesLabel(int bytes) {
-  const units = ['o', 'Ko', 'Mo', 'Go'];
+  final units = ['o', tr('Ko'), tr('Mo'), tr('Go')];
   var v = bytes.toDouble();
   var i = 0;
   while (v >= 1024 && i < units.length - 1) {
     v /= 1024;
     i++;
   }
-  return '${i == 0 ? v.toStringAsFixed(0) : v.toStringAsFixed(1).replaceAll('.', ',')} ${units[i]}';
+  return '${i == 0 ? v.toStringAsFixed(0) : v.toStringAsFixed(1).replaceAll('.', decimalSeparator)} ${units[i]}';
 }
 
 String _usd(Object? v, int digits) =>
-    '${(v as num? ?? 0).toStringAsFixed(digits).replaceAll('.', ',')} \$';
+    '${(v as num? ?? 0).toStringAsFixed(digits).replaceAll('.', decimalSeparator)} \$';
 
-const _aiKinds = {
-  'match_analysis': 'Analyses de match',
-  'coupon_summary': 'Résumés de coupons',
-  'assistant_intent': 'Assistant (compréhension)',
-  'engine_evaluation': 'Évaluation du moteur',
-  'provider_test': 'Tests des fournisseurs',
+final _aiKinds = {
+  'match_analysis': tr('Analyses de match'),
+  'coupon_summary': tr('Résumés de coupons'),
+  'assistant_intent': tr('Assistant (compréhension)'),
+  'engine_evaluation': tr('Évaluation du moteur'),
+  'provider_test': tr('Tests des fournisseurs'),
 };
 
 /// Coûts de fonctionnement et coût moyen par utilisateur actif.
@@ -47,17 +48,17 @@ class _CostsAdminScreenState extends ConsumerState<CostsAdminScreen> {
   Widget build(BuildContext context) {
     final costs = ref.watch(adminCostsProvider(_days));
     return Scaffold(
-      appBar: AppBar(title: const Text('Coûts')),
+      appBar: AppBar(title: Text(tr('Coûts'))),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(adminCostsProvider(_days)),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
           children: [
             SegmentedButton<int>(
-              segments: const [
-                ButtonSegment(value: 7, label: Text('7 j')),
-                ButtonSegment(value: 30, label: Text('30 j')),
-                ButtonSegment(value: 90, label: Text('90 j')),
+              segments: [
+                ButtonSegment(value: 7, label: Text(tr('7 j'))),
+                ButtonSegment(value: 30, label: Text(tr('30 j'))),
+                ButtonSegment(value: 90, label: Text(tr('90 j'))),
               ],
               selected: {_days},
               onSelectionChanged: (s) => setState(() => _days = s.first),
@@ -101,17 +102,17 @@ class CostsView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         MetricGroup(
-          title: 'Sur ${data['days']} jours',
+          title: trf('Sur {0} jours', [data['days']]),
           tiles: [
-            ('coût total estimé', fcfa(asInt(data['total_xof']))),
+            (tr('coût total estimé'), fcfa(asInt(data['total_xof']))),
             (
-              'par utilisateur actif',
+              tr('par utilisateur actif'),
               perUser == null ? '–' : fcfa(asInt(perUser))
             ),
-            ('utilisateurs actifs', '${data['active_users']}'),
+            (tr('utilisateurs actifs'), '${data['active_users']}'),
             ('revenus', fcfa(asInt(data['revenue_xof']))),
             (
-              margin >= 0 ? 'excédent' : 'déficit',
+              margin >= 0 ? tr('excédent') : tr('déficit'),
               fcfa(margin.abs()),
             ),
           ],
@@ -119,39 +120,41 @@ class CostsView extends StatelessWidget {
           footer: fixed['configured'] == true
               ? null
               : Text(
-                  'Abonnements fixes non renseignés : le total ne compte que l’IA et les commissions. '
-                  'Renseigner « costs.fixed_monthly_xof » dans Réglages.',
+                  tr('Abonnements fixes non renseignés : le total ne compte que l’IA et les commissions. Renseigner « costs.fixed_monthly_xof » dans Réglages.'),
                   style: small?.copyWith(color: theme.colorScheme.error)),
         ),
         MetricGroup(
-          title: 'Intelligence artificielle (mesuré)',
+          title: tr('Intelligence artificielle (mesuré)'),
           tiles: [
-            ('coût', fcfa(asInt(ai['cost_xof']))),
-            ('en dollars', _usd(ai['cost_usd'], 2)),
-            ('appels', '${ai['requests']}'),
+            (tr('coût'), fcfa(asInt(ai['cost_xof']))),
+            (tr('en dollars'), _usd(ai['cost_usd'], 2)),
+            (tr('appels'), '${ai['requests']}'),
             if (asInt(ai['unpriced']) > 0)
-              ('sans prix connu', '${ai['unpriced']}'),
+              (tr('sans prix connu'), '${ai['unpriced']}'),
           ],
           footer: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (final k in asList(ai['by_kind']))
                 Text(
-                    '${_aiKinds[k['kind']] ?? k['kind']} : ${k['requests']} appels · '
-                    '${_usd(k['cost_usd'], 3)}',
+                    trf('{0} : {1} appels · {2}', [
+                      _aiKinds[k['kind']] ?? k['kind'],
+                      k['requests'],
+                      _usd(k['cost_usd'], 3)
+                    ]),
                     style: small),
               Text(
-                  'Prix par million de jetons : réglage « ai.pricing_usd_per_mtok ». '
-                  'Conversion : 1 \$ = ${data['usd_to_xof']} FCFA (« costs.usd_to_xof »).',
+                  trf('Prix par million de jetons : réglage « ai.pricing_usd_per_mtok ». Conversion : 1 \$ = {0} FCFA (« costs.usd_to_xof »).',
+                      [data['usd_to_xof']]),
                   style: small),
             ],
           ),
         ),
         MetricGroup(
-          title: 'Abonnements fixes (renseigné)',
+          title: tr('Abonnements fixes (renseigné)'),
           tiles: [
-            ('par mois', fcfa(asInt(fixed['monthly_xof']))),
-            ('sur la période', fcfa(asInt(fixed['period_xof']))),
+            (tr('par mois'), fcfa(asInt(fixed['monthly_xof']))),
+            (tr('sur la période'), fcfa(asInt(fixed['period_xof']))),
           ],
           footer: fixedItems.isEmpty
               ? null
@@ -163,38 +166,44 @@ class CostsView extends StatelessWidget {
                   style: small),
         ),
         MetricGroup(
-          title: 'Paiements',
+          title: tr('Paiements'),
           tiles: [
             ('commissions', fcfa(asInt(payments['fees_xof']))),
-            ('taux', '${payments['fee_percent']} %'),
-            ('paiements', '${payments['count']}'),
+            (tr('taux'), '${payments['fee_percent']} %'),
+            (tr('paiements'), '${payments['count']}'),
           ],
         ),
         MetricGroup(
-          title: 'Données sportives',
+          title: tr('Données sportives'),
           tiles: [
-            ('requêtes', '${sports['requests']}'),
-            ('par jour', '${sports['requests_per_day']}'),
-            ('restantes aujourd’hui', '${sports['remaining_today'] ?? '–'}'),
+            (tr('requêtes'), '${sports['requests']}'),
+            (tr('par jour'), '${sports['requests_per_day']}'),
+            (
+              tr('restantes aujourd’hui'),
+              '${sports['remaining_today'] ?? '–'}'
+            ),
           ],
           footer: Text(
-              'Inclus dans l’abonnement API-Football (montant fixe ci-dessus).',
+              tr('Inclus dans l’abonnement API-Football (montant fixe ci-dessus).'),
               style: small),
         ),
         MetricGroup(
-          title: 'Notifications',
+          title: tr('Notifications'),
           tiles: [
-            ('créées', '${notifs['created']}'),
-            ('envoyées au téléphone', '${notifs['sent']}'),
-            ('échecs', '${notifs['failed']}'),
+            (tr('créées'), '${notifs['created']}'),
+            (tr('envoyées au téléphone'), '${notifs['sent']}'),
+            (tr('échecs'), '${notifs['failed']}'),
           ],
-          footer: Text('Firebase Cloud Messaging : sans frais par message.',
+          footer: Text(tr('Firebase Cloud Messaging : sans frais par message.'),
               style: small),
         ),
         MetricGroup(
-          title: 'Stockage',
+          title: tr('Stockage'),
           tiles: [
-            ('base de données', bytesLabel(asInt(storage['database_bytes']))),
+            (
+              tr('base de données'),
+              bytesLabel(asInt(storage['database_bytes']))
+            ),
             for (final f in asList(storage['files']))
               (
                 '${f['bucket']} (${f['objects']})',
@@ -202,7 +211,7 @@ class CostsView extends StatelessWidget {
               ),
           ],
           footer: Text(
-              'La bande passante n’est pas mesurée ici : voir le tableau de bord Supabase (Usage).',
+              tr('La bande passante n’est pas mesurée ici : voir le tableau de bord Supabase (Usage).'),
               style: small),
         ),
         const SizedBox(height: 4),
@@ -211,12 +220,11 @@ class CostsView extends StatelessWidget {
           child: TextButton.icon(
             onPressed: () => context.push(AppRoutes.adminSettings),
             icon: const Icon(Icons.tune),
-            label: const Text('Modifier les montants (réglages « costs. »)'),
+            label: Text(tr('Modifier les montants (réglages « costs. »)')),
           ),
         ),
         Text(
-            'Estimations : prix publics des modèles IA, montants saisis par l’administrateur. '
-            'Les quotas et tarifs des fournisseurs peuvent changer.',
+            tr('Estimations : prix publics des modèles IA, montants saisis par l’administrateur. Les quotas et tarifs des fournisseurs peuvent changer.'),
             style: small),
       ],
     );

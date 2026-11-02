@@ -16,6 +16,7 @@ import '../../system/system_providers.dart';
 import '../data/ai_consistency.dart';
 import '../data/coupon_models.dart';
 import '../data/coupon_repository.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Confirmation quand une sélection contredit l'analyse IA : l'équipe peut passer outre.
 Future<bool> confirmAiOverride(
@@ -24,14 +25,14 @@ Future<bool> confirmAiOverride(
     context: context,
     builder: (d) => AlertDialog(
       icon: const Icon(Icons.warning_amber_rounded, color: BrandColors.orange),
-      title: const Text('Contraire à l’analyse IA'),
-      content: Text(
-          '${items.map((i) => '• $i').join('\n')}\n\nLes utilisateurs voient le pronostic de l’IA sur la fiche du match. '
-          'Maintenir ce choix est noté au journal d’audit.'),
+      title: Text(tr('Contraire à l’analyse IA')),
+      content: Text(trf(
+          '{0}\n\nLes utilisateurs voient le pronostic de l’IA sur la fiche du match. Maintenir ce choix est noté au journal d’audit.',
+          [items.map((i) => '• $i').join('\n')])),
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(d, false),
-            child: const Text('Revoir')),
+            child: Text(tr('Revoir'))),
         FilledButton(
             style: FilledButton.styleFrom(backgroundColor: BrandColors.orange),
             onPressed: () => Navigator.pop(d, true),
@@ -110,9 +111,9 @@ class _CouponEditScreenState extends ConsumerState<CouponEditScreen> {
             return ListView(
               controller: controller,
               children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
-                  child: Text('Ajouter un match (aujourd’hui ou demain)'),
+                  child: Text(tr('Ajouter un match (aujourd’hui ou demain)')),
                 ),
                 for (final m in all)
                   ListTile(
@@ -122,10 +123,10 @@ class _CouponEditScreenState extends ConsumerState<CouponEditScreen> {
                     onTap: () => Navigator.pop(sheet, m),
                   ),
                 if (all.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.all(20),
-                    child: Text(
-                        'Aucun autre match programmé à plus de 30 minutes.'),
+                    child: Text(tr(
+                        'Aucun autre match programmé à plus de 30 minutes.')),
                   ),
               ],
             );
@@ -141,12 +142,12 @@ class _CouponEditScreenState extends ConsumerState<CouponEditScreen> {
   Future<void> _save({bool force = false}) async {
     final sels = _sels!;
     if (sels.isEmpty || sels.any((s) => s.key == null)) {
-      showMessage(context, 'Choisissez une issue pour chaque match.',
+      showMessage(context, tr('Choisissez une issue pour chaque match.'),
           error: true);
       return;
     }
     if (_note.text.trim().length < 3) {
-      showMessage(context, 'Indiquez le motif de la modification.',
+      showMessage(context, tr('Indiquez le motif de la modification.'),
           error: true);
       return;
     }
@@ -161,12 +162,13 @@ class _CouponEditScreenState extends ConsumerState<CouponEditScreen> {
       invalidateCouponAdminLists(ref);
       if (mounted) {
         showMessage(
-            context, 'Coupon modifié : cotes et probabilités recalculées.');
+            context, tr('Coupon modifié : cotes et probabilités recalculées.'));
         context.pop();
       }
     } on CouponAiConflict catch (e) {
       if (mounted &&
-          await confirmAiOverride(context, e.items, 'Enregistrer quand même')) {
+          await confirmAiOverride(
+              context, e.items, tr('Enregistrer quand même'))) {
         if (mounted) await _save(force: true);
       }
     } catch (e) {
@@ -186,32 +188,32 @@ class _CouponEditScreenState extends ConsumerState<CouponEditScreen> {
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!perms.contains('coupons.edit')) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Modifier le coupon')),
-        body: const InfoMessage(
+        appBar: AppBar(title: Text(tr('Modifier le coupon'))),
+        body: InfoMessage(
             icon: Icons.lock_outline,
-            title: 'Écran réservé au super administrateur'),
+            title: tr('Écran réservé au super administrateur')),
       );
     }
     final coupon = ref.watch(couponProvider(widget.couponId));
     return Scaffold(
-      appBar: AppBar(title: const Text('Modifier le coupon')),
+      appBar: AppBar(title: Text(tr('Modifier le coupon'))),
       body: coupon.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => InfoMessage(
             icon: Icons.cloud_off_outlined,
-            title: 'Coupon indisponible',
+            title: tr('Coupon indisponible'),
             body: userMessageFor(e)),
         data: (c) {
           if (c == null) {
-            return const InfoMessage(
-                icon: Icons.help_outline, title: 'Coupon introuvable');
+            return InfoMessage(
+                icon: Icons.help_outline, title: tr('Coupon introuvable'));
           }
           if (!['pending_review', 'ready'].contains(c.status)) {
-            return const InfoMessage(
+            return InfoMessage(
                 icon: Icons.lock_outline,
-                title: 'Coupon non modifiable',
-                body:
-                    'Un coupon publié est immuable : retirez-le, puis « Dupliquer et modifier ».');
+                title: tr('Coupon non modifiable'),
+                body: tr(
+                    'Un coupon publié est immuable : retirez-le, puis « Dupliquer et modifier ».'));
           }
           _init(c);
           return _form(context);
@@ -235,12 +237,14 @@ class _CouponEditScreenState extends ConsumerState<CouponEditScreen> {
         TextField(
           controller: _title,
           maxLength: 120,
-          decoration: const InputDecoration(
-              labelText: 'Titre', border: OutlineInputBorder()),
+          decoration: InputDecoration(
+              labelText: tr('Titre'), border: OutlineInputBorder()),
         ),
-        SectionTitle('Sélections (${sels.length})',
+        SectionTitle(trf('Sélections ({0})', [sels.length]),
             trailing: Text(
-                total == null ? '' : 'cote indicative ${decimal(total)}',
+                total == null
+                    ? ''
+                    : trf('cote indicative {0}', [decimal(total)]),
                 style: theme.textTheme.labelLarge)),
         for (final (i, s) in sels.indexed)
           _SelectionEditor(
@@ -254,15 +258,15 @@ class _CouponEditScreenState extends ConsumerState<CouponEditScreen> {
           child: TextButton.icon(
             onPressed: sels.length >= 10 ? null : _addMatch,
             icon: const Icon(Icons.add),
-            label: const Text('Ajouter un match'),
+            label: Text(tr('Ajouter un match')),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _note,
           maxLength: 200,
-          decoration: const InputDecoration(
-              labelText: 'Motif (journal d’audit)',
+          decoration: InputDecoration(
+              labelText: tr('Motif (journal d’audit)'),
               border: OutlineInputBorder()),
         ),
         const SizedBox(height: 8),
@@ -274,12 +278,10 @@ class _CouponEditScreenState extends ConsumerState<CouponEditScreen> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.save_outlined),
-          label: const Text('Enregistrer'),
+          label: Text(tr('Enregistrer')),
         ),
         const SizedBox(height: 8),
-        Text(
-            'Le serveur relit les cotes médianes du moment, recalcule la cote totale, la probabilité, le risque et le résumé, '
-            'et refuse un match à moins de 30 minutes du coup d’envoi. Le coupon garde son statut (à valider ou programmé).',
+        Text(tr('Le serveur relit les cotes médianes du moment, recalcule la cote totale, la probabilité, le risque et le résumé, et refuse un match à moins de 30 minutes du coup d’envoi. Le coupon garde son statut (à valider ou programmé).'),
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
       ],
@@ -309,10 +311,14 @@ class _SelectionEditor extends ConsumerWidget {
     final bad =
         sel.key == null ? const <String>[] : aiContradictions(sel.key!, picks);
     final aiText = analysis == null
-        ? 'Pas encore d’analyse IA pour ce match'
+        ? tr('Pas encore d’analyse IA pour ce match')
         : picks.isEmpty
-            ? 'Analyse IA : aucun pronostic retenu'
-            : 'Pronostic IA : ${picks.map((k) => outcomeKeyLabel(k, sel.home, sel.away)).join(', ')}';
+            ? tr('Analyse IA : aucun pronostic retenu')
+            : trf('Pronostic IA : {0}', [
+                picks
+                    .map((k) => outcomeKeyLabel(k, sel.home, sel.away))
+                    .join(', ')
+              ]);
     return Card(
       shape: bad.isEmpty
           ? null
@@ -334,7 +340,7 @@ class _SelectionEditor extends ConsumerWidget {
                 Text('${shortDate(sel.kickoffAt)} ${timeLabel(sel.kickoffAt)}',
                     style: theme.textTheme.labelMedium),
                 IconButton(
-                  tooltip: 'Retirer ce match',
+                  tooltip: tr('Retirer ce match'),
                   icon: const Icon(Icons.close),
                   onPressed: onRemove,
                 ),
@@ -356,9 +362,9 @@ class _SelectionEditor extends ConsumerWidget {
                   return DropdownButtonFormField<String>(
                     initialValue: keys.contains(sel.key) ? sel.key : null,
                     isExpanded: true,
-                    hint: const Text('Choisir l’issue'),
-                    decoration: const InputDecoration(
-                        labelText: 'Issue', border: OutlineInputBorder()),
+                    hint: Text(tr('Choisir l’issue')),
+                    decoration: InputDecoration(
+                        labelText: tr('Issue'), border: OutlineInputBorder()),
                     items: [
                       for (final o in list)
                         DropdownMenuItem(
@@ -378,7 +384,11 @@ class _SelectionEditor extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 6, right: 10),
                 child: Text(
-                    'Contraire au pronostic de l’IA (${bad.map((k) => outcomeKeyLabel(k, sel.home, sel.away)).join(', ')}).',
+                    trf('Contraire au pronostic de l’IA ({0}).', [
+                      bad
+                          .map((k) => outcomeKeyLabel(k, sel.home, sel.away))
+                          .join(', ')
+                    ]),
                     style: const TextStyle(
                         color: BrandColors.orange,
                         fontWeight: FontWeight.w600)),

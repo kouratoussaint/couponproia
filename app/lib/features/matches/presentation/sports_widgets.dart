@@ -7,6 +7,7 @@ import '../../../core/theme/brand_colors.dart';
 import '../data/insights_models.dart';
 import '../data/sports_format.dart';
 import '../data/sports_models.dart';
+import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 /// Logo d'équipe ou de compétition, mis en cache sur l'appareil (économie de données).
 class SportsLogo extends StatelessWidget {
@@ -151,8 +152,12 @@ class OneXTwoBar extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     int flex(double p) => (p * 1000).round().clamp(1, 1000);
     return Semantics(
-      label: 'Selon les cotes : domicile ${(market.pHome * 100).round()} %, '
-          'nul ${(market.pDraw * 100).round()} %, extérieur ${(market.pAway * 100).round()} %',
+      label:
+          trf('Selon les cotes : domicile {0} %, nul {1} %, extérieur {2} %', [
+        (market.pHome * 100).round(),
+        (market.pDraw * 100).round(),
+        (market.pAway * 100).round()
+      ]),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(height),
         child: SizedBox(
@@ -204,12 +209,12 @@ class OneXTwoLegend extends StatelessWidget {
         runSpacing: 4,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text('Selon les cotes :',
+          Text(tr('Selon les cotes :'),
               style: theme.textTheme.labelSmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           key(BrandColors.vertIA, 'domicile'),
           key(theme.colorScheme.outline, 'nul'),
-          key(BrandColors.orange, 'extérieur'),
+          key(BrandColors.orange, tr('extérieur')),
         ],
       ),
     );
