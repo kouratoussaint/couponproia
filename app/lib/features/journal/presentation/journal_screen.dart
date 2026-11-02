@@ -13,6 +13,7 @@ import '../../simulator/data/stake_math.dart';
 import '../../simulator/presentation/stake_simulator_sheet.dart';
 import '../../system/system_providers.dart';
 import '../data/journal_repository.dart';
+import '../../help/help_screens.dart';
 
 /// Carnet de paris : les mises que l'utilisateur a déclarées, réglées automatiquement, avec son
 /// bilan réel par mois et le suivi de son budget. Aucun pari n'est pris par l'application.
@@ -29,6 +30,7 @@ class JournalScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Mon carnet de paris'),
         actions: [
+          const HelpButton('carnet'),
           IconButton(
             tooltip: 'Budget et plafond',
             icon: const Icon(Icons.shield_outlined),

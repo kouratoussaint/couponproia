@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="coupon_widget_label">Coupon Pro IA</string>
+    <string name="coupon_widget_description">Coupon du jour, matchs du jour et en direct</string>
+</resources>

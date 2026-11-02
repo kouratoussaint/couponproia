@@ -13,6 +13,7 @@ import '../../assistant/data/my_coupons_view.dart';
 import '../../billing/credit_costs.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
+import '../../help/help_screens.dart';
 import '../data/lab_repository.dart';
 
 /// Laboratoire IA : générateur manuel, puis analyse, optimisation, simulation et comparaison
@@ -113,7 +114,9 @@ class _LabScreenState extends ConsumerState<LabScreen> {
       return Scaffold(
         appBar: widget.embedded
             ? null
-            : AppBar(title: const Text('Laboratoire IA')),
+            : AppBar(
+                title: const Text('Laboratoire IA'),
+                actions: const [HelpButton('laboratoire')]),
         body: const InfoMessage(
             icon: Icons.pause_circle_outline,
             title: 'Laboratoire momentanément indisponible'),

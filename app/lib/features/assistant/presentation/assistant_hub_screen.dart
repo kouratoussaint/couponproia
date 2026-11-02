@@ -4,6 +4,7 @@ import '../../lab/presentation/lab_screen.dart';
 import '../../shell/app_drawer.dart';
 import 'assistant_screen.dart';
 import 'my_coupons_screen.dart';
+import '../../help/help_screens.dart';
 
 /// Onglet « Assistant IA » de la barre du bas : trois onglets, Assistant (conversation),
 /// Mes coupons (coupons enregistrés) et Laboratoire (composition et calculs).
@@ -21,6 +22,19 @@ class AssistantHubScreen extends StatelessWidget {
           appBar: AppBar(
             leading: const DrawerMenuButton(),
             title: const Text('Assistant IA'),
+            actions: [
+              Builder(builder: (context) {
+                final tabs = DefaultTabController.of(context);
+                return AnimatedBuilder(
+                  animation: tabs,
+                  builder: (_, __) => HelpButton(const [
+                    'assistant',
+                    'mes-coupons',
+                    'laboratoire'
+                  ][tabs.index]),
+                );
+              }),
+            ],
             bottom: const TabBar(
               tabs: [
                 Tab(text: 'Assistant'),

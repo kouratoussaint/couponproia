@@ -51,6 +51,9 @@ abstract final class AppRoutes {
   static const notificationSettings = '/notifications/reglages';
   static const community = '/communaute';
   static const search = '/recherche';
+  static const help = '/aide';
+  static const helpArticle = '/aide/:id';
+  static String helpArticleFor(String id) => '/aide/$id';
 
   /// Onglets ouverts directement depuis le menu latéral.
   static const matchesCompetitions = '/matchs?onglet=competitions';

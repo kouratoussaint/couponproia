@@ -20,6 +20,7 @@ import '../../assistant/data/assistant_repository.dart';
 import '../../system/system_providers.dart';
 import '../data/profile_repository.dart';
 import '../../shell/app_drawer.dart';
+import '../../widget/home_widget_sync.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -259,6 +260,20 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     const ErrorReportsSwitch(),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.widgets_outlined),
+                      title: const Text('Widget sur l’écran d’accueil'),
+                      subtitle: const Text(
+                          'Coupon du jour, matchs du jour et en direct, sans ouvrir l’app'),
+                      onTap: () async {
+                        final ok = await requestHomeWidget();
+                        if (!ok && context.mounted) {
+                          showMessage(context,
+                              'Ajout manuel : appui long sur l’écran d’accueil → Widgets → Coupon Pro IA.');
+                        }
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -286,6 +301,14 @@ class ProfileScreen extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.help_outline),
+                    title: const Text('Aide et questions fréquentes'),
+                    subtitle: const Text(
+                        'Crédits, coupons, analyses, forfaits, widget…'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.help),
+                  ),
                   ListTile(
                     leading: const Icon(Icons.support_agent),
                     title: const Text('Contacter le support'),

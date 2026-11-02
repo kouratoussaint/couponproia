@@ -14,6 +14,7 @@ import 'data/coupon_repository.dart';
 import 'presentation/coupon_actions.dart';
 import 'presentation/coupon_tiles.dart';
 import 'presentation/coupon_widgets.dart';
+import '../help/help_screens.dart';
 
 /// Onglet Coupons, en trois onglets :
 /// - « À jouer » : aucun match commencé (Coupon du jour en avant, puis lignes compactes) ;
@@ -99,6 +100,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
         leading: const DrawerMenuButton(),
         title: const Text('Coupons'),
         actions: [
+          const HelpButton('acces-coupons'),
           IconButton(
               tooltip: 'Actualiser',
               icon: const Icon(Icons.refresh),

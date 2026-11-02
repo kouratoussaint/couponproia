@@ -38,6 +38,7 @@ class _LiveUpdatesScopeState extends ConsumerState<LiveUpdatesScope> {
     if (now.difference(_lastRefresh) < const Duration(seconds: 20)) return;
     _lastRefresh = now;
     ref.invalidate(activeCouponsProvider);
+    ref.invalidate(publishedCouponsProvider);
     ref.invalidate(decidedCouponsProvider);
     ref.invalidate(couponProvider);
     ref.invalidate(savedCouponsProvider);

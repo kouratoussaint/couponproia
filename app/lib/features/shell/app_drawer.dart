@@ -128,6 +128,8 @@ class AppDrawer extends ConsumerWidget {
                 () => open(AppRoutes.studio)),
             const Divider(),
             const DrawerSectionTitle('Aide'),
+            item(Icons.help_outline, 'Aide et questions fréquentes',
+                () => open(AppRoutes.help)),
             item(Icons.health_and_safety_outlined, 'Jeu responsable',
                 () => open(AppRoutes.responsibleGaming)),
             item(Icons.support_agent, 'Contacter le support', () {

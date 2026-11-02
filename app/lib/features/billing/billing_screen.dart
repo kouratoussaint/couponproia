@@ -9,6 +9,7 @@ import '../matches/data/sports_format.dart';
 import '../matches/presentation/sports_widgets.dart';
 import '../system/system_providers.dart';
 import 'billing_repository.dart';
+import '../help/help_screens.dart';
 
 String fcfa(int amount) {
   final s = amount.toString();
@@ -223,7 +224,9 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Abonnement et crédits')),
+      appBar: AppBar(
+          title: const Text('Abonnement et crédits'),
+          actions: const [HelpButton('forfaits')]),
       body: RefreshIndicator(
         onRefresh: () async => _refreshAll(),
         child: ListView(

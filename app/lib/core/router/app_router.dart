@@ -25,6 +25,7 @@ import '../../features/coupons/presentation/generations_admin_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/lab/presentation/lab_screen.dart';
 import '../../features/search/search_screen.dart';
+import '../../features/help/help_screens.dart';
 import '../../features/matches/presentation/competitions_screen.dart';
 import '../../features/matches/presentation/match_detail_screen.dart';
 import '../../features/matches/presentation/matches_screen.dart';
@@ -297,6 +298,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.favoriteTeams,
         builder: (context, state) => const FavoriteTeamsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.help,
+        builder: (context, state) => const HelpScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.helpArticle,
+        builder: (context, state) =>
+            HelpArticleScreen(id: state.pathParameters['id'] ?? ''),
       ),
       GoRoute(
         path: AppRoutes.search,

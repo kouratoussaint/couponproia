@@ -42,6 +42,18 @@
             </intent-filter>
             <meta-data android:name="flutter_deeplinking_enabled" android:value="true"/>
         </activity>
+        <!-- Widget de l'écran d'accueil (Coupon du jour, matchs du jour et en direct). -->
+        <receiver
+            android:name=".CouponWidgetProvider"
+            android:exported="false"
+            android:label="@string/coupon_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/coupon_widget_info" />
+        </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

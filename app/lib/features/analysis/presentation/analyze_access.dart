@@ -78,8 +78,9 @@ Future<void> showAnalysisLocked(BuildContext context) =>
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (c) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -101,6 +102,13 @@ Future<void> showAnalysisLocked(BuildContext context) =>
                   context.push(AppRoutes.billing);
                 },
                 child: const Text('Voir les forfaits et les crédits'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(c);
+                  context.push(AppRoutes.helpArticleFor('analyser'));
+                },
+                child: const Text('Comment fonctionnent les analyses ?'),
               ),
             ],
           ),
