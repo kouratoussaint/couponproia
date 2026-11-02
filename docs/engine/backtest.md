@@ -1,6 +1,6 @@
-# Backtest poisson-1.1 contre poisson-2.0 (2026-10-31T21:38 UTC)
+# Backtest poisson-1.1 contre poisson-2.0 (2026-11-02T12:29 UTC)
 
-Matchs évalués : saison 2025 (réglage) 2239, saison 2026 (validation) 547. Avant chaque match, au moins 30 matchs de la même saison.
+Matchs évalués : saison 2025 (réglage) 2239, saison 2026 (validation) 567. Avant chaque match, au moins 30 matchs de la même saison.
 
 Plus bas = meilleur pour Brier et perte logarithmique (ll). Précision = issue la plus probable juste.
 
@@ -40,45 +40,45 @@ Meilleure variante sur la saison 2025 : **demi-vie 730 j · ρ 0 · k 5**.
 
 | Modèle (saison 2026) | Matchs | Brier 1X2 | ll 1X2 | Précision | ll +2,5 buts | ll les deux marquent |
 |---|---|---|---|---|---|---|
-| poisson-1.1 | 547 | 0,5989 | 1,0025 | 52,1 % | 0,6802 | 0,6884 |
-| demi-vie 730 j · ρ 0 · k 5 | 547 | 0,5734 | 0,9656 | 55,9 % | 0,6762 | 0,6836 |
+| poisson-1.1 | 567 | 0,5947 | 0,9964 | 52,9 % | 0,6811 | 0,6897 |
+| demi-vie 730 j · ρ 0 · k 5 | 567 | 0,5767 | 0,9704 | 55,4 % | 0,6836 | 0,6862 |
 
 ## Calibration 1X2 (saison en cours)
 
 | Tranche | v1.1 annoncé → observé (n) | v2.0 annoncé → observé (n) |
 |---|---|---|
-| 0–10 % | 8,6 % → 11,1 % (9) | 7,8 % → 0,0 % (27) |
-| 10–20 % | 16,8 % → 14,5 % (173) | 16,2 % → 15,4 % (188) |
-| 20–30 % | 25,0 % → 24,1 % (718) | 24,8 % → 22,3 % (650) |
-| 30–40 % | 34,6 % → 33,9 % (254) | 34,7 % → 32,0 % (316) |
-| 40–50 % | 45,2 % → 47,0 % (268) | 44,5 % → 53,2 % (218) |
-| 50–60 % | 54,3 % → 57,8 % (135) | 54,4 % → 57,6 % (132) |
-| 60–70 % | 64,2 % → 64,2 % (67) | 64,3 % → 64,9 % (77) |
-| 70–80 % | 73,2 % → 85,7 % (14) | 74,0 % → 88,0 % (25) |
-| 80–90 % | 80,5 % → 100,0 % (3) | 83,8 % → 100,0 % (8) |
+| 0–10 % | 8,5 % → 10,0 % (10) | 8,0 % → 8,3 % (24) |
+| 10–20 % | 16,8 % → 14,0 % (179) | 16,1 % → 12,9 % (201) |
+| 20–30 % | 25,0 % → 23,8 % (745) | 24,9 % → 22,9 % (677) |
+| 30–40 % | 34,5 % → 33,5 % (260) | 34,3 % → 33,1 % (308) |
+| 40–50 % | 45,1 % → 48,0 % (279) | 44,6 % → 50,8 % (248) |
+| 50–60 % | 54,3 % → 57,9 % (140) | 54,4 % → 55,5 % (128) |
+| 60–70 % | 64,3 % → 65,7 % (70) | 64,4 % → 69,5 % (82) |
+| 70–80 % | 73,6 % → 86,7 % (15) | 74,8 % → 80,8 % (26) |
+| 80–90 % | 80,5 % → 100,0 % (3) | 82,6 % → 100,0 % (7) |
 
 ## Par compétition (saisons évaluées, Brier 1X2)
 
 | Compétition | Matchs | v1.1 | v2.0 |
 |---|---|---|---|
 | Africa Cup of Nations | 22 | 0,6156 | 0,5537 |
-| Bundesliga | 314 | 0,6010 | 0,5968 |
-| CAF Champions League | 183 | 0,5697 | 0,5299 |
-| La Liga | 423 | 0,5881 | 0,5839 |
-| Ligue 1 | 320 | 0,6196 | 0,6026 |
-| Premier League | 407 | 0,6292 | 0,6241 |
-| Serie A | 412 | 0,6004 | 0,5856 |
-| UEFA Champions League | 362 | 0,6133 | 0,5719 |
-| UEFA Europa League | 343 | 0,6236 | 0,6071 |
+| Bundesliga | 316 | 0,6011 | 0,5968 |
+| CAF Champions League | 183 | 0,5697 | 0,5332 |
+| La Liga | 428 | 0,5864 | 0,5830 |
+| Ligue 1 | 325 | 0,6170 | 0,6035 |
+| Premier League | 409 | 0,6294 | 0,6240 |
+| Serie A | 418 | 0,5980 | 0,5841 |
+| UEFA Champions League | 362 | 0,6133 | 0,5756 |
+| UEFA Europa League | 343 | 0,6236 | 0,6079 |
 
-## Comparaison au marché (matchs avec cotes avant le coup d'envoi : 23)
+## Comparaison au marché (matchs avec cotes avant le coup d'envoi : 43)
 
 | Source | Brier 1X2 | ll 1X2 |
 |---|---|---|
-| Marché (cotes médianes, marge retirée) | 0,5768 | 0,9717 |
-| poisson-1.1 | 0,6405 | 1,0528 |
-| demi-vie 730 j · ρ 0 · k 5 | 0,5745 | 0,9627 |
-| 30 % v1.1 + 70 % marché | 0,5913 | 0,9896 |
-| 30 % v2.0 + 70 % marché | 0,5737 | 0,9668 |
+| Marché (cotes médianes, marge retirée) | 0,5159 | 0,8852 |
+| poisson-1.1 | 0,5657 | 0,9495 |
+| demi-vie 730 j · ρ 0 · k 5 | 0,5281 | 0,9007 |
+| 30 % v1.1 + 70 % marché | 0,5262 | 0,8990 |
+| 30 % v2.0 + 70 % marché | 0,5170 | 0,8867 |
 
 Échantillon encore trop petit pour conclure : les cotes de clôture ne sont conservées que depuis la mise en service.
