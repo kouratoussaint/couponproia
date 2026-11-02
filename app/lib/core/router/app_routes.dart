@@ -50,6 +50,11 @@ abstract final class AppRoutes {
   static const notifications = '/notifications';
   static const notificationSettings = '/notifications/reglages';
   static const community = '/communaute';
+
+  /// Onglets ouverts directement depuis le menu latéral.
+  static const matchesCompetitions = '/matchs?onglet=competitions';
+  static const assistantMyCoupons = '/assistant?onglet=coupons';
+  static const assistantLab = '/assistant?onglet=laboratoire';
   static const myTipsterProfile = '/communaute/mon-profil';
   static const tipster = '/tipster/:id';
   static const post = '/publication/:id';

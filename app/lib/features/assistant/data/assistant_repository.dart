@@ -6,7 +6,7 @@ import 'assistant_models.dart';
 
 const _userCouponColumns =
     'id, status, title, total_odd, combined_probability, implied_probability, risk_level, '
-    'engine_version, conversation_id, created_at, analysis, result, settled_odd, published_at, user_coupon_selections(position, selection_key, odd, result, '
+    'engine_version, conversation_id, created_at, analysis, result, settled_odd, settled_at, published_at, user_coupon_selections(position, selection_key, odd, result, '
     'odd_best, bookmakers, odds_captured_at, model_probability, implied_probability, edge, reliability, justification, '
     'match:matches(id, kickoff_at, status, home_goals, away_goals, home:teams!matches_home_team_fk(name, logo_url), '
     'away:teams!matches_away_team_fk(name, logo_url), competition:competitions(name)))';
@@ -119,6 +119,11 @@ class AssistantRepository {
   Future<void> setStatus(String couponId, String status) => _client
       .from('user_coupons')
       .update({'status': status}).eq('id', couponId);
+
+  /// Renommer un de ses coupons (1 à 80 caractères, contrôlé par le serveur).
+  Future<void> rename(String couponId, String title) => _client
+      .from('user_coupons')
+      .update({'title': title.trim()}).eq('id', couponId);
 
   Future<void> deleteCoupon(String couponId) =>
       _client.from('user_coupons').delete().eq('id', couponId);

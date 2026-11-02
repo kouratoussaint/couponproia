@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
     };
 
     const own = async (id: unknown) => {
-      if (typeof id !== "string") return null;
+      if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) return null;
       return await loadUserCoupon(db, caller.id, id, null);
     };
 
@@ -104,8 +104,11 @@ Deno.serve(async (req) => {
       if (errors.length) return json({ error: "invalid_selections", errors }, 422);
       const p = proposalOf(chosen);
       const risk = riskLevel(p.combinedProbability, thresholds);
-      const analysis = { ...defaultSummary(p), source: "calcul", manual: true };
-      const title = `Mon coupon · ${p.selections.length} sélection${p.selections.length > 1 ? "s" : ""} · cote ${p.totalOdd.toFixed(2).replace(".", ",")}`;
+      // Version optimisée d'un de vos coupons (alternative appliquée depuis le laboratoire).
+      const source = await own(body?.variant_of);
+      const analysis = { ...defaultSummary(p), source: "calcul", manual: true, ...(source ? { variant_of: source.id } : {}) };
+      const n = p.selections.length;
+      const title = `${source ? "Version optimisée" : "Coupon manuel"} · ${n} sélection${n > 1 ? "s" : ""}`;
       const existing = await own(body?.coupon_id);
       let id: string;
       if (existing) {

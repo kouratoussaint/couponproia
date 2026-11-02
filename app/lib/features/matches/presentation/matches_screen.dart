@@ -13,7 +13,10 @@ import 'sports_widgets.dart';
 /// Matchs : onglet Calendrier (un jour à la fois, hier à J+6, recherche et filtre par
 /// compétition) et onglet Compétitions et classements.
 class MatchesScreen extends ConsumerStatefulWidget {
-  const MatchesScreen({super.key});
+  const MatchesScreen({super.key, this.initialTab = 0});
+
+  /// 0 Calendrier, 1 Compétitions et classements (`/matchs?onglet=competitions`).
+  final int initialTab;
 
   @override
   ConsumerState<MatchesScreen> createState() => _MatchesScreenState();
@@ -260,6 +263,7 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
 
     return DefaultTabController(
       length: 2,
+      initialIndex: widget.initialTab.clamp(0, 1),
       child: Scaffold(
         appBar: appBar,
         body: TabBarView(

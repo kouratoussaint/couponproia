@@ -9,6 +9,7 @@ import '../../../core/widgets/form_widgets.dart';
 import '../../analysis/data/analysis_format.dart';
 import '../../assistant/data/assistant_models.dart';
 import '../../assistant/data/assistant_repository.dart';
+import '../../assistant/data/my_coupons_view.dart';
 import '../../billing/credit_costs.dart';
 import '../../matches/presentation/sports_widgets.dart';
 import '../../system/system_providers.dart';
@@ -90,7 +91,9 @@ class _LabScreenState extends ConsumerState<LabScreen> {
             else
               (matchId: s.match.id, key: s.key),
         ];
-        final id = await ref.read(labRepositoryProvider).build(selections);
+        final id = await ref
+            .read(labRepositoryProvider)
+            .build(selections, variantOf: coupon.id);
         ref.invalidate(savedCouponsProvider);
         if (!mounted) return;
         setState(() {
@@ -233,8 +236,8 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                       for (final c in list)
                         DropdownMenuItem(
                             value: c.id,
-                            child:
-                                Text(c.title, overflow: TextOverflow.ellipsis))
+                            child: Text(displayTitle(c),
+                                overflow: TextOverflow.ellipsis))
                     ],
                     onChanged: (v) => setState(() {
                       _couponId = v;
@@ -319,7 +322,8 @@ class _LabScreenState extends ConsumerState<LabScreen> {
                         CheckboxListTile(
                           dense: true,
                           value: _compareIds.contains(c.id),
-                          title: Text(c.title, overflow: TextOverflow.ellipsis),
+                          title: Text(displayTitle(c),
+                              overflow: TextOverflow.ellipsis),
                           onChanged: (v) => setState(() {
                             if (v == true && _compareIds.length < 3) {
                               _compareIds.add(c.id);

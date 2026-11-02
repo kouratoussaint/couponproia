@@ -14,6 +14,7 @@ import '../../shell/app_drawer.dart';
 import '../../system/system_providers.dart';
 import '../data/assistant_models.dart';
 import '../data/assistant_repository.dart';
+import '../data/my_coupons_view.dart';
 
 /// Suggestions de départ ; `paid` : action payante (proposition, analyse), sinon question gratuite.
 const _suggestions = [
@@ -517,8 +518,8 @@ class _ProposalCard extends ConsumerWidget {
                 Row(
                   children: [
                     Expanded(
-                        child:
-                            Text(c.title, style: theme.textTheme.titleSmall)),
+                        child: Text(displayTitle(c),
+                            style: theme.textTheme.titleSmall)),
                     RiskBadge(risk: c.riskLevel, compact: true),
                   ],
                 ),

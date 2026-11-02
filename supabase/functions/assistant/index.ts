@@ -420,7 +420,7 @@ class Assistant {
         conversationId,
         messageId,
         status: "proposal",
-        title: `Coupon ${p.selections.length} sélections · cote ${dec(p.totalOdd)}`,
+        title: `Coupon de l'assistant · ${p.selections.length} sélection${p.selections.length > 1 ? "s" : ""}`,
         criteria: result.criteria ?? {},
         proposal: p,
         risk: riskLevel(p.combinedProbability, thresholds),

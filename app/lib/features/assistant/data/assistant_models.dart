@@ -179,6 +179,9 @@ class UserCoupon {
     this.result,
     this.settledOdd,
     this.publishedAt,
+    this.settledAt,
+    this.manual = false,
+    this.variantOf,
   });
 
   factory UserCoupon.fromJson(Map<String, dynamic> j) {
@@ -205,6 +208,9 @@ class UserCoupon {
       result: j['result'] as String?,
       settledOdd: _dn(j['settled_odd']),
       publishedAt: j['published_at'] == null ? null : _date(j['published_at']),
+      settledAt: j['settled_at'] == null ? null : _date(j['settled_at']),
+      manual: analysis['manual'] == true,
+      variantOf: analysis['variant_of'] as String?,
     );
   }
 
@@ -228,6 +234,15 @@ class UserCoupon {
 
   /// Publié sur le profil Tipster : immuable.
   final DateTime? publishedAt;
+
+  /// Date du règlement (gagné, perdu, annulé).
+  final DateTime? settledAt;
+
+  /// Composé à la main dans le laboratoire.
+  final bool manual;
+
+  /// Version optimisée de ce coupon (laboratoire).
+  final String? variantOf;
 
   bool get isSaved => status == 'saved';
   bool get isPublished => publishedAt != null;

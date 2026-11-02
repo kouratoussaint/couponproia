@@ -338,7 +338,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [
             GoRoute(
                 path: AppRoutes.matches,
-                builder: (context, state) => const MatchesScreen()),
+                builder: (context, state) => MatchesScreen(
+                    key: ValueKey(state.uri.queryParameters['onglet']),
+                    initialTab:
+                        state.uri.queryParameters['onglet'] == 'competitions'
+                            ? 1
+                            : 0)),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(

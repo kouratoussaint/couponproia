@@ -229,13 +229,14 @@ class LabRepository {
 
   /// Le serveur vérifie chaque sélection, relit les cotes et recalcule tout.
   Future<String> build(List<({int matchId, String key})> selections,
-      {String? replaceCouponId, bool save = true}) async {
+      {String? replaceCouponId, String? variantOf, bool save = true}) async {
     final data = await _call({
       'action': 'build',
       'selections': [
         for (final s in selections) {'match_id': s.matchId, 'key': s.key}
       ],
       if (replaceCouponId != null) 'coupon_id': replaceCouponId,
+      if (variantOf != null) 'variant_of': variantOf,
       'save': save,
     });
     return data['coupon_id'] as String;
