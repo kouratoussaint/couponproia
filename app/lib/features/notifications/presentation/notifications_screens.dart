@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../coupons/data/coupon_models.dart';
 import '../../coupons/presentation/coupon_tiles.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../../core/providers.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../community/data/community_models.dart';
@@ -231,6 +232,19 @@ class NotificationSettingsScreen extends ConsumerWidget {
                       onChanged: (v) => set({column: v}),
                     ),
                 ],
+              ),
+            ),
+            const SectionTitle('Par e-mail'),
+            Card(
+              child: SwitchListTile(
+                secondary: const Icon(Icons.mail_outline),
+                title: const Text('Rapport hebdomadaire par e-mail'),
+                subtitle: Text(
+                    'Le lundi matin : votre bilan de la semaine (Mes coupons, carnet de paris) et celui '
+                    'des coupons de la plateforme, pertes comprises.'
+                    '${ref.watch(currentUserProvider)?.email == null ? '' : ' Envoyé à ${ref.watch(currentUserProvider)!.email}.'}'),
+                value: p.weeklyEmail,
+                onChanged: (v) => set({'weekly_email': v}),
               ),
             ),
             if (p.coupons) ...[

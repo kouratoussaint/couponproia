@@ -92,6 +92,8 @@ Deno.serve(async (req) => {
         accuracy_baseline: e.accuracyBaseline,
         over_2_5: evaluation.over25,
         btts: evaluation.btts,
+        dnb: evaluation.dnb,
+        team_totals: evaluation.teamTotals,
         per_competition: perCompetition,
       },
     }).select().single();

@@ -146,6 +146,8 @@ class _EvaluationView extends StatelessWidget {
                   ('Résultat 1 / N / 2', e.oneXTwo),
                   if (e.over25 != null) ('Plus de 2,5 buts', e.over25!),
                   if (e.btts != null) ('Les deux marquent', e.btts!),
+                  if (e.dnb != null) ('Remboursé si nul', e.dnb!),
+                  if (e.teamTotals != null) ('Buts par équipe', e.teamTotals!),
                 ]),
                 const SizedBox(height: 12),
                 Text(

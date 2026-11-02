@@ -39,8 +39,9 @@ export interface Intent {
   reponse: string;
 }
 
-const MARKETS = ["1X2", "DC", "OU", "BTTS"];
-const KEY_RE = /^(1X2\.(HOME|DRAW|AWAY)|DC\.(1X|12|X2)|OU\.(OVER|UNDER)\.[0-3]\.5|BTTS\.(YES|NO))$/;
+const MARKETS = ["1X2", "DC", "OU", "BTTS", "DNB", "TTH", "TTA"];
+const KEY_RE =
+  /^(1X2\.(HOME|DRAW|AWAY)|DC\.(1X|12|X2)|OU\.(OVER|UNDER)\.[0-3]\.5|BTTS\.(YES|NO)|DNB\.(HOME|AWAY)|TT[HA]\.(OVER|UNDER)\.[0-2]\.5)$/;
 
 function num(v: unknown, lo: number, hi: number): number | null {
   if (v === null || v === undefined || v === "") return null;
@@ -163,6 +164,11 @@ export function criteriaFromIntent(i: Intent, windowHours: number): { criteria: 
   if (marketsAsked && markets.some((m) => m === "OU" || m === "BTTS")) {
     warnings.push(
       "Sur l'historique, le moteur ne fait pas mieux qu'une simple fréquence pour les buts (plus/moins, les deux marquent) : ces probabilités sont à prendre avec prudence.",
+    );
+  }
+  if (marketsAsked && markets.some((m) => m === "DNB" || m === "TTH" || m === "TTA")) {
+    warnings.push(
+      "Remboursé si nul et buts par équipe : marchés récents, pas encore validés par l'évaluation du moteur ; probabilités à prendre avec prudence.",
     );
   }
   return { criteria, warnings };

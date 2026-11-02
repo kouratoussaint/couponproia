@@ -327,6 +327,8 @@ class EngineEvaluation {
     this.season,
     this.over25,
     this.btts,
+    this.dnb,
+    this.teamTotals,
   });
 
   factory EngineEvaluation.fromJson(Map<String, dynamic> j) {
@@ -352,6 +354,11 @@ class EngineEvaluation {
       btts: details['btts'] is Map
           ? Metrics.fromJson(_map(details['btts']))
           : null,
+      dnb:
+          details['dnb'] is Map ? Metrics.fromJson(_map(details['dnb'])) : null,
+      teamTotals: details['team_totals'] is Map
+          ? Metrics.fromJson(_map(details['team_totals']))
+          : null,
       calibration: [
         for (final b in (j['calibration'] as List? ?? const []))
           CalibrationBin(_d(b['from']), _d(b['to']), _i(b['count']),
@@ -370,6 +377,10 @@ class EngineEvaluation {
   final Metrics oneXTwo;
   final Metrics? over25;
   final Metrics? btts;
+
+  /// Remboursé si nul (matchs sans nul) et buts par équipe : présents dès la 0.29.
+  final Metrics? dnb;
+  final Metrics? teamTotals;
   final List<CalibrationBin> calibration;
   final List<String> competitions;
   final Map<String, Metrics> perCompetition;

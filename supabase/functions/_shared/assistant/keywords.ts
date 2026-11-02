@@ -147,6 +147,7 @@ export function extractConstraints(message: string, now: Date, timeZone: string)
     if (line !== null) issues.add(`OU.UNDER.${line}`);
   }
   if (/les deux (?:equipes )?marquent|\bbtts\b|both teams/.test(t)) issues.add("BTTS.YES");
+  if (/rembourse(?:e)? si (?:match )?nul|draw no bet|\bdnb\b/.test(t)) markets.add("DNB");
   out.issues = [...issues];
   out.marches = [...markets];
   out.mentionsMarket = markets.size > 0 || issues.size > 0 ||

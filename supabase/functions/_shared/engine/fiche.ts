@@ -53,10 +53,12 @@ export interface FicheInput {
   quality?: { evaluatedMatches: number; beatsBaseline: Record<string, boolean> } | null;
 }
 
-/** Famille d'évaluation d'une issue : 1X2 (et double chance), OU, BTTS. */
+/** Famille d'évaluation d'une issue : 1X2 (et double chance), OU, BTTS, DNB, TT (buts par équipe). */
 export function qualityGroup(key: string): string {
   const market = key.split(".")[0];
-  return market === "DC" ? "1X2" : market;
+  if (market === "DC") return "1X2";
+  if (market === "TTH" || market === "TTA") return "TT";
+  return market;
 }
 
 export interface OddsLineFiche {
@@ -101,7 +103,7 @@ function groupOf(row: OddsRow): string {
  * ramenés à une somme de 1 (2 pour la double chance, dont les issues se recouvrent).
  */
 export function impliedProbabilities(odds: OddsRow[]): Map<string, number> {
-  const size: Record<string, number> = { "1X2": 3, DC: 3, OU: 2, BTTS: 2 };
+  const size: Record<string, number> = { "1X2": 3, DC: 3, OU: 2, BTTS: 2, DNB: 2, TTH: 2, TTA: 2 };
   const groups = new Map<string, OddsRow[]>();
   for (const o of odds) {
     const g = groupOf(o);

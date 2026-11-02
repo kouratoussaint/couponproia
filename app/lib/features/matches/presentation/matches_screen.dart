@@ -7,6 +7,7 @@ import '../../system/system_providers.dart';
 import '../data/sports_format.dart';
 import '../data/sports_repository.dart';
 import '../../analysis/presentation/analyze_access.dart';
+import '../../search/search_screen.dart';
 import 'competitions_screen.dart';
 import 'sports_widgets.dart';
 
@@ -44,6 +45,7 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
       leading: const DrawerMenuButton(),
       title: const Text('Matchs'),
       actions: [
+        const SearchButton(),
         IconButton(
           tooltip: 'Choisir une date',
           icon: const Icon(Icons.calendar_month_outlined),

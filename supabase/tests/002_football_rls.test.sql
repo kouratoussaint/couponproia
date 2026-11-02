@@ -24,7 +24,7 @@ insert into public.sync_runs (provider_id, job, status, requests_used) values ('
 
 -- 1-4 : données de référence
 select is((select count(*)::int from public.competitions where is_active), 9, '9 compétitions actives au départ');
-select is((select count(*)::int from public.markets), 4, '4 marchés normalisés');
+select is((select count(*)::int from public.markets), 7, '7 marchés normalisés (dont remboursé si nul et buts par équipe)');
 select ok((select enabled from public.feature_flags where key = 'matches'), 'module Matchs activé');
 select is((select count(*)::int from public.app_settings where key like 'sports.%' and not is_public), 6,
           'réglages de synchronisation privés');

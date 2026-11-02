@@ -30,6 +30,15 @@ String bookmakerPick(String key) {
       return outcome == 'YES'
           ? 'Les deux marquent : Oui'
           : 'Les deux marquent : Non';
+    case 'DNB':
+      return outcome == 'HOME'
+          ? 'Remboursé si nul : 1 (DNB 1)'
+          : 'Remboursé si nul : 2 (DNB 2)';
+    case 'TTH' || 'TTA':
+      final side = market == 'TTH' ? 'domicile' : 'extérieur';
+      return outcome == 'OVER'
+          ? 'Buts équipe $side : plus de $line (Total Plus $line)'
+          : 'Buts équipe $side : moins de $line (Total Moins $line)';
   }
   return key;
 }

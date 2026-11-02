@@ -54,6 +54,22 @@ class SportsRepository {
     return rows.map(OddsLine.fromJson).toList();
   }
 
+  /// Matchs d'un groupe d'équipes sur une période (recherche).
+  Future<List<MatchSummary>> matchesOfTeams(List<int> teamIds,
+      {required DateTime from, required DateTime to, int limit = 40}) async {
+    if (teamIds.isEmpty) return const [];
+    final ids = teamIds.join(',');
+    final rows = await _client
+        .from('matches')
+        .select(_matchColumns)
+        .or('home_team_id.in.($ids),away_team_id.in.($ids)')
+        .gte('kickoff_at', from.toUtc().toIso8601String())
+        .lt('kickoff_at', to.toUtc().toIso8601String())
+        .order('kickoff_at')
+        .limit(limit);
+    return _matches(rows);
+  }
+
   /// Derniers matchs terminés d'une équipe, avant une date.
   Future<List<MatchSummary>> recentMatches(int teamId, DateTime before,
       {int limit = 5}) async {

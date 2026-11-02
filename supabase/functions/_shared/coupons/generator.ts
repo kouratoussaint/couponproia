@@ -208,10 +208,15 @@ export function recordUsage(usage: Map<number, MatchUsage>, selections: Pick<Can
   }
 }
 
-/** Famille d'un marché pour les critères (1X2, DC, OU, BTTS). */
+/** Famille d'un marché pour les critères (1X2, DC, OU, BTTS, DNB, TTH, TTA). */
 export const familyOf = (key: string) => key.split(".")[0];
-/** Famille d'évaluation : la double chance dépend du 1X2. */
-export const qualityFamilyOf = (key: string) => (familyOf(key) === "DC" ? "1X2" : familyOf(key));
+/** Famille d'évaluation : la double chance dépend du 1X2 ; buts par équipe → TT. */
+export const qualityFamilyOf = (key: string) => {
+  const f = familyOf(key);
+  if (f === "DC") return "1X2";
+  if (f === "TTH" || f === "TTA") return "TT";
+  return f;
+};
 
 const HOUR = 3600_000;
 
@@ -459,6 +464,10 @@ export function outcomeLabel(key: string, home: string, away: string): string {
   if (market === "DC") return outcome === "1X" ? `${home} ou nul` : outcome === "X2" ? `Nul ou ${away}` : `${home} ou ${away}`;
   if (market === "OU") return `${outcome === "OVER" ? "Plus" : "Moins"} de ${line} buts`;
   if (market === "BTTS") return outcome === "YES" ? "Les deux équipes marquent" : "Au moins une équipe ne marque pas";
+  if (market === "DNB") return `${outcome === "HOME" ? home : away} (remboursé si nul)`;
+  if (market === "TTH" || market === "TTA") {
+    return `${market === "TTH" ? home : away} : ${outcome === "OVER" ? "plus" : "moins"} de ${line} but${line === "0,5" ? "" : "s"}`;
+  }
   return key;
 }
 

@@ -725,7 +725,17 @@ const marketFamilies = [
   ('DC', 'Double chance'),
   ('OU', 'Nombre de buts'),
   ('BTTS', 'Les deux équipes marquent'),
+  ('DNB', 'Remboursé si nul'),
+  ('TTH', 'Buts de l’équipe à domicile'),
+  ('TTA', 'Buts de l’équipe à l’extérieur'),
 ];
+
+/// Famille d'évaluation d'un marché (la double chance suit le 1X2, les buts par équipe → TT).
+String qualityFamily(String code) => switch (code) {
+      'DC' => '1X2',
+      'TTH' || 'TTA' => 'TT',
+      _ => code,
+    };
 
 /// Marchés du match : estimation du modèle, cote juste, cote du marché, écart.
 class MarketsComparison extends StatelessWidget {
@@ -765,7 +775,18 @@ class MarketsComparison extends StatelessWidget {
                     Text(title.toUpperCase(),
                         style: theme.textTheme.labelMedium?.copyWith(
                             fontWeight: FontWeight.w800, letterSpacing: 1)),
-                    if (weak.contains(code == 'DC' ? '1X2' : code))
+                    if (!f.beatsBaseline.containsKey(qualityFamily(code)) &&
+                        f.beatsBaseline.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Marché récent : pas encore évalué par le moteur sur l’historique. '
+                          'Chiffres indicatifs.',
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: BrandColors.orange),
+                        ),
+                      )
+                    else if (weak.contains(qualityFamily(code)))
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(

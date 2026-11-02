@@ -170,6 +170,11 @@ String outcomeLabel(OddsLine o) {
       return o.outcomeCode == 'OVER' ? 'Plus de$line' : 'Moins de$line';
     case 'BTTS':
       return o.outcomeCode == 'YES' ? 'Oui' : 'Non';
+    case 'DNB':
+      return o.outcomeCode == 'HOME' ? '1' : '2';
+    case 'TTH' || 'TTA':
+      final line = o.line == null ? '' : ' ${formatLine(o.line!)}';
+      return o.outcomeCode == 'OVER' ? 'Plus de$line' : 'Moins de$line';
   }
   return o.outcomeCode;
 }
@@ -179,6 +184,9 @@ const marketTitles = {
   'DC': 'Double chance',
   'OU': 'Plus / moins de buts',
   'BTTS': 'Les deux équipes marquent',
+  'DNB': 'Remboursé si nul',
+  'TTH': 'Buts de l’équipe à domicile',
+  'TTA': 'Buts de l’équipe à l’extérieur',
 };
 
 const _outcomeOrder = [

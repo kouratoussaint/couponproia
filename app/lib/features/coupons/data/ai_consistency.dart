@@ -9,6 +9,9 @@ const _result = {
   'DC.1X': {'H', 'D'},
   'DC.X2': {'D', 'A'},
   'DC.12': {'H', 'A'},
+  // Remboursé si nul : le nul annule la sélection sans la faire perdre.
+  'DNB.HOME': {'H', 'D'},
+  'DNB.AWAY': {'D', 'A'},
 };
 
 String? _family(String key) {

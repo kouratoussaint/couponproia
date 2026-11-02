@@ -35,6 +35,10 @@ export interface Evaluation {
   oneXTwo: Scores;
   over25: Omit<Scores, "accuracyModel" | "accuracyBaseline"> & { accuracyModel: number };
   btts: Omit<Scores, "accuracyModel" | "accuracyBaseline"> & { accuracyModel: number };
+  /** Remboursé si nul : matchs sans nul seulement (victoire domicile ou extérieur). */
+  dnb: Omit<Scores, "accuracyModel" | "accuracyBaseline"> & { accuracyModel: number };
+  /** Buts par équipe : domicile plus de 1,5 et extérieur plus de 0,5 (lignes les plus cotées). */
+  teamTotals: Omit<Scores, "accuracyModel" | "accuracyBaseline"> & { accuracyModel: number };
   calibration: CalibrationBin[];
 }
 
@@ -88,7 +92,9 @@ export function evaluateCompetition(
   const r1x2 = new Acc();
   const rOver = new Acc();
   const rBtts = new Acc();
-  const counts = { home: 0, draw: 0, away: 0, over: 0, btts: 0 };
+  const rDnb = new Acc();
+  const rTeam = new Acc();
+  const counts = { home: 0, draw: 0, away: 0, over: 0, btts: 0, home15: 0, away05: 0 };
 
   // Forces calculées une fois par jour de match, avec les seuls matchs des jours précédents
   // (prudent : aucun match du jour même n'est utilisé) ; limite le temps de calcul.
@@ -124,6 +130,15 @@ export function evaluateCompetition(
       const baseBtts = (counts.btts + 1) / (n + 2);
       rBtts.add([p["BTTS.YES"], 1 - p["BTTS.YES"]], [baseBtts, 1 - baseBtts], btts);
 
+      if (m.homeGoals !== m.awayGoals) {
+        const baseDnb = (counts.home + 1) / (counts.home + counts.away + 2);
+        rDnb.add([p["DNB.HOME"], 1 - p["DNB.HOME"]], [baseDnb, 1 - baseDnb], m.homeGoals > m.awayGoals ? 0 : 1);
+      }
+      const baseH15 = (counts.home15 + 1) / (n + 2);
+      rTeam.add([p["TTH.OVER.1.5"], 1 - p["TTH.OVER.1.5"]], [baseH15, 1 - baseH15], m.homeGoals > 1.5 ? 0 : 1);
+      const baseA05 = (counts.away05 + 1) / (n + 2);
+      rTeam.add([p["TTA.OVER.0.5"], 1 - p["TTA.OVER.0.5"]], [baseA05, 1 - baseA05], m.awayGoals > 0.5 ? 0 : 1);
+
       model1x2.forEach((prob, k) => {
         const b = Math.min(9, Math.floor(prob * 10));
         bins[b][0]++;
@@ -137,8 +152,10 @@ export function evaluateCompetition(
     else counts.away++;
     if (m.homeGoals + m.awayGoals > 2.5) counts.over++;
     if (m.homeGoals > 0 && m.awayGoals > 0) counts.btts++;
+    if (m.homeGoals > 1.5) counts.home15++;
+    if (m.awayGoals > 0.5) counts.away05++;
   }
-  return { r1x2, rOver, rBtts, bins };
+  return { r1x2, rOver, rBtts, rDnb, rTeam, bins };
 }
 
 function merge(target: Acc, src: Acc) {
@@ -159,6 +176,8 @@ export function evaluate(
   const all1x2 = new Acc();
   const allOver = new Acc();
   const allBtts = new Acc();
+  const allDnb = new Acc();
+  const allTeam = new Acc();
   const bins: number[][] = Array.from({ length: 10 }, () => [0, 0, 0]);
   const perCompetition: Record<string, Scores> = {};
 
@@ -167,6 +186,8 @@ export function evaluate(
     merge(all1x2, r.r1x2);
     merge(allOver, r.rOver);
     merge(allBtts, r.rBtts);
+    merge(allDnb, r.rDnb);
+    merge(allTeam, r.rTeam);
     if (r.r1x2.n > 0) perCompetition[g.name] = r.r1x2.scores();
   }
 
@@ -179,6 +200,8 @@ export function evaluate(
     oneXTwo: all1x2.scores(),
     over25: strip(allOver.scores()),
     btts: strip(allBtts.scores()),
+    dnb: strip(allDnb.scores()),
+    teamTotals: strip(allTeam.scores()),
     calibration: bins.map(([count, sumP, hits], i) => ({
       from: i / 10,
       to: (i + 1) / 10,

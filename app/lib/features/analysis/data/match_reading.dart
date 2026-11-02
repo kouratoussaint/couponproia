@@ -94,6 +94,11 @@ List<(String, double)> alternativesOf(
       keys = ['OU.${parts[1] == 'OVER' ? 'UNDER' : 'OVER'}.$line'];
     case 'BTTS':
       keys = ['BTTS.${parts[1] == 'YES' ? 'NO' : 'YES'}'];
+    case 'DNB':
+      keys = [parts[1] == 'HOME' ? '1X2.AWAY' : '1X2.HOME'];
+    case 'TTH' || 'TTA':
+      final line = parts.sublist(2).join('.');
+      keys = ['${parts[0]}.${parts[1] == 'OVER' ? 'UNDER' : 'OVER'}.$line'];
     default:
       keys = const [];
   }

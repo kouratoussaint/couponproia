@@ -21,6 +21,12 @@ export async function loadEngineQuality(db: SupabaseClient): Promise<EngineQuali
       "1X2": Number(e.brier_model) < Number(e.brier_baseline),
       OU: Number(e.details?.over_2_5?.brierModel) < Number(e.details?.over_2_5?.brierBaseline),
       BTTS: Number(e.details?.btts?.brierModel) < Number(e.details?.btts?.brierBaseline),
+      // Marchés récents : présents seulement une fois évalués (absents = pas encore évalués,
+      // donc hors des coupons de la plateforme).
+      ...(e.details?.dnb ? { DNB: Number(e.details.dnb.brierModel) < Number(e.details.dnb.brierBaseline) } : {}),
+      ...(e.details?.team_totals
+        ? { TT: Number(e.details.team_totals.brierModel) < Number(e.details.team_totals.brierBaseline) }
+        : {}),
     },
     competitions: byCompetition((e.details?.per_competition ?? {}) as Record<string, CompetitionScore>),
   };

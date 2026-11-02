@@ -35,7 +35,10 @@ const _marketNames = {
   '1X2': 'Résultat (1X2)',
   'DC': 'Double chance',
   'OU': 'Plus / moins',
-  'BTTS': 'Les deux marquent'
+  'BTTS': 'Les deux marquent',
+  'DNB': 'Remboursé si nul',
+  'TTH': 'Buts domicile',
+  'TTA': 'Buts extérieur',
 };
 
 /// Performances : coupons de la plateforme (publiés avant le coup d'envoi, réglés sur le score

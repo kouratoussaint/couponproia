@@ -41,6 +41,16 @@ String outcomeKeyLabel(String key, String home, String away) {
       return outcome == 'YES'
           ? 'Les deux équipes marquent'
           : 'Au moins une équipe ne marque pas';
+    case 'DNB':
+      return switch (outcome) {
+        'HOME' => '$home (remboursé si nul)',
+        'AWAY' => '$away (remboursé si nul)',
+        _ => key,
+      };
+    case 'TTH' || 'TTA':
+      final team = market == 'TTH' ? home : away;
+      final s = line == '0,5' ? '' : 's';
+      return '$team : ${outcome == 'OVER' ? 'plus' : 'moins'} de $line but$s';
   }
   return key;
 }

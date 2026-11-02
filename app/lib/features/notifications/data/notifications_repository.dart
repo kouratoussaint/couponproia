@@ -56,6 +56,7 @@ class NotificationPrefs {
     this.couponCategories = const {},
     this.quietStart = 23,
     this.quietEnd = 7,
+    this.weeklyEmail = false,
   });
 
   factory NotificationPrefs.fromJson(Map<String, dynamic> j) =>
@@ -76,6 +77,7 @@ class NotificationPrefs {
         },
         quietStart: (j['quiet_start'] as num?)?.toInt() ?? 23,
         quietEnd: (j['quiet_end'] as num?)?.toInt() ?? 7,
+        weeklyEmail: j['weekly_email'] == true,
       );
 
   final bool enabled;
@@ -95,10 +97,13 @@ class NotificationPrefs {
   final int quietStart;
   final int quietEnd;
 
+  /// Rapport hebdomadaire par e-mail (désactivé par défaut).
+  final bool weeklyEmail;
+
   static const columns =
       'notifications_enabled, notify_coupons, notify_results, notify_tipsters, '
       'notify_matches, notify_morning, notify_credits, notify_analyses, notify_bet_reminders, '
-      'notify_live, notify_news, coupon_categories, quiet_start, quiet_end';
+      'notify_live, notify_news, coupon_categories, quiet_start, quiet_end, weekly_email';
 
   bool get hasQuietHours => quietStart != quietEnd;
 }

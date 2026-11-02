@@ -180,10 +180,19 @@ export function outcomeKey(market: string, outcome: string, line: number | null)
   return line === null ? `${market}.${outcome}` : `${market}.${outcome}.${line}`;
 }
 
-/** Probabilités des marchés suivis (1X2, double chance, plus/moins, les deux marquent). */
+/** Lignes des buts par équipe (marchés TTH et TTA). */
+export const TEAM_GOAL_LINES = [0.5, 1.5, 2.5];
+
+/**
+ * Probabilités des marchés suivis : 1X2, double chance, plus/moins, les deux marquent,
+ * remboursé si nul (DNB, probabilité sachant qu'il n'y a pas match nul) et buts de chaque
+ * équipe (TTH domicile, TTA extérieur).
+ */
 export function marketProbabilities(matrix: number[][]): Record<string, number> {
   let home = 0, draw = 0, away = 0, btts = 0;
   const totals = new Map<number, number>();
+  const homeGoals = new Map<number, number>();
+  const awayGoals = new Map<number, number>();
   matrix.forEach((row, h) =>
     row.forEach((p, a) => {
       if (h > a) home += p;
@@ -191,6 +200,8 @@ export function marketProbabilities(matrix: number[][]): Record<string, number> 
       else away += p;
       if (h > 0 && a > 0) btts += p;
       totals.set(h + a, (totals.get(h + a) ?? 0) + p);
+      homeGoals.set(h, (homeGoals.get(h) ?? 0) + p);
+      awayGoals.set(a, (awayGoals.get(a) ?? 0) + p);
     })
   );
   const probs: Record<string, number> = {
@@ -208,6 +219,18 @@ export function marketProbabilities(matrix: number[][]): Record<string, number> 
     for (const [goals, p] of totals) if (goals < line) under += p;
     probs[outcomeKey("OU", "OVER", line)] = 1 - under;
     probs[outcomeKey("OU", "UNDER", line)] = under;
+  }
+  if (home + away > 0) {
+    probs["DNB.HOME"] = home / (home + away);
+    probs["DNB.AWAY"] = away / (home + away);
+  }
+  for (const [market, dist] of [["TTH", homeGoals], ["TTA", awayGoals]] as const) {
+    for (const line of TEAM_GOAL_LINES) {
+      let under = 0;
+      for (const [goals, p] of dist) if (goals < line) under += p;
+      probs[outcomeKey(market, "OVER", line)] = 1 - under;
+      probs[outcomeKey(market, "UNDER", line)] = under;
+    }
   }
   for (const key of Object.keys(probs)) probs[key] = round(clamp(probs[key], 0, 1));
   return probs;

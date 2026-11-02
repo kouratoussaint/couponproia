@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../search/search_screen.dart';
 import '../../core/errors/error_messages.dart';
 import '../../core/router/app_routes.dart';
 import '../../core/theme/brand_colors.dart';
@@ -130,6 +131,7 @@ class HomeScreen extends ConsumerWidget {
         leading: const DrawerMenuButton(),
         title: const AppLogo(size: 30),
         actions: [
+          const SearchButton(),
           const NotificationBell(),
           if (credits != null)
             Padding(

@@ -32,7 +32,11 @@ export function regulationScore(m: MatchState): [number, number] | null {
   return null;
 }
 
-/** Issue d'une sélection (« 1X2.HOME », « DC.1X », « OU.OVER.2.5 », « BTTS.YES ») sur un score. */
+/**
+ * Issue d'une sélection (« 1X2.HOME », « DC.1X », « OU.OVER.2.5 », « BTTS.YES », « DNB.HOME »,
+ * « TTH.OVER.1.5 », « TTA.UNDER.0.5 ») sur un score. `null` : sélection annulée (remboursé si nul
+ * sur un match nul, ou issue inconnue).
+ */
 export function outcomeWins(key: string, home: number, away: number): boolean | null {
   const [market, outcome, ...rest] = key.split(".");
   switch (market) {
@@ -47,6 +51,17 @@ export function outcomeWins(key: string, home: number, away: number): boolean | 
     }
     case "BTTS":
       return outcome === "YES" ? home > 0 && away > 0 : outcome === "NO" ? home === 0 || away === 0 : null;
+    case "DNB":
+      // Remboursé si nul : match nul → sélection annulée (null → void).
+      if (home === away) return null;
+      return outcome === "HOME" ? home > away : outcome === "AWAY" ? away > home : null;
+    case "TTH":
+    case "TTA": {
+      const line = Number(rest.join("."));
+      const goals = market === "TTH" ? home : away;
+      if (!Number.isFinite(line)) return null;
+      return outcome === "OVER" ? goals > line : outcome === "UNDER" ? goals < line : null;
+    }
   }
   return null;
 }

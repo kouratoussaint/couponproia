@@ -26,6 +26,9 @@ export function aiPositionOf(analysis: unknown): AiPosition | null {
 }
 
 const RESULT: Record<string, string[]> = {
+  // Remboursé si nul : le nul annule la sélection sans la faire perdre.
+  "DNB.HOME": ["H", "D"],
+  "DNB.AWAY": ["D", "A"],
   "1X2.HOME": ["H"],
   "1X2.DRAW": ["D"],
   "1X2.AWAY": ["A"],

@@ -138,7 +138,41 @@ class HealthAdminScreen extends ConsumerStatefulWidget {
 
 class _HealthAdminScreenState extends ConsumerState<HealthAdminScreen> {
   bool _scanning = false;
+  bool _sendingReport = false;
   bool _showResolvedErrors = false;
+
+  /// Aperçu du rapport hebdomadaire, envoyé à votre seule adresse.
+  Future<void> _previewWeekly() async {
+    setState(() => _sendingReport = true);
+    try {
+      final res = await ref
+          .read(supabaseClientProvider)
+          .functions
+          .invoke('weekly-report', body: const {'preview': true});
+      final d = Map<String, dynamic>.from(res.data as Map);
+      if (mounted) {
+        showMessage(
+            context,
+            (d['sent'] as num? ?? 0) > 0
+                ? 'Aperçu du rapport hebdomadaire envoyé à votre adresse.'
+                : 'Envoi impossible : ${d['error'] ?? 'adresse non confirmée'}',
+            error: (d['sent'] as num? ?? 0) == 0);
+      }
+    } on FunctionException catch (e) {
+      if (mounted) {
+        showMessage(
+            context,
+            e.status == 503
+                ? 'E-mail non configuré (secrets SMTP).'
+                : 'Envoi impossible (${e.status}).',
+            error: true);
+      }
+    } catch (e) {
+      if (mounted) showMessage(context, userMessageFor(e), error: true);
+    } finally {
+      if (mounted) setState(() => _sendingReport = false);
+    }
+  }
 
   Future<void> _scan() async {
     setState(() => _scanning = true);
@@ -215,6 +249,15 @@ class _HealthAdminScreenState extends ConsumerState<HealthAdminScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.health_and_safety_outlined),
                 label: const Text('Lancer un contrôle maintenant'),
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _sendingReport ? null : _previewWeekly,
+                icon: const Icon(Icons.mark_email_read_outlined),
+                label:
+                    const Text('M’envoyer un aperçu du rapport hebdomadaire'),
               ),
             ),
             ...alerts.when(

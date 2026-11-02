@@ -31,6 +31,9 @@ export function normalizeStatus(short: string | null | undefined): MatchStatus {
 /** Lignes de buts suivies (les autres sont ignorées pour limiter le stockage). */
 export const GOAL_LINES = [0.5, 1.5, 2.5, 3.5];
 
+/** Lignes des buts par équipe (« Total - Home » / « Total - Away »). */
+export const TEAM_GOAL_LINES = [0.5, 1.5, 2.5];
+
 const WINNER: Record<string, string> = { home: "HOME", draw: "DRAW", away: "AWAY" };
 const DOUBLE_CHANCE: Record<string, string> = { "home/draw": "1X", "home/away": "12", "draw/away": "X2" };
 const YES_NO: Record<string, string> = { yes: "YES", no: "NO" };
@@ -60,6 +63,17 @@ export function normalizeBet(betName: string, value: string): NormalizedBet | nu
     const line = Number(m[2]);
     if (!GOAL_LINES.includes(line)) return null;
     return { market: "OU", outcome: m[1] === "over" ? "OVER" : "UNDER", line };
+  }
+  if (bet === "home/away" || bet === "draw no bet") {
+    const outcome = v === "home" || v === "1" ? "HOME" : v === "away" || v === "2" ? "AWAY" : null;
+    return outcome ? { market: "DNB", outcome, line: null } : null;
+  }
+  if (bet === "total - home" || bet === "total - away") {
+    const m = /^(over|under)\s+(\d+(?:\.\d+)?)$/.exec(v);
+    if (!m) return null;
+    const line = Number(m[2]);
+    if (!TEAM_GOAL_LINES.includes(line)) return null;
+    return { market: bet === "total - home" ? "TTH" : "TTA", outcome: m[1] === "over" ? "OVER" : "UNDER", line };
   }
   if (bet === "both teams score" || bet === "both teams to score") {
     const outcome = YES_NO[v];
