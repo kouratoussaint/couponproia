@@ -1,5 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- LOT 26 : installation des mises à jour téléchargées par l'application. Sur Android 12
+         et plus, les mises à jour suivantes peuvent s'installer sans confirmation. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION"/>
     <!-- Enregistrement des visuels du studio dans la galerie (Android 10 et moins) -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <application
@@ -53,6 +57,26 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/coupon_widget_info" />
+        </receiver>
+        <!-- LOT 26 : fin du téléchargement (envoyée par le gestionnaire de téléchargements). -->
+        <receiver
+            android:name=".UpdateDownloadReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
+            </intent-filter>
+        </receiver>
+        <!-- LOT 26 : résultat de l'installation (appelé par PackageInstaller). -->
+        <receiver
+            android:name=".InstallResultReceiver"
+            android:exported="false" />
+        <!-- LOT 26 : application mise à jour → notification « à jour », fichier effacé. -->
+        <receiver
+            android:name=".AppReplacedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
         </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

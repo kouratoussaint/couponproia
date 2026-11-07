@@ -1,3 +1,4 @@
+import '../system/app_updater.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,6 +73,10 @@ class _HomeShellState extends ConsumerState<HomeShell>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed || !mounted) return;
+    // Retour du réglage « installer des applis inconnues » : l'installation reprend.
+    ref.read(updateControllerProvider.notifier).resumeAfterPermission();
+    // Téléchargement terminé pendant l'absence : bandeau à jour tout de suite.
+    ref.read(updateControllerProvider.notifier).refresh();
     final now = DateTime.now();
     if (now.difference(_lastUpdateCheck) < const Duration(minutes: 15)) return;
     _lastUpdateCheck = now;
