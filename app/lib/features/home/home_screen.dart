@@ -1,3 +1,4 @@
+import '../system/update_prompt.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -161,6 +162,7 @@ class HomeScreen extends ConsumerWidget {
                     ?.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 16),
             const OnboardingTrigger(),
+            const UpdateReadyBannerSlot(),
             const RenewalBanner(),
             _StatusTiles(day: today),
             _LiveBlock(day: today),

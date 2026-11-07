@@ -1,3 +1,4 @@
+import '../../system/update_prompt.dart';
 import '../data/language_sync.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -317,6 +318,7 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const UpdateSettingsSlot(),
             _GroupTitle(tr('Aide')),
             Card(
               child: Column(

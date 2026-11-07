@@ -67,6 +67,8 @@ class AppVersionInfo {
     required this.minSupportedBuild,
     this.downloadUrl,
     this.releaseNotes,
+    this.sha256,
+    this.sizeBytes,
   });
 
   factory AppVersionInfo.fromJson(Map<String, dynamic> json) => AppVersionInfo(
@@ -75,6 +77,8 @@ class AppVersionInfo {
         minSupportedBuild: json['min_supported_build'] as int,
         downloadUrl: json['download_url'] as String?,
         releaseNotes: json['release_notes'] as String?,
+        sha256: json['sha256'] as String?,
+        sizeBytes: (json['size_bytes'] as num?)?.toInt(),
       );
 
   final String versionName;
@@ -82,6 +86,18 @@ class AppVersionInfo {
   final int minSupportedBuild;
   final String? downloadUrl;
   final String? releaseNotes;
+
+  /// Empreinte et taille de l'APK (LOT 26) : sans elles, repli sur le navigateur.
+  final String? sha256;
+  final int? sizeBytes;
+
+  bool get installableInApp =>
+      downloadUrl != null &&
+      sha256 != null &&
+      sha256!.length == 64 &&
+      (sizeBytes ?? 0) > 0;
+
+  double get sizeMb => (sizeBytes ?? 0) / 1000000;
 }
 
 enum UpdateKind { none, optional, required }
@@ -106,7 +122,7 @@ final latestAndroidVersionProvider =
       .watch(supabaseClientProvider)
       .from('app_versions')
       .select(
-          'version_name, build_number, min_supported_build, download_url, release_notes')
+          'version_name, build_number, min_supported_build, download_url, release_notes, sha256, size_bytes')
       .eq('platform', 'android')
       .order('build_number', ascending: false)
       .limit(1)
