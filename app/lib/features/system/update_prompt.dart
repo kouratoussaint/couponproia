@@ -19,10 +19,17 @@ String updateMessage(UpdateKind kind, AppVersionInfo latest) {
       : parts.join('\n\n');
 }
 
-/// Vérifie une fois par lancement si une nouvelle version de l'APK est publiée
-/// (table `app_versions`) et propose ou impose la mise à jour.
-Future<void> checkForUpdate(BuildContext context, WidgetRef ref) async {
+/// Dernière version proposée pendant cette session (pas de nouvelle proposition au
+/// retour dans l'app pour la même version, sauf si elle est obligatoire).
+int? _lastPromptedBuild;
+
+/// Vérifie si une nouvelle version de l'APK est publiée (table `app_versions`) et
+/// propose ou impose la mise à jour : au lancement, puis au retour dans l'app
+/// ([refresh] relit la table au lieu de la valeur gardée en mémoire).
+Future<void> checkForUpdate(BuildContext context, WidgetRef ref,
+    {bool refresh = false}) async {
   try {
+    if (refresh) ref.invalidate(latestAndroidVersionProvider);
     final package = await ref.read(installedPackageProvider.future);
     final latest = await ref.read(latestAndroidVersionProvider.future);
     final kind = updateKindFor(
@@ -30,6 +37,11 @@ Future<void> checkForUpdate(BuildContext context, WidgetRef ref) async {
       latest: latest,
     );
     if (kind == UpdateKind.none || latest == null || !context.mounted) return;
+    if (kind == UpdateKind.optional &&
+        _lastPromptedBuild == latest.buildNumber) {
+      return;
+    }
+    _lastPromptedBuild = latest.buildNumber;
     final optional = kind == UpdateKind.optional;
     await showDialog<void>(
       context: context,

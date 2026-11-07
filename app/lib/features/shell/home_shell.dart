@@ -61,9 +61,28 @@ class TabBackHistory {
   }
 }
 
-class _HomeShellState extends ConsumerState<HomeShell> {
+class _HomeShellState extends ConsumerState<HomeShell>
+    with WidgetsBindingObserver {
   final _history = TabBackHistory();
   bool _goingBack = false;
+  DateTime _lastUpdateCheck = DateTime.now();
+
+  /// Retour dans l'app : nouvelle vérification de version, au plus toutes les 15 minutes
+  /// (une app restée ouverte en arrière-plan voit ainsi une version publiée entre-temps).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+    final now = DateTime.now();
+    if (now.difference(_lastUpdateCheck) < const Duration(minutes: 15)) return;
+    _lastUpdateCheck = now;
+    checkForUpdate(context, ref, refresh: true);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(covariant HomeShell oldWidget) {
@@ -125,6 +144,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(themeModeProvider.notifier).pullRemote();
