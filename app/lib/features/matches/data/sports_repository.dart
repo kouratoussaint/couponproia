@@ -6,10 +6,21 @@ import 'sports_format.dart';
 import 'insights_models.dart';
 import 'sports_models.dart';
 
+const _competitionColumns =
+    'id, name, display_name, status, country, logo_url, current_season, priority';
 const _matchColumns =
     'id, season, round, kickoff_at, status, status_short, elapsed, '
     'home_goals, away_goals, ht_home_goals, ht_away_goals, venue, referee, source_updated_at, '
-    'competition:competitions(id, name, country, logo_url, current_season, priority), '
+    'competition:competitions($_competitionColumns), '
+    'home:teams!matches_home_team_fk(id, name, logo_url), '
+    'away:teams!matches_away_team_fk(id, name, logo_url)';
+
+/// Listes (jour, recherche) : les compétitions désactivées sont masquées (LOT 25) ; leurs
+/// matchs restent visibles dans les coupons qui les contiennent.
+const _listColumns =
+    'id, season, round, kickoff_at, status, status_short, elapsed, '
+    'home_goals, away_goals, ht_home_goals, ht_away_goals, venue, referee, source_updated_at, '
+    'competition:competitions!inner($_competitionColumns), '
     'home:teams!matches_home_team_fk(id, name, logo_url), '
     'away:teams!matches_away_team_fk(id, name, logo_url)';
 
@@ -28,7 +39,8 @@ class SportsRepository {
     final (from, to) = utcRangeForLocalDay(day);
     final rows = await _client
         .from('matches')
-        .select(_matchColumns)
+        .select(_listColumns)
+        .neq('competition.status', 'inactive')
         .gte('kickoff_at', from.toIso8601String())
         .lt('kickoff_at', to.toIso8601String())
         .order('kickoff_at')
@@ -61,7 +73,8 @@ class SportsRepository {
     final ids = teamIds.join(',');
     final rows = await _client
         .from('matches')
-        .select(_matchColumns)
+        .select(_listColumns)
+        .neq('competition.status', 'inactive')
         .or('home_team_id.in.($ids),away_team_id.in.($ids)')
         .gte('kickoff_at', from.toUtc().toIso8601String())
         .lt('kickoff_at', to.toUtc().toIso8601String())
@@ -134,7 +147,7 @@ class SportsRepository {
   Future<List<CompetitionRef>> competitions() async {
     final rows = await _client
         .from('competitions')
-        .select('id, name, country, logo_url, current_season')
+        .select('id, name, display_name, country, logo_url, current_season')
         .eq('is_active', true)
         .order('priority');
     return rows.map(CompetitionRef.fromJson).toList();
@@ -143,7 +156,7 @@ class SportsRepository {
   Future<CompetitionRef?> competition(int id) async {
     final row = await _client
         .from('competitions')
-        .select('id, name, country, logo_url, current_season')
+        .select('id, name, display_name, country, logo_url, current_season')
         .eq('id', id)
         .maybeSingle();
     return row == null ? null : CompetitionRef.fromJson(row);

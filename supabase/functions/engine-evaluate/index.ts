@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
   try {
     const settings = await readSettings(db, ["sports.archive_season"]);
     const { data: competitions, error: compError } = await db.from("competitions")
-      .select("id, name, current_season").eq("is_active", true);
+      .select("id, name, display_name, current_season").eq("is_active", true);
     if (compError) throw new Error(compError.message);
     const season = Number(body?.season ?? settings["sports.archive_season"] ?? NaN);
 
@@ -57,26 +57,29 @@ Deno.serve(async (req) => {
     };
 
     // Par défaut (tâche hebdomadaire) : saison précédente complète + saison en cours.
+    // Compétitions repérées par leur identifiant (« 5:2025 ») : deux « Ligue 1 » restent séparées.
     const groups: { name: string; matches: PlayedMatch[]; prior: PlayedMatch[] }[] = [];
+    const labels: Record<string, string> = {};
     for (const c of competitions ?? []) {
       const seasons = Number.isInteger(season) ? [season] : c.current_season ? [c.current_season - 1, c.current_season] : [];
       for (const s of seasons) {
         const matches = await load(c.id, s);
         if (matches.length === 0) continue;
         const prior = priorWeight > 0 ? weighted(await load(c.id, s - 1), priorWeight) : [];
-        groups.push({ name: `${c.name} ${s}`, matches, prior });
+        groups.push({ name: `${c.id}:${s}`, matches, prior });
+        labels[`${c.id}:${s}`] = `${c.display_name ?? c.name} ${s}`;
       }
     }
 
     const warmupMatches = 30;
     const { evaluation, perCompetition } = evaluate(groups, { warmupMatches });
     const e = evaluation.oneXTwo;
-    if (dryRun) return json({ dry_run: true, prior_weight: priorWeight, evaluation, perCompetition });
+    if (dryRun) return json({ dry_run: true, prior_weight: priorWeight, evaluation, perCompetition, labels });
     const { data: saved, error: saveError } = await db.from("engine_evaluations").insert({
       engine_version: ENGINE_VERSION,
       scope: {
         season: Number.isInteger(season) ? season : "précédente et en cours",
-        competitions: groups.map((g) => g.name),
+        competitions: groups.map((g) => labels[g.name] ?? g.name),
         warmup_matches: warmupMatches,
         prior_season_weight: priorWeight,
         method: "Chaque match est prédit avec les seuls matchs antérieurs de sa compétition",
@@ -94,7 +97,9 @@ Deno.serve(async (req) => {
         btts: evaluation.btts,
         dnb: evaluation.dnb,
         team_totals: evaluation.teamTotals,
-        per_competition: perCompetition,
+        // Affichage (nom affiché + saison) et qualité par identifiant (« 5:2025 »), lue par le moteur.
+        per_competition: Object.fromEntries(Object.entries(perCompetition).map(([k, v]) => [labels[k] ?? k, v])),
+        per_competition_ids: perCompetition,
       },
     }).select().single();
     if (saveError) throw new Error(saveError.message);

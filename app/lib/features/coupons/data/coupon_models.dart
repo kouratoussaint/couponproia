@@ -68,7 +68,9 @@ class SelectionMatch {
         away: _map(j['away'])['name'] as String? ?? '?',
         homeLogo: _map(j['home'])['logo_url'] as String?,
         awayLogo: _map(j['away'])['logo_url'] as String?,
-        competition: _map(j['competition'])['name'] as String? ?? '',
+        competition: _map(j['competition'])['display_name'] as String? ??
+            _map(j['competition'])['name'] as String? ??
+            '',
         homeGoals: j['home_goals'] == null ? null : _i(j['home_goals']),
         awayGoals: j['away_goals'] == null ? null : _i(j['away_goals']),
       );

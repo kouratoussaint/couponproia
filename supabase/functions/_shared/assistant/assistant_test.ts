@@ -56,7 +56,7 @@ Deno.test("périodes : aujourd'hui, demain, week-end, date (heure locale)", () =
 
 Deno.test("noms : casse et accents ignorés, inconnus signalés", () => {
   const known = [{ id: 1, name: "Premier League" }, { id: 2, name: "Ligue 1" }, { id: 3, name: "Atlético Madrid" }];
-  assertEquals(matchNames(["premier league", "atletico"], known), { ids: [1, 3], unknown: [] });
+  assertEquals(matchNames(["premier league", "atletico"], known), { ids: [1, 3], unknown: [], ambiguous: [] });
   assertEquals(matchNames(["Serie Z"], known).unknown, ["Serie Z"]);
 });
 
@@ -102,4 +102,22 @@ Deno.test("opportunités : une par match, triées par écart", () => {
   });
   const o = opportunities([c(1, "1X2.HOME", 0.6, 0.02), c(1, "DC.1X", 0.8, 0.05), c(2, "1X2.AWAY", 0.5, 0.08)]);
   assertEquals(o.map((x) => [x.match_id, x.key]), [[2, "1X2.AWAY"], [1, "DC.1X"]]);
+});
+
+Deno.test("compétitions : pays pour départager les noms en double (LOT 25)", () => {
+  const known = [
+    { id: 5, name: "Ligue 1", country: "France", display_name: "Ligue 1 (France)", priority: 50 },
+    { id: 40, name: "Ligue 1", country: "Ivory-Coast", display_name: "Ligue 1 (Ivory-Coast)", priority: 120 },
+    { id: 41, name: "Ligue 1", country: "Burkina-Faso", display_name: "Ligue 1 (Burkina-Faso)", priority: 130 },
+    { id: 1, name: "Premier League", country: "England", display_name: "Premier League (England)", priority: 10 },
+    { id: 42, name: "Premier League", country: "Egypt", display_name: "Premier League (Egypt)", priority: 140 },
+  ];
+  assertEquals(matchNames(["Ligue 1 ivoirienne"], known).ids, [40]);
+  assertEquals(matchNames(["Ligue 1 Côte d'Ivoire"], known).ids, [40]);
+  assertEquals(matchNames(["ligue 1 burkinabè"], known).ids, [41]);
+  assertEquals(matchNames(["Premier League Égypte"], known).ids, [42]);
+  assertEquals(matchNames(["Ligue 1 (Burkina-Faso)"], known).ids, [41]);
+  const amb = matchNames(["Ligue 1"], known);
+  assertEquals(amb.ids, [5]);
+  assertEquals(amb.ambiguous, [{ asked: "Ligue 1", chosen: "Ligue 1 (France)", others: ["Ligue 1 (Ivory-Coast)", "Ligue 1 (Burkina-Faso)"] }]);
 });

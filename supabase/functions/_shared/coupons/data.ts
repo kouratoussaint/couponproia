@@ -14,7 +14,14 @@ interface UpcomingRow {
   season: number;
   round: string | null;
   kickoff_at: string;
-  competition: { id: number; name: string; type: string | null } | null;
+  competition: {
+    id: number;
+    name: string;
+    display_name?: string | null;
+    type: string | null;
+    status?: "inactive" | "observation" | "active";
+    quality_override?: boolean;
+  } | null;
   home: { id: number; name: string } | null;
   away: { id: number; name: string } | null;
 }
@@ -94,12 +101,13 @@ export async function loadCandidates(
   const startIso = new Date(Math.max(now.getTime(), range?.from.getTime() ?? 0)).toISOString();
   const upcoming = await paged<UpcomingRow>((from, to) => {
     let q = db.from("matches").select(
-      "id, season, round, kickoff_at, competition:competitions(id, name, type), home:teams!matches_home_team_fk(id, name), away:teams!matches_away_team_fk(id, name)",
+      "id, season, round, kickoff_at, competition:competitions(id, name, display_name, type, status, quality_override), home:teams!matches_home_team_fk(id, name), away:teams!matches_away_team_fk(id, name)",
     ).eq("status", "scheduled").gt("kickoff_at", startIso);
     q = matchIds?.length ? q.in("id", matchIds) : q.lte("kickoff_at", until);
     return q.order("kickoff_at").order("id").range(from, to) as unknown as PromiseLike<{ data: UpcomingRow[] | null; error: { message: string } | null }>;
   });
-  const valid = upcoming.filter((m) => m.competition && m.home && m.away);
+  // Compétition désactivée : aucun candidat, même si des cotes récentes existent encore.
+  const valid = upcoming.filter((m) => m.competition && m.home && m.away && m.competition.status !== "inactive");
   const odds = await latestOdds(db, valid.map((m) => m.id));
   const withOdds = valid.filter((m) => (odds.get(m.id) ?? []).length > 0);
   if (withOdds.length === 0) return { candidates: [], upcomingMatches: valid.length, matchesWithOdds: 0 };
@@ -189,7 +197,9 @@ export async function loadCandidates(
       candidates.push({
         matchId: m.id,
         competitionId: m.competition!.id,
-        competitionName: m.competition!.name,
+        competitionName: m.competition!.display_name ?? m.competition!.name,
+        competitionStatus: m.competition!.status ?? "active",
+        qualityOverride: m.competition!.quality_override === true,
         kickoffAt: m.kickoff_at,
         key: line.key,
         marketCode: row.market_code,

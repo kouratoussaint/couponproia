@@ -197,3 +197,96 @@ Deno.test("absents : joueur, équipe, type et motif", () => {
   assertEquals(parseAbsence({ player: { name: "X" }, team: { id: 1 } }), null, "sans match : ignoré");
   assertEquals(parseAbsence({ player: {}, team: { id: 1 }, fixture: { id: 2 } }), null, "sans nom : ignoré");
 });
+
+// --- LOT 25 : catalogue et matchs des coupons non réglés -----------------------
+import { parseCatalogLeague } from "./api_football.ts";
+import { SportsSync } from "./sync.ts";
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
+import type { CatalogLeague, SportsDataProvider } from "./types.ts";
+
+Deno.test("catalogue : saisons et couverture de la saison en cours", () => {
+  const l = parseCatalogLeague({
+    league: { id: 423, name: "Ligue 1", type: "League", logo: "x.png" },
+    country: { name: "Burkina-Faso", code: "BF" },
+    seasons: [
+      { year: 2024, current: false, coverage: { odds: false } },
+      {
+        year: 2025,
+        current: true,
+        coverage: { odds: true, injuries: false, standings: true, fixtures: { lineups: true, statistics_fixtures: false } },
+      },
+    ],
+  });
+  assertEquals([l.ref, l.name, l.country, l.type, l.currentSeason], ["423", "Ligue 1", "Burkina-Faso", "league", 2025]);
+  assertEquals(l.seasons, [2024, 2025]);
+  assertEquals(l.coverage, { odds: true, lineups: true, statistics: false, injuries: false, standings: true });
+});
+
+/** Base factice : chaque table renvoie ses lignes ; les appels sont notés. */
+function fakeDb(tables: Record<string, unknown[]>) {
+  const calls: { table: string; op: string; args: unknown[] }[] = [];
+  const builder = (table: string) => {
+    const b: Record<string, unknown> = {};
+    for (const op of ["select", "eq", "is", "in", "lt", "gte", "lte", "limit", "order", "like", "update", "insert", "upsert", "single"]) {
+      b[op] = (...args: unknown[]) => {
+        calls.push({ table, op, args });
+        return b;
+      };
+    }
+    b.then = (resolve: (v: unknown) => unknown) => resolve({ data: tables[table] ?? [], error: null });
+    return b;
+  };
+  return { db: { from: builder } as unknown as SupabaseClient, calls };
+}
+
+function fakeProvider(catalog: CatalogLeague[] = []): SportsDataProvider & { asked: string[][] } {
+  const asked: string[][] = [];
+  return {
+    id: "api_football",
+    requestsUsed: 0,
+    requestsRemaining: null,
+    asked,
+    getLeague: () => Promise.resolve(null),
+    getFixtures: () => Promise.resolve([]),
+    getFixturesByIds: (refs: string[]) => {
+      asked.push(refs);
+      return Promise.resolve([]);
+    },
+    getStandings: () => Promise.resolve([]),
+    getOdds: () => Promise.resolve([]),
+    getLeagueCatalog: () => Promise.resolve(catalog),
+  };
+}
+
+Deno.test("matchs des coupons non réglés : plateforme, coupons personnels et carnet", async () => {
+  const { db, calls } = fakeDb({
+    app_settings: [],
+    sync_runs: [],
+    coupon_selections: [{ match_id: 1 }, { match_id: 2 }],
+    user_coupon_selections: [{ match_id: 2 }, { match_id: 3 }],
+    bet_journal: [{ legs: [{ match_id: 4 }, { match_id: "x" }] }],
+    matches: [{ provider_ref: "1001" }],
+  });
+  const sync = new SportsSync(db, fakeProvider());
+  await sync.loadSettings();
+  const refs = await sync.openCouponMatchRefs();
+  assertEquals(refs, ["1001"]);
+  const ids = calls.find((c) => c.table === "matches" && c.op === "in" && c.args[0] === "id")?.args[1];
+  assertEquals(ids, [1, 2, 3, 4]);
+  const statuses = calls.find((c) => c.table === "matches" && c.op === "in" && c.args[0] === "status")?.args[1];
+  assertEquals((statuses as string[]).includes("finished"), false);
+});
+
+Deno.test("tâche catalog : toutes les compétitions en une requête, enregistrées par lots", async () => {
+  const league = (ref: string): CatalogLeague => ({
+    ref, name: `L${ref}`, type: "league", country: "X", countryCode: "XX", logoUrl: null, currentSeason: 2025,
+    seasons: [2025], coverage: { odds: true, lineups: false, statistics: false, injuries: false, standings: true },
+  });
+  const { db, calls } = fakeDb({ app_settings: [], sync_runs: [{ id: 1 }] });
+  const sync = new SportsSync(db, fakeProvider([league("1"), league("2")]));
+  const r = await sync.run("catalog");
+  assertEquals(r.status, "success");
+  assertEquals(r.items, 2);
+  const upsert = calls.find((c) => c.table === "provider_leagues" && c.op === "upsert");
+  assertEquals((upsert?.args[0] as { provider_ref: string }[]).map((x) => x.provider_ref), ["1", "2"]);
+});

@@ -12,7 +12,7 @@ const _selectionColumns =
     'model_probability, implied_probability, edge, reliability, justification, justification_en, result, '
     'match:matches(id, kickoff_at, status, home_goals, away_goals, '
     'home:teams!matches_home_team_fk(name, logo_url), away:teams!matches_away_team_fk(name, logo_url), '
-    'competition:competitions(name))';
+    'competition:competitions(name, display_name))';
 
 const _couponColumns =
     'id, category, title, description, risk_level, total_odd, combined_probability, '

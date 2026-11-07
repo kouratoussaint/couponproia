@@ -174,6 +174,8 @@ export const EXCLUSION_EN: Record<string, string> = {
   "issue non demandée": "outcome not requested",
   "marché non validé par l'évaluation du moteur": "market not validated by the engine evaluation",
   "compétition où le moteur ne bat pas la référence": "competition where the engine does not beat the baseline",
+  "compétition sans verdict du moteur": "competition not yet validated by the engine",
+  "compétition en observation": "competition under observation",
   "cote trop ancienne": "odd too old",
   "cote hors fourchette": "odd out of range",
   "probabilité du modèle trop faible": "model probability too low",

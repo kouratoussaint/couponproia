@@ -1,6 +1,7 @@
 // Adaptateur API-Football (https://v3.football.api-sports.io).
 import { normalizeBet, normalizeStatus } from "./normalize.ts";
 import type {
+  CatalogLeague,
   LineupPlayer,
   OddsQuote,
   ProviderAbsence,
@@ -112,6 +113,27 @@ export function parseLeague(r: Json): ProviderLeague {
   };
 }
 
+/** Entrée du catalogue (/leagues sans filtre) : saisons et couverture de la saison en cours. */
+export function parseCatalogLeague(r: Json): CatalogLeague {
+  const base = parseLeague(r);
+  const seasons: Json[] = Array.isArray(r?.seasons) ? r.seasons : [];
+  const years = seasons.map((s) => numOrNull(s?.year)).filter((y): y is number => y !== null).sort((a, b) => a - b);
+  const current = seasons.find((s) => s?.current === true) ??
+    [...seasons].sort((a, b) => Number(b?.year ?? 0) - Number(a?.year ?? 0))[0];
+  const c = current?.coverage ?? {};
+  return {
+    ...base,
+    seasons: years,
+    coverage: {
+      odds: c?.odds === true,
+      lineups: c?.fixtures?.lineups === true,
+      statistics: c?.fixtures?.statistics_fixtures === true,
+      injuries: c?.injuries === true,
+      standings: c?.standings === true,
+    },
+  };
+}
+
 export function parseStandings(r: Json): ProviderStanding[] {
   const groups: Json[] = Array.isArray(r?.league?.standings) ? r.league.standings : [];
   const rows: ProviderStanding[] = [];
@@ -219,6 +241,10 @@ export class ApiFootballProvider implements SportsDataProvider {
     // Compétition hors saison : on récupère quand même ses informations.
     const all = await this.get("/leagues", { id: ref });
     return all.length > 0 ? parseLeague(all[0]) : null;
+  }
+
+  async getLeagueCatalog(): Promise<CatalogLeague[]> {
+    return (await this.get("/leagues", {})).map(parseCatalogLeague);
   }
 
   async getFixtures(leagueRef: string, season: number): Promise<ProviderFixture[]> {

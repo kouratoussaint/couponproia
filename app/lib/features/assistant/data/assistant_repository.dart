@@ -10,7 +10,7 @@ const _userCouponColumns =
     'engine_version, conversation_id, created_at, analysis, result, settled_odd, settled_at, published_at, user_coupon_selections(position, selection_key, odd, result, '
     'odd_best, bookmakers, odds_captured_at, model_probability, implied_probability, edge, reliability, justification, '
     'match:matches(id, kickoff_at, status, home_goals, away_goals, home:teams!matches_home_team_fk(name, logo_url), '
-    'away:teams!matches_away_team_fk(name, logo_url), competition:competitions(name)))';
+    'away:teams!matches_away_team_fk(name, logo_url), competition:competitions(name, display_name)))';
 
 class AssistantException implements Exception {
   const AssistantException(this.message);

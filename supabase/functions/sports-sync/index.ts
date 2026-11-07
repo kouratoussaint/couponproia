@@ -13,7 +13,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-const JOBS: SyncJob[] = ["daily", "odds", "live", "matchday"];
+const JOBS: SyncJob[] = ["daily", "odds", "live", "matchday", "catalog"];
 
 function json(body: Record<string, unknown>, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -62,10 +62,17 @@ Deno.serve(async (req) => {
   if (!(await isAuthorized(req, url, anonKey))) return json({ error: "unauthorized" }, 401);
 
   let job: SyncJob = "daily";
+  let competitionId: number | undefined;
   try {
     const body = await req.json();
     if (JOBS.includes(body?.job)) job = body.job;
     else return json({ error: "unknown_job", allowed: JOBS }, 400);
+    // Chargement ciblé d'une compétition ajoutée (tâche daily seulement).
+    if (job === "daily" && body?.competition_id !== undefined) {
+      const id = Number(body.competition_id);
+      if (!Number.isInteger(id) || id <= 0) return json({ error: "invalid_competition" }, 400);
+      competitionId = id;
+    }
   } catch {
     return json({ error: "invalid_body" }, 400);
   }
@@ -84,7 +91,7 @@ Deno.serve(async (req) => {
   }
 
   const sync = new SportsSync(db, new ApiFootballProvider(apiKey));
-  const task = sync.run(job).then(
+  const task = sync.run(job, { competitionId }).then(
     (r) => console.log(JSON.stringify(r)),
     (e) => console.error("sync", e instanceof Error ? e.message : e),
   );

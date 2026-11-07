@@ -4,7 +4,10 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { summarizeOdds } from "./normalize.ts";
 import type { ProviderAbsence, ProviderFixture, ProviderTeam, SportsDataProvider } from "./types.ts";
 
-export type SyncJob = "daily" | "odds" | "live" | "matchday";
+export type SyncJob = "daily" | "odds" | "live" | "matchday" | "catalog";
+
+/** Statuts encore à suivre (un match dans cet état peut encore changer de score ou de date). */
+const OPEN_STATUSES = ["scheduled", "live", "interrupted", "postponed", "unknown"];
 
 export interface SyncSettings {
   dailyBudget: number;
@@ -96,7 +99,7 @@ export class SportsSync {
     if (remaining !== null && remaining < cost + 1) throw new BudgetExhausted();
   }
 
-  async run(job: SyncJob): Promise<Record<string, unknown>> {
+  async run(job: SyncJob, options: { competitionId?: number } = {}): Promise<Record<string, unknown>> {
     await this.loadSettings();
 
     // Le suivi en direct et le jour de match ne journalisent rien quand il n'y a rien à faire.
@@ -121,7 +124,9 @@ export class SportsSync {
     let report: RunReport;
     try {
       report = job === "daily"
-        ? await this.daily()
+        ? await this.daily(options.competitionId)
+        : job === "catalog"
+        ? await this.catalog()
         : job === "odds"
         ? await this.odds()
         : job === "matchday"
@@ -152,13 +157,15 @@ export class SportsSync {
   // ---------------------------------------------------------------------------
   // Tâche quotidienne : saison en cours, calendrier complet + résultats, classement
   // ---------------------------------------------------------------------------
-  private async daily(): Promise<RunReport> {
-    const { data: comps, error } = await this.db
+  private async daily(competitionId?: number): Promise<RunReport> {
+    let query = this.db
       .from("competitions")
       .select("id, provider_ref, name")
       .eq("provider_id", this.provider.id)
-      .eq("is_active", true)
-      .order("priority");
+      .eq("is_active", true);
+    // Compétition qu'on vient d'ajouter : chargée seule, tout de suite.
+    if (competitionId !== undefined) query = query.eq("id", competitionId);
+    const { data: comps, error } = await query.order("priority");
     if (error) throw new Error(error.message);
 
     let items = 0;
@@ -234,12 +241,109 @@ export class SportsSync {
       if (!(e instanceof BudgetExhausted)) throw e;
       problems.push("budget journalier atteint : compétitions restantes reportées");
     }
+    // Matchs des coupons non réglés restés ouverts au-delà du suivi en direct (compétition
+    // désactivée, match reporté ou statut jamais finalisé) : rafraîchis un par un.
+    let openCoupons = 0;
+    if (competitionId === undefined) {
+      try {
+        openCoupons = await this.refreshOpenCouponMatches();
+        items += openCoupons;
+      } catch (e) {
+        if (e instanceof BudgetExhausted) problems.push("budget journalier atteint : matchs des coupons reportés");
+        else problems.push(`Matchs des coupons : ${e instanceof Error ? e.message : e}`);
+      }
+    }
     return {
       status: problems.length === 0 ? "success" : done.length > 0 ? "partial" : "failed",
       items,
       error: problems.length > 0 ? problems.join(" | ").slice(0, 2000) : undefined,
-      details: { competitions: done, problems },
+      details: { competitions: done, problems, open_coupon_matches: openCoupons, ...(competitionId ? { competition_id: competitionId } : {}) },
     };
+  }
+
+  /** Matchs présents dans un coupon ou un pari non réglé, non terminés, commencés avant le suivi en direct. */
+  async openCouponMatchRefs(): Promise<string[]> {
+    const before = new Date(Date.now() - this.settings.liveLookbackHours * 3600_000).toISOString();
+    const ids = new Set<number>();
+    const platform = await this.db.from("coupon_selections").select("match_id, coupon:coupons!inner(result, status)")
+      .is("coupon.result", null).eq("coupon.status", "published").limit(5000);
+    if (platform.error) throw new Error(platform.error.message);
+    for (const r of platform.data ?? []) ids.add(r.match_id);
+    const mine = await this.db.from("user_coupon_selections").select("match_id, coupon:user_coupons!inner(result)")
+      .is("coupon.result", null).limit(5000);
+    if (mine.error) throw new Error(mine.error.message);
+    for (const r of mine.data ?? []) ids.add(r.match_id);
+    const bets = await this.db.from("bet_journal").select("legs").is("result", null).limit(5000);
+    if (bets.error) throw new Error(bets.error.message);
+    for (const b of bets.data ?? []) {
+      for (const l of (Array.isArray(b.legs) ? b.legs : []) as { match_id?: unknown }[]) {
+        const id = Number(l?.match_id);
+        if (Number.isInteger(id)) ids.add(id);
+      }
+    }
+    if (ids.size === 0) return [];
+    const refs: string[] = [];
+    for (const chunk of chunks([...ids], 200)) {
+      const { data, error } = await this.db.from("matches").select("provider_ref")
+        .eq("provider_id", this.provider.id).in("id", chunk).in("status", OPEN_STATUSES).lt("kickoff_at", before);
+      if (error) throw new Error(error.message);
+      refs.push(...(data ?? []).map((m: { provider_ref: string }) => m.provider_ref));
+    }
+    return refs;
+  }
+
+  private async refreshOpenCouponMatches(): Promise<number> {
+    const refs = await this.openCouponMatchRefs();
+    if (refs.length === 0) return 0;
+    this.guard(Math.ceil(refs.length / 20));
+    const fixtures = await this.provider.getFixturesByIds(refs);
+    return await this.saveFixturesByLeague(fixtures);
+  }
+
+  /** Enregistre des matchs de compétitions diverses (toutes compétitions connues, quel que soit leur état). */
+  private async saveFixturesByLeague(fixtures: ProviderFixture[]): Promise<number> {
+    const { data: comps } = await this.db.from("competitions").select("id, provider_ref").eq("provider_id", this.provider.id);
+    const compByRef = new Map((comps ?? []).map((c: { id: number; provider_ref: string }) => [c.provider_ref, c.id] as [string, number]));
+    let items = 0;
+    for (const [leagueRef, list] of groupBy(fixtures, (f) => f.leagueRef)) {
+      const compId = compByRef.get(leagueRef);
+      if (compId !== undefined) items += await this.saveFixtures(compId, list);
+    }
+    return items;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Catalogue du fournisseur (hebdomadaire) : toutes les compétitions, 1 requête
+  // ---------------------------------------------------------------------------
+  private async catalog(): Promise<RunReport> {
+    if (!this.provider.getLeagueCatalog) {
+      return { status: "skipped", items: 0, error: "catalogue non proposé par ce fournisseur", details: {} };
+    }
+    this.guard();
+    const leagues = await this.provider.getLeagueCatalog();
+    const now = new Date().toISOString();
+    let items = 0;
+    for (const chunk of chunks(leagues.filter((l) => l.ref && l.ref !== "undefined"), 500)) {
+      const { error } = await this.db.from("provider_leagues").upsert(
+        chunk.map((l) => ({
+          provider_id: this.provider.id,
+          provider_ref: l.ref,
+          name: l.name,
+          type: l.type,
+          country: l.country,
+          country_code: l.countryCode,
+          logo_url: l.logoUrl,
+          current_season: l.currentSeason,
+          seasons: l.seasons,
+          coverage: l.coverage,
+          refreshed_at: now,
+        })),
+        { onConflict: "provider_id,provider_ref" },
+      );
+      if (error) throw new Error(`Catalogue : ${error.message}`);
+      items += chunk.length;
+    }
+    return { status: "success", items, details: { leagues: items } };
   }
 
   // ---------------------------------------------------------------------------
@@ -335,13 +439,7 @@ export class SportsSync {
     const refs = await this.liveCandidates();
     this.guard(Math.ceil(refs.length / 20));
     const fixtures = await this.provider.getFixturesByIds(refs);
-    const { data: comps } = await this.db.from("competitions").select("id, provider_ref").eq("provider_id", this.provider.id);
-    const compByRef = new Map((comps ?? []).map((c: { id: number; provider_ref: string }) => [c.provider_ref, c.id] as [string, number]));
-    let items = 0;
-    for (const [leagueRef, list] of groupBy(fixtures, (f) => f.leagueRef)) {
-      const compId = compByRef.get(leagueRef);
-      if (compId !== undefined) items += await this.saveFixtures(compId, list);
-    }
+    const items = await this.saveFixturesByLeague(fixtures);
     const lineups = await this.saveLineups(fixtures);
     return { status: "success", items, details: { tracked: refs.length, lineups } };
   }

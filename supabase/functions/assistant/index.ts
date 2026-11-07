@@ -16,6 +16,7 @@ import {
   criteriaFromIntent,
   dateRange,
   type Intent,
+  type KnownCompetition,
   matchNames,
   normalizeName,
   PAID_INTENTS,
@@ -123,8 +124,9 @@ class Assistant {
   }
 
   async competitions() {
-    const { data } = await this.db.from("competitions").select("id, name").eq("is_active", true).order("priority");
-    return (data ?? []) as { id: number; name: string }[];
+    const { data } = await this.db.from("competitions").select("id, name, display_name, country, priority")
+      .eq("is_active", true).order("priority");
+    return (data ?? []) as KnownCompetition[];
   }
 
   // ---------------------------------------------------------------------------
@@ -144,7 +146,7 @@ class Assistant {
           cote: l.odd,
         }))
         : null,
-      competitions: (await this.competitions()).map((c) => c.name),
+      competitions: (await this.competitions()).map((c) => c.display_name ?? c.name),
       date_du_jour: new Intl.DateTimeFormat(this.en ? "en-GB" : "fr-FR", { timeZone: this.timeZone, dateStyle: "full" })
         .format(this.now),
       date_iso: this.now.toISOString().slice(0, 10),
@@ -197,7 +199,13 @@ class Assistant {
     const load = await loadCandidates(this.db, this.now, hours, this.quality, range);
     let cands = load.candidates;
     if (i.competitions.length) {
-      const { ids, unknown } = matchNames(i.competitions, await this.competitions());
+      const { ids, unknown, ambiguous } = matchNames(i.competitions, await this.competitions());
+      for (const a of ambiguous) {
+        this.warnings.push(this.t(
+          `« ${a.asked} » : ${a.chosen} retenue. Précisez le pays pour une autre (${a.others.join(", ")}).`,
+          `“${a.asked}”: ${a.chosen} used. Name the country for another one (${a.others.join(", ")}).`,
+        ));
+      }
       if (unknown.length) {
         this.warnings.push(this.t(`Compétition(s) non suivie(s) : ${unknown.join(", ")}.`, `Competition(s) not covered: ${unknown.join(", ")}.`));
       }

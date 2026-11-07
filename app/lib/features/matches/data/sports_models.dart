@@ -31,9 +31,10 @@ class CompetitionRef {
     this.priority = 100,
   });
 
+  /// Nom affiché : « Ligue 1 (Burkina-Faso) » quand deux compétitions suivies portent le même nom.
   factory CompetitionRef.fromJson(Map<String, dynamic> json) => CompetitionRef(
         id: _int(json['id']),
-        name: json['name'] as String,
+        name: json['display_name'] as String? ?? json['name'] as String,
         country: json['country'] as String?,
         logoUrl: json['logo_url'] as String?,
         currentSeason: _intOrNull(json['current_season']),

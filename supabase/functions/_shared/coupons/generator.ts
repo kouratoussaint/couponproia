@@ -132,6 +132,10 @@ export interface Candidate {
   rawEdge?: number | null;
   reliability: Reliability;
   justification: string;
+  /** État de la compétition : seule « active » entre dans un coupon automatique. */
+  competitionStatus?: "inactive" | "observation" | "active";
+  /** Forçage du super administrateur : admise sans verdict du moteur. */
+  qualityOverride?: boolean;
   /** Même justification en anglais (coupons de la plateforme, utilisateurs anglophones). */
   justificationEn?: string;
 }
@@ -233,7 +237,8 @@ export function filterCandidates(
   criteria: Criteria,
   now: Date,
   beatsBaseline: Record<string, boolean> | null,
-  competitionQuality: Record<string, boolean> = {},
+  /** Verdict du moteur par identifiant de compétition ; null = contrôle non demandé (tests, outils). */
+  competitionQuality: Record<string, boolean> | null = null,
 ): { kept: Candidate[]; excluded: Record<string, number> } {
   const excluded: Record<string, number> = {};
   const out = (reason: string) => {
@@ -253,8 +258,12 @@ export function filterCandidates(
     if (criteria.require_validated_markets && beatsBaseline?.[qualityFamilyOf(c.key)] !== true) {
       return out("marché non validé par l'évaluation du moteur");
     }
-    if (criteria.require_validated_markets && competitionQuality[c.competitionName] === false) {
-      return out("compétition où le moteur ne bat pas la référence");
+    // Coupons automatiques : compétition active, avec un verdict positif du moteur (ou forcée).
+    if (c.competitionStatus && c.competitionStatus !== "active") return out("compétition en observation");
+    if (criteria.require_validated_markets && competitionQuality !== null && !c.qualityOverride) {
+      const verdict = competitionQuality[String(c.competitionId)];
+      if (verdict === false) return out("compétition où le moteur ne bat pas la référence");
+      if (verdict !== true) return out("compétition sans verdict du moteur");
     }
     if (t - Date.parse(c.oddsCapturedAt) > criteria.max_odds_age_hours * HOUR) return out("cote trop ancienne");
     if (c.odd < criteria.min_selection_odd || c.odd > criteria.max_selection_odd) return out("cote hors fourchette");

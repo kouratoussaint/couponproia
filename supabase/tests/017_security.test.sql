@@ -41,8 +41,8 @@ select is((select count(*)::int from pg_constraint c join pg_namespace n on n.oi
                              and (string_to_array(i.indkey::text, ' ')::int2[])[1:cardinality(c.conkey)] = c.conkey)), 0,
           '7. toutes les clés étrangères sont indexées');
 
-select ok((select bool_and(pg_get_functiondef('app_private.invoke_sports_sync(text)'::regprocedure) like '%''' || j || '''%')
-           from unnest(array['daily', 'odds', 'live', 'matchday']) j),
+select ok((select bool_and(pg_get_functiondef('app_private.invoke_sports_sync(text, bigint)'::regprocedure) like '%''' || j || '''%')
+           from unnest(array['daily', 'odds', 'live', 'matchday', 'catalog']) j),
           '8. toutes les tâches planifiées de synchronisation sont autorisées');
 
 -- Une fonction STABLE est exécutée par l'API dans une transaction en lecture seule : si elle écrit

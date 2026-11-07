@@ -6,7 +6,7 @@ import { ENGINE_VERSION } from "./poisson.ts";
 export interface EngineQuality {
   evaluatedMatches: number;
   beatsBaseline: Record<string, boolean>;
-  /** Par compétition (nom) : le moteur bat-il la référence sur 1/N/2 ? (≥ 100 matchs évalués) */
+  /** Par compétition (identifiant) : le moteur bat-il la référence sur 1/N/2 ? (≥ 100 matchs évalués) */
   competitions?: Record<string, boolean>;
 }
 
@@ -28,7 +28,7 @@ export async function loadEngineQuality(db: SupabaseClient): Promise<EngineQuali
         ? { TT: Number(e.details.team_totals.brierModel) < Number(e.details.team_totals.brierBaseline) }
         : {}),
     },
-    competitions: byCompetition((e.details?.per_competition ?? {}) as Record<string, CompetitionScore>),
+    competitions: byCompetition((e.details?.per_competition_ids ?? {}) as Record<string, CompetitionScore>),
   };
 }
 
@@ -38,11 +38,16 @@ interface CompetitionScore {
   brierBaseline: number;
 }
 
-/** Regroupe les saisons d'une même compétition (« Ligue 1 2025 », « Ligue 1 2026 ») ; ≥ 100 matchs. */
+/**
+ * Regroupe les saisons d'une même compétition par identifiant (« 5:2025 », « 5:2026 ») ; ≥ 100 matchs.
+ * Les clés de l'ancien format (« Ligue 1 2025 ») sont ignorées : sans nouvelle évaluation, pas de verdict.
+ */
 export function byCompetition(per: Record<string, CompetitionScore>): Record<string, boolean> {
   const sums = new Map<string, { n: number; model: number; base: number }>();
   for (const [key, m] of Object.entries(per)) {
-    const name = key.replace(/ \d{4}$/, "");
+    const id = /^(\d+):\d{4}$/.exec(key)?.[1];
+    if (!id) continue;
+    const name = id;
     const acc = sums.get(name) ?? { n: 0, model: 0, base: 0 };
     acc.n += m.matches;
     acc.model += m.brierModel * m.matches;

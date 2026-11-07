@@ -21,6 +21,13 @@ export interface ProviderLeague {
   currentSeason: number | null;
 }
 
+/** Compétition du catalogue du fournisseur, avec ses saisons et ce qu'il couvre. */
+export interface CatalogLeague extends ProviderLeague {
+  seasons: number[];
+  /** Couverture de la saison en cours (ou la plus récente). */
+  coverage: { odds: boolean; lineups: boolean; statistics: boolean; injuries: boolean; standings: boolean };
+}
+
 export interface ProviderTeam {
   ref: string;
   name: string;
@@ -127,6 +134,8 @@ export interface SportsDataProvider {
   getOdds(fixtureRef: string): Promise<OddsQuote[]>;
   /** Absents annoncés pour une liste de matchs (facultatif selon le fournisseur). */
   getAbsences?(fixtureRefs: string[]): Promise<ProviderAbsence[]>;
+  /** Catalogue complet des compétitions (facultatif ; 1 requête chez API-Football). */
+  getLeagueCatalog?(): Promise<CatalogLeague[]>;
   /** Réglages de rythme (ex. offre gratuite limitée à 10 requêtes par minute). */
   configure?(options: { minIntervalMs: number }): void;
 }

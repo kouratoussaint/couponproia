@@ -14,6 +14,12 @@ final _jobLabels = {
   'daily': tr('Calendriers, résultats et classements'),
   'odds': tr('Cotes des 48 prochaines heures'),
   'live': tr('Scores en direct'),
+  'catalog': tr('Catalogue des compétitions du fournisseur'),
+};
+
+/// Tâches lancées automatiquement seulement (affichées dans le journal).
+final _autoJobLabels = {
+  'matchday': tr('Compositions et absents'),
 };
 
 final _statusLabels = {
@@ -121,7 +127,7 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
                             [remaining ?? 'inconnu'])),
                         const SizedBox(height: 8),
                         Text(
-                          tr('Planification : calendriers à 4 h, cotes à 7 h et 15 h, scores en direct toutes les 15 min.'),
+                          tr('Planification : calendriers à 4 h, cotes à 6 h, 12 h et 18 h, compositions et absents toutes les 10 min, scores en direct toutes les 30 s pendant les matchs, catalogue le lundi à 3 h 10.'),
                           style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant),
                         ),
@@ -186,7 +192,10 @@ class _RunTile extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                    child: Text(_jobLabels[run.job] ?? run.job,
+                    child: Text(
+                        _jobLabels[run.job] ??
+                            _autoJobLabels[run.job] ??
+                            run.job,
                         style: theme.textTheme.titleSmall)),
                 Container(
                   padding:

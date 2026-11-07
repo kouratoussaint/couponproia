@@ -193,17 +193,80 @@ export function normalizeName(s: string): string {
   return s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-export function matchNames(wanted: string[], known: { id: number; name: string }[]): { ids: number[]; unknown: string[] } {
+/** Pays (nom du fournisseur, normalisé) et façons courantes de le dire, en français et en anglais. */
+const COUNTRY_WORDS: Record<string, string[]> = {
+  "france": ["francais", "francaise"],
+  "england": ["angleterre", "anglais", "anglaise", "english"],
+  "spain": ["espagne", "espagnol", "espagnole", "spanish"],
+  "italy": ["italie", "italien", "italienne", "italian"],
+  "germany": ["allemagne", "allemand", "allemande", "german"],
+  "ivory coast": ["cote d ivoire", "ivoirien", "ivoirienne", "ivorian", "rci"],
+  "burkina faso": ["burkina", "burkinabe"],
+  "senegal": ["senegalais", "senegalaise", "senegalese"],
+  "algeria": ["algerie", "algerien", "algerienne", "algerian"],
+  "tunisia": ["tunisie", "tunisien", "tunisienne", "tunisian"],
+  "egypt": ["egypte", "egyptien", "egyptienne", "egyptian"],
+  "morocco": ["maroc", "marocain", "marocaine", "moroccan"],
+  "ghana": ["ghaneen", "ghaneenne", "ghanaian"],
+  "mali": ["malien", "malienne", "malian"],
+  "south africa": ["afrique du sud", "sud africain", "sud africaine", "south african"],
+  "saudi arabia": ["arabie saoudite", "saoudien", "saoudienne", "saudi"],
+  "united arab emirates": ["emirats", "emirati", "emiratie", "uae"],
+  "kuwait": ["koweit", "koweitien", "koweitienne", "kuwaiti"],
+  "bahrain": ["bahrein", "bahreini", "bahreinie"],
+  "qatar": ["qatari", "qatarie"],
+  "iraq": ["irak", "irakien", "irakienne", "iraqi"],
+  "jordan": ["jordanie", "jordanien", "jordanienne", "jordanian"],
+};
+
+function mentionsCountry(text: string, country: string | null | undefined): boolean {
+  if (!country) return false;
+  const c = normalizeName(country);
+  const words = [c, ...(COUNTRY_WORDS[c] ?? [])];
+  return words.some((w) => ` ${text} `.includes(` ${w} `));
+}
+
+export interface KnownCompetition {
+  id: number;
+  name: string;
+  country?: string | null;
+  display_name?: string | null;
+  priority?: number;
+}
+
+/**
+ * Compétitions demandées par leur nom, le pays précisant un nom porté par plusieurs
+ * (« Ligue 1 ivoirienne », « Premier League Égypte »). Nom ambigu sans pays : la
+ * compétition principale (ordre de la console) est retenue et les autres sont proposées.
+ */
+export function matchNames(
+  wanted: string[],
+  known: KnownCompetition[],
+): { ids: number[]; unknown: string[]; ambiguous: { asked: string; chosen: string; others: string[] }[] } {
   const ids = new Set<number>();
   const unknown: string[] = [];
+  const ambiguous: { asked: string; chosen: string; others: string[] }[] = [];
+  const label = (k: KnownCompetition) => k.display_name ?? k.name;
   for (const w of wanted) {
     const nw = normalizeName(w);
-    const hits = known.filter((k) => {
+    const exact = known.filter((k) => k.display_name && normalizeName(k.display_name) === nw);
+    let hits = exact.length ? exact : known.filter((k) => {
       const nk = normalizeName(k.name);
       return nk === nw || nk.includes(nw) || (nw.length >= 4 && nw.includes(nk));
     });
+    if (hits.length > 1) {
+      const byCountry = hits.filter((k) => mentionsCountry(nw, k.country));
+      if (byCountry.length) hits = byCountry;
+    }
+    // Plusieurs compétitions du même nom, aucun pays précisé : la principale, les autres proposées.
+    const sameName = new Set(hits.map((h) => normalizeName(h.name)));
+    if (hits.length > 1 && sameName.size === 1) {
+      const sorted = [...hits].sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+      ambiguous.push({ asked: w, chosen: label(sorted[0]), others: sorted.slice(1).map(label) });
+      hits = [sorted[0]];
+    }
     if (hits.length) hits.forEach((h) => ids.add(h.id));
     else unknown.push(w);
   }
-  return { ids: [...ids], unknown };
+  return { ids: [...ids], unknown, ambiguous };
 }

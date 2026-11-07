@@ -177,9 +177,24 @@ Deno.test("créneaux : heure locale, rattrapage limité, passage de minuit", () 
 
 Deno.test("filtres : compétition où le moteur ne bat pas la référence exclue", () => {
   const all = [cand({ matchId: 1 }), cand({ matchId: 2, competitionName: "UEFA Champions League", competitionId: 2 })];
-  const { kept, excluded } = filterCandidates(all, DEFAULT_CRITERIA, NOW, VALID, { "UEFA Champions League": false, "Premier League": true });
+  const { kept, excluded } = filterCandidates(all, DEFAULT_CRITERIA, NOW, VALID, { "2": false, "1": true });
   assertEquals(kept.map((c) => c.matchId), [1]);
   assertEquals(excluded["compétition où le moteur ne bat pas la référence"], 1);
+});
+
+Deno.test("LOT 25 : verdict positif exigé, forçage, observation exclue, identifiants distincts", () => {
+  const all = [
+    cand({ matchId: 1, competitionId: 5, competitionName: "Ligue 1 (France)" }),
+    cand({ matchId: 2, competitionId: 40, competitionName: "Ligue 1 (Burkina-Faso)" }), // même nom, pas de verdict
+    cand({ matchId: 3, competitionId: 8, qualityOverride: true }), // CAN forcée
+    cand({ matchId: 4, competitionId: 5, competitionStatus: "observation" }),
+  ];
+  const { kept, excluded } = filterCandidates(all, DEFAULT_CRITERIA, NOW, VALID, { "5": true });
+  assertEquals(kept.map((c) => c.matchId), [1, 3]);
+  assertEquals(excluded["compétition sans verdict du moteur"], 1);
+  assertEquals(excluded["compétition en observation"], 1);
+  // Sans évaluation au nouveau format, aucune compétition non forcée n'est admise.
+  assertEquals(filterCandidates(all, DEFAULT_CRITERIA, NOW, VALID, {}).kept.map((c) => c.matchId), [3]);
 });
 
 Deno.test("filtres : un désaccord trop fort avec le marché est écarté", () => {
@@ -191,13 +206,15 @@ Deno.test("filtres : un désaccord trop fort avec le marché est écarté", () =
 
 import { byCompetition } from "../engine/quality.ts";
 
-Deno.test("qualité par compétition : saisons regroupées, petits échantillons ignorés", () => {
+Deno.test("qualité par compétition : par identifiant, saisons regroupées, petits échantillons ignorés", () => {
   const q = byCompetition({
-    "Ligue 1 2025": { matches: 278, brierModel: 0.63, brierBaseline: 0.66 },
-    "Ligue 1 2026": { matches: 50, brierModel: 0.70, brierBaseline: 0.62 },
-    "Coupe X 2026": { matches: 40, brierModel: 0.7, brierBaseline: 0.6 },
+    "5:2025": { matches: 278, brierModel: 0.63, brierBaseline: 0.66 },
+    "5:2026": { matches: 50, brierModel: 0.70, brierBaseline: 0.62 },
+    "40:2026": { matches: 140, brierModel: 0.68, brierBaseline: 0.64 }, // autre « Ligue 1 »
+    "12:2026": { matches: 40, brierModel: 0.7, brierBaseline: 0.6 },
+    "Ligue 1 2025": { matches: 500, brierModel: 0.5, brierBaseline: 0.7 }, // ancien format ignoré
   });
-  assertEquals(q, { "Ligue 1": true });
+  assertEquals(q, { "5": true, "40": false });
 });
 
 Deno.test("sélections imposées : conservées, complétées dans la fourchette", () => {
