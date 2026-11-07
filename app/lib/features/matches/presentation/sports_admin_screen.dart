@@ -8,6 +8,7 @@ import '../data/sports_format.dart';
 import '../data/sports_models.dart';
 import '../data/sports_repository.dart';
 import 'sports_widgets.dart';
+import '../../admin/presentation/competitions_admin_screen.dart';
 import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 final _jobLabels = {
@@ -134,6 +135,14 @@ class _SportsAdminScreenState extends ConsumerState<SportsAdminScreen> {
                       ],
                     ),
                   ),
+                ),
+                const SizedBox(height: 8),
+                FilledButton.tonalIcon(
+                  onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                          builder: (_) => const CompetitionsAdminScreen())),
+                  icon: const Icon(Icons.emoji_events_outlined),
+                  label: Text(tr('Compétitions')),
                 ),
                 SectionTitle(tr('Lancer maintenant')),
                 for (final entry in _jobLabels.entries)
