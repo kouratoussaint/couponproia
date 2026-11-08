@@ -8,6 +8,7 @@ import { loadAiSetup } from "../ai/setup.ts";
 import { loadEngineQuality } from "../engine/quality.ts";
 import { buildFiche, type NamedMatch, type OddsRow } from "../engine/fiche.ts";
 import { ENGINE_VERSION, type PlayedMatch, PRIOR_SEASON_WEIGHT, weighted } from "../engine/poisson.ts";
+import { strengthsFor } from "../engine/strengths_store.ts";
 import { env } from "../http.ts";
 
 export const MATCH_COLUMNS =
@@ -124,6 +125,8 @@ export async function generateMatchAnalysis(
 ) {
   const inputs = await loadFicheInputs(db, m);
   const quality = await loadEngineQuality(db);
+  // Moteur poisson-3.0 : photo horaire pour un match à venir, calcul au coup d'envoi sinon.
+  const strengths = await strengthsFor(db, new Date(m.kickoff_at));
   const fiche = buildFiche({
     match: {
       id: m.id,
@@ -136,6 +139,7 @@ export async function generateMatchAnalysis(
     },
     ...inputs,
     quality,
+    strengths,
     generatedAt: new Date().toISOString(),
     lang,
   });

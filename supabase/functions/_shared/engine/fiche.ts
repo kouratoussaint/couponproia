@@ -2,7 +2,7 @@
 // données réelles antérieures au coup d'envoi. C'est la SEULE source que l'IA a le
 // droit d'utiliser ; l'application l'affiche aussi telle quelle (transparence).
 import {
-  ENGINE_VERSION,
+  ENGINE_VERSION_2,
   GOAL_LINES,
   outcomeKey,
   type PlayedMatch,
@@ -12,6 +12,7 @@ import {
   tableAt,
 } from "./poisson.ts";
 import { runProductionModel } from "./poisson2.ts";
+import { ENGINE_VERSION_3, runModel3, type Strengths3 } from "./poisson3.ts";
 
 export interface NamedMatch extends PlayedMatch {
   homeName: string;
@@ -53,6 +54,11 @@ export interface FicheInput {
   quality?: { evaluatedMatches: number; beatsBaseline: Record<string, boolean> } | null;
   /** Langue des textes de la fiche (« fr » par défaut ; « en » pour une analyse en anglais). */
   lang?: "fr" | "en";
+  /**
+   * Forces du moteur poisson-3.0 (toutes compétitions, niveau des championnats). Sans elles,
+   * la fiche est calculée avec poisson-2.0 (compétition seule) et l'indique.
+   */
+  strengths?: Strengths3 | null;
 }
 
 /** Famille d'évaluation d'une issue : 1X2 (et double chance), OU, BTTS, DNB, TT (buts par équipe). */
@@ -137,7 +143,10 @@ function h2hJson(m: NamedMatch) {
 export function buildFiche(input: FicheInput) {
   const { match } = input;
   const prior = input.prior ?? [];
-  const model = runProductionModel(input.history, prior, match.home.id, match.away.id, match.kickoffAt);
+  const model = input.strengths
+    ? runModel3(input.strengths, match.competition.id, match.home.id, match.away.id)
+    : runProductionModel(input.history, prior, match.home.id, match.away.id, match.kickoffAt);
+  const engineVersion = input.strengths ? ENGINE_VERSION_3 : ENGINE_VERSION_2;
 
   const implied = impliedProbabilities(input.odds);
   const oddsLines: OddsLineFiche[] = input.odds.map((o) => {
@@ -204,10 +213,14 @@ export function buildFiche(input: FicheInput) {
   }
 
   return {
-    engine_version: ENGINE_VERSION,
+    engine_version: engineVersion,
     generated_at: input.generatedAt,
     note: en
-      ? "Probabilities estimated by a statistical model (Poisson, weighted recent form): these are estimates, not certainties."
+      ? input.strengths
+        ? "Probabilities estimated by a statistical model (Poisson, weighted recent form, all competitions and league level): these are estimates, not certainties."
+        : "Probabilities estimated by a statistical model (Poisson, weighted recent form): these are estimates, not certainties."
+      : input.strengths
+      ? "Probabilités estimées par un modèle statistique (Poisson, forme récente pondérée, toutes compétitions et niveau des championnats) : ce sont des estimations, pas des certitudes."
       : "Probabilités estimées par un modèle statistique (Poisson, forme récente pondérée) : ce sont des estimations, pas des certitudes.",
     match: {
       id: match.id,

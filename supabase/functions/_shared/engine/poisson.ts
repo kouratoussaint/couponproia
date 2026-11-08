@@ -11,7 +11,10 @@
 // Fonctions pures, sans accès réseau : testables et rejouables sur l'historique.
 
 /** Version du moteur en production (modèle : poisson2.ts, activé le 31/10 après backtest). */
-export const ENGINE_VERSION = "poisson-2.0";
+/** Moteur de production (LOT 28 : poisson-3.0, compétitions reliées et niveau des championnats). */
+export const ENGINE_VERSION = "poisson-3.0";
+/** Ancien moteur (forces calculées dans la seule compétition), gardé pour comparaison. */
+export const ENGINE_VERSION_2 = "poisson-2.0";
 
 export interface PlayedMatch {
   kickoffAt: string;

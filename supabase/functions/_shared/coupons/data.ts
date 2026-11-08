@@ -1,6 +1,7 @@
 // Accès aux données du moteur de coupons : matchs à venir cotés, fiches calculées en
 // lot (sans IA, sans appel au fournisseur), état réel des sélections pour le contrôle.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { strengthsFor } from "../engine/strengths_store.ts";
 import { buildFiche, type NamedMatch, type OddsRow } from "../engine/fiche.ts";
 import type { EngineQuality } from "../engine/quality.ts";
 import { outcomeKey, PRIOR_SEASON_WEIGHT, weighted } from "../engine/poisson.ts";
@@ -151,6 +152,8 @@ export async function loadCandidates(
     )).forEach(add);
   }
   const all = [...played.values()].sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt));
+  // Moteur poisson-3.0 : forces du jour (photo horaire), communes à tous les matchs à venir.
+  const strengths = await strengthsFor(db, new Date(now.getTime() + 60_000), now);
 
   const candidates: Candidate[] = [];
   for (const m of withOdds) {
@@ -182,6 +185,7 @@ export async function loadCandidates(
       odds: odds.get(m.id) ?? [],
       generatedAt: now.toISOString(),
       quality,
+      strengths,
     });
     const rows = odds.get(m.id) ?? [];
     for (const line of fiche.market.lines) {

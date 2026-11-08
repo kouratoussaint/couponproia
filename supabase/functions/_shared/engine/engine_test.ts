@@ -1,4 +1,5 @@
 // Tests unitaires du moteur statistique : `deno test supabase/functions/_shared`
+import { strengthsAt } from "./poisson3.ts";
 import { assert, assertAlmostEquals, assertEquals } from "jsr:@std/assert@1";
 import { buildFiche, formOf, impliedProbabilities, type OddsRow } from "./fiche.ts";
 import { evaluate } from "./evaluate.ts";
@@ -233,4 +234,31 @@ Deno.test("poisson-2.0 : les matchs à l'extérieur comptent, les anciens matchs
   const old = fitStrengths([{ kickoffAt: day(0), homeId: 1, awayId: 2, homeGoals: 5, awayGoals: 0 }], Date.parse(day(720)));
   const recent = fitStrengths([{ kickoffAt: day(700), homeId: 1, awayId: 2, homeGoals: 5, awayGoals: 0 }], Date.parse(day(720)));
   assert(recent.attack.get(1)! > old.attack.get(1)!, "le match récent pèse davantage");
+});
+
+Deno.test("fiche : moteur indiqué selon les forces fournies (poisson-3.0 ou poisson-2.0)", () => {
+  const history = [m(1, 1, 3, 2, 0), m(2, 3, 2, 1, 1), m(3, 2, 3, 0, 2)];
+  const base = {
+    match: {
+      id: 7,
+      kickoffAt: "2024-09-10T15:00:00Z",
+      season: 2024,
+      round: null,
+      competition: { id: 1, name: "Premier League", type: "league" },
+      home: { id: 1, name: "Alpha" },
+      away: { id: 2, name: "Beta" },
+    },
+    history,
+    recentHome: [],
+    recentAway: [],
+    headToHead: [],
+    odds: [],
+    generatedAt: "2024-09-09T00:00:00Z",
+  };
+  const old = buildFiche(base);
+  assertEquals(old.engine_version, "poisson-2.0");
+  const strengths = strengthsAt(history.map((h) => ({ ...h, competitionId: 1 })), Date.parse("2024-09-10T00:00:00Z"), new Set([1]));
+  const fiche = buildFiche({ ...base, strengths });
+  assertEquals(fiche.engine_version, "poisson-3.0");
+  assert(fiche.note.includes("niveau des championnats"));
 });

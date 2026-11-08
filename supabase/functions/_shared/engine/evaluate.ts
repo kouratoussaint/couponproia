@@ -4,7 +4,7 @@
 // Référence (baseline) : fréquences observées jusque-là dans la compétition
 // (1 / N / 2, plus de 2,5 buts, les deux marquent), avec lissage de Laplace.
 // Plus le score de Brier et la perte logarithmique sont BAS, meilleur est le modèle.
-import { ENGINE_VERSION, type PlayedMatch, round } from "./poisson.ts";
+import { ENGINE_VERSION_2, type PlayedMatch, round } from "./poisson.ts";
 import { DEFAULT_OPTIONS_2, fitStrengths, runModel2FromStrengths, type Strengths } from "./poisson2.ts";
 import { ENGINE_VERSION_3, LeagueModel, type Match3, runModel3, type Strengths3 } from "./poisson3.ts";
 
@@ -206,7 +206,7 @@ export function evaluate(
     merge(allTeam, r.rTeam);
     if (r.r1x2.n > 0) perCompetition[g.name] = r.r1x2.scores();
   }
-  return report(ENGINE_VERSION, { r1x2: all1x2, rOver: allOver, rBtts: allBtts, rDnb: allDnb, rTeam: allTeam }, bins, perCompetition);
+  return report(ENGINE_VERSION_2, { r1x2: all1x2, rOver: allOver, rBtts: allBtts, rDnb: allDnb, rTeam: allTeam }, bins, perCompetition);
 }
 
 function report(engineVersion: string, all: Accs, bins: number[][], perCompetition: Record<string, Scores>) {
