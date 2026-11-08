@@ -76,7 +76,11 @@ Deno.serve(async (req) => {
 
     // Laboratoire « Moteur 3.0 » : comparaison de variantes, rien n'est enregistré.
     if (body?.experiment === "moteur-3") {
-      return json({ experiment: "moteur-3", labels, ...await moteur3(db, groups) });
+      // Options : `only` (identifiants de compétitions), `refit` ("week" par défaut, ou "day").
+      const only = Array.isArray(body?.only) ? new Set(body.only.map(Number)) : null;
+      const refit = body?.refit === "day" ? "day" : "week";
+      const chosen = only ? groups.filter((g) => only.has(g.competitionId)) : groups;
+      return json({ experiment: "moteur-3", refit, labels, ...await moteur3(db, chosen, refit) });
     }
 
     const { evaluation, perCompetition } = evaluate(groups, { warmupMatches });
@@ -130,8 +134,12 @@ Deno.serve(async (req) => {
  * l'évaluation officielle ; tous les matchs terminés connus servent aux forces « reliées » ;
  * dernier relevé de cotes 1X2 avant le coup d'envoi pour la comparaison avec le marché.
  */
-// deno-lint-ignore no-explicit-any
-async function moteur3(db: any, groups: { name: string; competitionId: number; season: number; prior: PlayedMatch[] }[]) {
+async function moteur3(
+  // deno-lint-ignore no-explicit-any
+  db: any,
+  groups: { name: string; competitionId: number; season: number; prior: PlayedMatch[] }[],
+  refit: "week" | "day",
+) {
   const all: LabMatch[] = [];
   for (let from = 0;; from += PAGE) {
     const { data, error } = await db.from("matches")
@@ -187,6 +195,6 @@ async function moteur3(db: any, groups: { name: string; competitionId: number; s
     if (o.home && o.draw && o.away) odds.set(id, { home: o.home, draw: o.draw, away: o.away });
   }
   const t0 = performance.now();
-  const result = runExperiment(labGroups, all, odds, 30);
+  const result = runExperiment(labGroups, all, odds, 30, undefined, refit);
   return { all_matches: all.length, matches_with_odds: odds.size, compute_ms: Math.round(performance.now() - t0), ...result };
 }

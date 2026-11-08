@@ -277,6 +277,8 @@ export function runExperiment(
   odds: Map<number, { home: number; draw: number; away: number }> = new Map(),
   warmupMatches = 30,
   o: Model2Options = DEFAULT_OPTIONS_2,
+  /** Fréquence de calcul des forces reliées : chaque semaine (léger) ou chaque jour. */
+  refit: "week" | "day" = "week",
 ) {
   const allSorted = [...all].sort((x, y) => x.kickoffAt.localeCompare(y.kickoffAt));
   // 1. Prédictions A et B, sur les matchs notés par l'évaluation officielle.
@@ -325,7 +327,7 @@ export function runExperiment(
   // seuls matchs antérieurs ; une semaine à la fois, rien n'est gardé en mémoire ensuite.
   const weekStart = (iso: string) => {
     const t = Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
-    const dow = (new Date(t).getUTCDay() + 6) % 7;
+    const dow = refit === "day" ? 0 : (new Date(t).getUTCDay() + 6) % 7;
     return new Date(t - dow * DAY).toISOString();
   };
   const byWeek = new Map<string, Prediction[]>();
