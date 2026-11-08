@@ -5,8 +5,8 @@
 //  A  — poisson-2.0 (production) : forces calculées dans la seule compétition.
 //  B  — compétitions reliées : forces de chaque équipe calculées sur TOUS ses matchs (championnat,
 //       coupes d'Europe et d'Afrique…), avec la moyenne de buts et l'avantage du terrain propres
-//       à la compétition du match. Mêmes réglages que A (demi-vie, rétrécissement, poids 0,5 des
-//       saisons précédentes).
+//       à la compétition du match. Mêmes réglages que A (demi-vie, rétrécissement ; anciennes
+//       saisons au poids 1 comme en production, seule la décroissance dans le temps joue).
 //  +cal — recalibrage 1X2 « marche avant » : p_k^T, nul multiplié par e^d, renormalisé ; T et d
 //       ajustés au début de chaque mois sur les seules prédictions des mois précédents.
 //  Marché — pour les matchs dont la cote 1X2 a été relevée avant le coup d'envoi : probabilités
@@ -509,7 +509,10 @@ export function runExperiment(
     const season = Number(seasonText);
     while (cut < allSorted.length && allSorted[cut].kickoffAt < at) cut++;
     const history = allSorted.slice(0, cut);
-    const weightOf = (m: PlayedMatch) => ((m as LabMatch).season < season ? 0.5 : 1);
+    // Comme poisson-2.0 en production (runProductionModel, evaluate) : toutes les saisons au
+    // poids 1, seule la décroissance dans le temps réduit les anciens matchs.
+    const weightOf = (_m: PlayedMatch) => 1;
+    void season;
     const b = withB ? fitGlobalStrengths(history, Date.parse(at), o, weightOf) : null;
     const c = leagues ? fitLeagueStrengths(history, Date.parse(at), leagues, o, weightOf) : null;
     if (c) levels[at.slice(0, 10)] = Object.fromEntries(c.leagueLevel);
