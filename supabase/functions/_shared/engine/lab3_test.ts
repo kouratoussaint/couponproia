@@ -128,3 +128,17 @@ Deno.test("variante C : un club dominant d'un championnat faible n'est pas sures
   const pb = globalProbabilities(b, 3, 20, 6), pc = globalProbabilities(c, 3, 20, 6);
   assert(pc["1X2.HOME"] < pb["1X2.HOME"], `${pc["1X2.HOME"]} < ${pb["1X2.HOME"]}`);
 });
+
+Deno.test("variante C : équipe d'une seule compétition (coupe) = poisson-2.0 à l'identique", () => {
+  const all = synthetic();
+  const at = Date.parse("2026-01-01T00:00:00Z");
+  // Coupe seule, sans championnat suivi pour ses équipes : C doit se ramener à A.
+  const cup = all.filter((m) => m.competitionId === 3);
+  const a = fitStrengths(cup, at, { ...DEFAULT_OPTIONS_2, iterations: DEFAULT_OPTIONS_2.iterations + 4 });
+  const c = fitLeagueStrengths(cup, at, new Set([1, 2]));
+  for (const t of [6, 8, 16]) {
+    if (!a.attack.has(t)) continue;
+    assertAlmostEquals(c.attack.get(t)!, a.attack.get(t)!, 1e-9);
+    assertAlmostEquals(c.defense.get(t)!, a.defense.get(t)!, 1e-9);
+  }
+});

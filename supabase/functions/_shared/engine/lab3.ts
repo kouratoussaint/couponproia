@@ -131,7 +131,8 @@ export function fitGlobalStrengths(
  * multiplie l'attaque et divise la défense. Dans un match de championnat, S s'annule ; il
  * n'est estimé que sur les matchs entre équipes de championnats différents (coupes
  * continentales), rétréci vers 1 avec `leagueShrink` buts fictifs. Une équipe sans
- * championnat suivi (sélections, clubs de championnats non suivis) garde S = 1.
+ * championnat suivi (sélections, clubs de championnats non suivis) garde S = 1. La prudence
+ * (matchs fictifs) de chaque équipe suit le niveau de buts de ses propres matchs.
  */
 export function fitLeagueStrengths(
   history: (PlayedMatch & { competitionId: number })[],
@@ -202,8 +203,19 @@ export function fitLeagueStrengths(
     goals += w[r] * (bh[r] + ba[r]);
     weightSum += w[r];
   }
-  const k = o.shrinkK * (weightSum > 0 ? goals / weightSum / 2 : (o.priorHomeGoals + o.priorAwayGoals) / 2);
+  // Prudence (matchs fictifs) propre à chaque équipe : niveau de buts de SES matchs. Une équipe
+  // qui ne joue qu'une compétition retrouve exactement le réglage de poisson-2.0.
   const T = index.size, L = leagueIndex.size;
+  const kw = new Float64Array(T), kg = new Float64Array(T);
+  for (let r = 0; r < n; r++) {
+    for (const t of [hi[r], ai[r]]) {
+      kw[t] += w[r];
+      kg[t] += w[r] * (bh[r] + ba[r]) / 2;
+    }
+  }
+  const fallback = weightSum > 0 ? goals / weightSum / 2 : (o.priorHomeGoals + o.priorAwayGoals) / 2;
+  const kOf = new Float64Array(T);
+  for (let t = 0; t < T; t++) kOf[t] = o.shrinkK * (kw[t] > 0 ? kg[t] / kw[t] : fallback);
   const att = new Float64Array(T).fill(1), def = new Float64Array(T).fill(1);
   const lv = new Float64Array(L).fill(1);
   const S = (l: number) => (l < 0 ? 1 : lv[l]);
@@ -227,8 +239,8 @@ export function fitLeagueStrengths(
       ec[a] += x * bh[r] * ratio * att[h];
     }
     for (let t = 0; t < T; t++) {
-      att[t] = (sc[t] + k) / (es[t] + k);
-      def[t] = (co[t] + k) / (ec[t] + k);
+      att[t] = (sc[t] + kOf[t]) / (es[t] + kOf[t]);
+      def[t] = (co[t] + kOf[t]) / (ec[t] + kOf[t]);
     }
     // Niveau des championnats : matchs entre championnats différents seulement.
     lsc.fill(0);
