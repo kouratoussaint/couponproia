@@ -2,7 +2,9 @@
 // Appelée par un administrateur (JWT + ai.configure) ou par pg_cron (en-tête x-cron-secret).
 // Rejoue chaque match terminé de la saison avec les seuls matchs antérieurs, compare
 // au résultat réel et enregistre les scores dans engine_evaluations (lisibles par tous).
-import { evaluate } from "../_shared/engine/evaluate.ts";
+import { evaluate, evaluate3 } from "../_shared/engine/evaluate.ts";
+import { ENGINE_VERSION_3 } from "../_shared/engine/poisson3.ts";
+import { loadModelInputs, refreshStrengths } from "../_shared/engine/strengths_store.ts";
 import { type LabGroup, type LabMatch, runExperiment } from "../_shared/engine/lab3.ts";
 import { ENGINE_VERSION, type PlayedMatch, PRIOR_SEASON_WEIGHT, weighted } from "../_shared/engine/poisson.ts";
 import { callerFrom, corsHeaders, env, json, readSettings, serverContext } from "../_shared/http.ts";
@@ -25,6 +27,16 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   const { db } = ctx;
   try {
+    // Tâche horaire : forces du moteur poisson-3.0 (photo lue par les analyses et les coupons).
+    if (body?.job === "strengths") {
+      if (!fromCron && !caller) return json({ error: "unauthorized" }, 401);
+      return json({ ok: true, ...await refreshStrengths(db) });
+    }
+    // Moteur évalué : celui de production par défaut ; « poisson-3.0 » peut être évalué avant la
+    // bascule (LOT 28) pour que la qualité par compétition existe dès l'activation.
+    const production: string = ENGINE_VERSION;
+    const engine = body?.engine === ENGINE_VERSION_3 || production === ENGINE_VERSION_3 ? ENGINE_VERSION_3 : production;
+
     const settings = await readSettings(db, ["sports.archive_season"]);
     const { data: competitions, error: compError } = await db.from("competitions")
       .select("id, name, display_name, current_season").eq("is_active", true);
@@ -86,17 +98,24 @@ Deno.serve(async (req) => {
       return json({ experiment: "moteur-3", refit, labels, ...await moteur3(db, chosen, { refit, withB, variantC }) });
     }
 
-    const { evaluation, perCompetition } = evaluate(groups, { warmupMatches });
+    const { evaluation, perCompetition } = engine === ENGINE_VERSION_3
+      ? await (async () => {
+        const { matches, leagues } = await loadModelInputs(db, new Date());
+        return evaluate3(groups, matches, leagues, { warmupMatches });
+      })()
+      : evaluate(groups, { warmupMatches });
     const e = evaluation.oneXTwo;
     if (dryRun) return json({ dry_run: true, prior_weight: priorWeight, evaluation, perCompetition, labels });
     const { data: saved, error: saveError } = await db.from("engine_evaluations").insert({
-      engine_version: ENGINE_VERSION,
+      engine_version: engine,
       scope: {
         season: Number.isInteger(season) ? season : "précédente et en cours",
         competitions: groups.map((g) => labels[g.name] ?? g.name),
         warmup_matches: warmupMatches,
         prior_season_weight: priorWeight,
-        method: "Chaque match est prédit avec les seuls matchs antérieurs de sa compétition",
+        method: engine === ENGINE_VERSION_3
+          ? "Chaque match est prédit avec les seuls matchs antérieurs, toutes compétitions (forces de la veille)"
+          : "Chaque match est prédit avec les seuls matchs antérieurs de sa compétition",
       },
       matches_evaluated: e.matches,
       brier_model: e.brierModel,
@@ -123,7 +142,7 @@ Deno.serve(async (req) => {
       action: "engine.evaluate",
       target_type: "engine_evaluation",
       target_id: String(saved.id),
-      details: { engine_version: ENGINE_VERSION, matches: e.matches, source: fromCron ? "cron" : "admin" },
+      details: { engine_version: engine, matches: e.matches, source: fromCron ? "cron" : "admin" },
     });
     return json(saved);
   } catch (err) {
