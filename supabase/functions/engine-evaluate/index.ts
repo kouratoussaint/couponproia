@@ -3,6 +3,7 @@
 // Rejoue chaque match terminé de la saison avec les seuls matchs antérieurs, compare
 // au résultat réel et enregistre les scores dans engine_evaluations (lisibles par tous).
 import { evaluate } from "../_shared/engine/evaluate.ts";
+import { type LabGroup, type LabMatch, runExperiment } from "../_shared/engine/lab3.ts";
 import { ENGINE_VERSION, type PlayedMatch, PRIOR_SEASON_WEIGHT, weighted } from "../_shared/engine/poisson.ts";
 import { callerFrom, corsHeaders, env, json, readSettings, serverContext } from "../_shared/http.ts";
 import { safeEqual } from "../_shared/sports/normalize.ts";
@@ -58,7 +59,7 @@ Deno.serve(async (req) => {
 
     // Par défaut (tâche hebdomadaire) : saison précédente complète + saison en cours.
     // Compétitions repérées par leur identifiant (« 5:2025 ») : deux « Ligue 1 » restent séparées.
-    const groups: { name: string; matches: PlayedMatch[]; prior: PlayedMatch[] }[] = [];
+    const groups: { name: string; competitionId: number; season: number; matches: PlayedMatch[]; prior: PlayedMatch[] }[] = [];
     const labels: Record<string, string> = {};
     for (const c of competitions ?? []) {
       const seasons = Number.isInteger(season) ? [season] : c.current_season ? [c.current_season - 1, c.current_season] : [];
@@ -66,12 +67,18 @@ Deno.serve(async (req) => {
         const matches = await load(c.id, s);
         if (matches.length === 0) continue;
         const prior = priorWeight > 0 ? weighted(await load(c.id, s - 1), priorWeight) : [];
-        groups.push({ name: `${c.id}:${s}`, matches, prior });
+        groups.push({ name: `${c.id}:${s}`, competitionId: c.id, season: s, matches, prior });
         labels[`${c.id}:${s}`] = `${c.display_name ?? c.name} ${s}`;
       }
     }
 
     const warmupMatches = 30;
+
+    // Laboratoire « Moteur 3.0 » : comparaison de variantes, rien n'est enregistré.
+    if (body?.experiment === "moteur-3") {
+      return json({ experiment: "moteur-3", labels, ...await moteur3(db, groups) });
+    }
+
     const { evaluation, perCompetition } = evaluate(groups, { warmupMatches });
     const e = evaluation.oneXTwo;
     if (dryRun) return json({ dry_run: true, prior_weight: priorWeight, evaluation, perCompetition, labels });
@@ -117,3 +124,69 @@ Deno.serve(async (req) => {
     return json({ error: "internal_error", message: String((err as Error).message ?? err).slice(0, 200) }, 500);
   }
 });
+
+/**
+ * Expérience « Moteur 3.0 » (laboratoire, lecture seule) : mêmes compétitions-saisons que
+ * l'évaluation officielle ; tous les matchs terminés connus servent aux forces « reliées » ;
+ * dernier relevé de cotes 1X2 avant le coup d'envoi pour la comparaison avec le marché.
+ */
+// deno-lint-ignore no-explicit-any
+async function moteur3(db: any, groups: { name: string; competitionId: number; season: number; prior: PlayedMatch[] }[]) {
+  const all: LabMatch[] = [];
+  for (let from = 0;; from += PAGE) {
+    const { data, error } = await db.from("matches")
+      .select("id, competition_id, season, kickoff_at, home_team_id, away_team_id, home_goals, away_goals")
+      .in("status", ["finished", "awarded"]).not("home_goals", "is", null).not("away_goals", "is", null)
+      .order("id").range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    for (const r of data ?? []) {
+      all.push({
+        id: r.id,
+        competitionId: r.competition_id,
+        season: r.season,
+        kickoffAt: r.kickoff_at,
+        homeId: r.home_team_id,
+        awayId: r.away_team_id,
+        homeGoals: r.home_goals,
+        awayGoals: r.away_goals,
+      });
+    }
+    if (!data || data.length < PAGE) break;
+  }
+  const labGroups: LabGroup[] = groups.map((g) => ({
+    key: g.name,
+    competitionId: g.competitionId,
+    season: g.season,
+    matches: all.filter((m) => m.competitionId === g.competitionId && m.season === g.season),
+    prior: g.prior,
+  }));
+
+  // Cotes : dernier relevé 1X2 avant le coup d'envoi, pour les matchs terminés.
+  const kickoff = new Map(all.map((m) => [m.id, m.kickoffAt]));
+  const latest = new Map<number, { at: string; home?: number; draw?: number; away?: number }>();
+  for (let from = 0;; from += PAGE) {
+    const { data, error } = await db.from("odds_snapshots")
+      .select("match_id, outcome_code, odd_median, captured_at")
+      .eq("market_code", "1X2").order("id").range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    for (const r of data ?? []) {
+      const k = kickoff.get(r.match_id);
+      if (!k || r.captured_at >= k) continue;
+      const cur = latest.get(r.match_id);
+      const at = String(r.captured_at).slice(0, 16);
+      const row = !cur || at > cur.at ? { at } : cur;
+      if (cur && at < cur.at) continue;
+      const key = String(r.outcome_code).toLowerCase() as "home" | "draw" | "away";
+      row[key] = Number(r.odd_median);
+      latest.set(r.match_id, row);
+    }
+    if (!data || data.length < PAGE) break;
+  }
+  const odds = new Map<number, { home: number; draw: number; away: number }>();
+  for (const [id, o] of latest) {
+    if (o.home && o.draw && o.away) odds.set(id, { home: o.home, draw: o.draw, away: o.away });
+  }
+  const t0 = performance.now();
+  const result = runExperiment(labGroups, all, odds, 30);
+  return { all_matches: all.length, matches_with_odds: odds.size, compute_ms: Math.round(performance.now() - t0), ...result };
+}
