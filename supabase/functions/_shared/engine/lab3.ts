@@ -51,6 +51,7 @@ export function fitGlobalStrengths(
   history: (PlayedMatch & { competitionId: number })[],
   at: number,
   o: Model2Options = DEFAULT_OPTIONS_2,
+  weightOf: (m: PlayedMatch & { competitionId: number }) => number = (m) => m.weight ?? 1,
 ): GlobalStrengths {
   const n = history.length;
   const w = new Float64Array(n);
@@ -58,7 +59,7 @@ export function fitGlobalStrengths(
   for (let r = 0; r < n; r++) {
     const m = history[r];
     const age = Math.max(0, (at - Date.parse(m.kickoffAt)) / DAY);
-    w[r] = (m.weight ?? 1) * 0.5 ** (age / o.halfLifeDays);
+    w[r] = weightOf(m) * 0.5 ** (age / o.halfLifeDays);
     const c = comp.get(m.competitionId) ?? { w: 0, h: 0, a: 0 };
     c.w += w[r];
     c.h += w[r] * m.homeGoals;
@@ -247,6 +248,10 @@ interface Prediction {
   base: number[];
   a: Record<string, number>;
   b: Record<string, number>;
+  competitionId: number;
+  season: number;
+  homeId: number;
+  awayId: number;
 }
 
 const x12 = (p: Record<string, number>) => [p["1X2.HOME"], p["1X2.DRAW"], p["1X2.AWAY"]];
@@ -274,22 +279,6 @@ export function runExperiment(
   o: Model2Options = DEFAULT_OPTIONS_2,
 ) {
   const allSorted = [...all].sort((x, y) => x.kickoffAt.localeCompare(y.kickoffAt));
-  const globalCache = new Map<string, GlobalStrengths>();
-  const globalAt = (day: string, season: number) => {
-    const cacheKey = `${day}|${season}`;
-    let s = globalCache.get(cacheKey);
-    if (!s) {
-      const before: (LabMatch & { weight: number })[] = [];
-      for (const m of allSorted) {
-        if (m.kickoffAt < day) before.push({ ...m, weight: m.season < season ? 0.5 : 1 });
-        else break;
-      }
-      s = fitGlobalStrengths(before, Date.parse(`${day}T00:00:00Z`), o);
-      globalCache.set(cacheKey, s);
-    }
-    return s;
-  };
-
   // 1. Prédictions A et B, sur les matchs notés par l'évaluation officielle.
   const predictions: Prediction[] = [];
   for (const g of groups) {
@@ -320,13 +309,38 @@ export function runExperiment(
           awayGoals: m.awayGoals,
           base: counts.map((c) => (c + 1) / (n + 3)),
           a: runModel2FromStrengths(s, m.homeId, m.awayId, o).probabilities,
-          b: globalProbabilities(globalAt(day, g.season), g.competitionId, m.homeId, m.awayId, o),
+          b: {},
+          competitionId: g.competitionId,
+          season: g.season,
+          homeId: m.homeId,
+          awayId: m.awayId,
         });
       }
       counts[outcome]++;
     }
   }
   predictions.sort((x, y) => x.kickoffAt.localeCompare(y.kickoffAt));
+
+  // Variante B : forces reliées calculées au lundi 00:00 (UTC) de la semaine du match, avec les
+  // seuls matchs antérieurs ; une semaine à la fois, rien n'est gardé en mémoire ensuite.
+  const weekStart = (iso: string) => {
+    const t = Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
+    const dow = (new Date(t).getUTCDay() + 6) % 7;
+    return new Date(t - dow * DAY).toISOString();
+  };
+  const byWeek = new Map<string, Prediction[]>();
+  for (const p of predictions) {
+    const k = `${weekStart(p.kickoffAt)}|${p.season}`;
+    (byWeek.get(k) ?? byWeek.set(k, []).get(k)!).push(p);
+  }
+  let cut = 0;
+  for (const k of [...byWeek.keys()].sort()) {
+    const [at, seasonText] = k.split("|");
+    const season = Number(seasonText);
+    while (cut < allSorted.length && allSorted[cut].kickoffAt < at) cut++;
+    const s = fitGlobalStrengths(allSorted.slice(0, cut), Date.parse(at), o, (m) => ((m as LabMatch).season < season ? 0.5 : 1));
+    for (const p of byWeek.get(k)!) p.b = globalProbabilities(s, p.competitionId, p.homeId, p.awayId, o);
+  }
 
   // 2. Recalibrage marche avant : réglages refaits au début de chaque mois.
   const calA = new Map<string, Calibration>(), calB = new Map<string, Calibration>();
