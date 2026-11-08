@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/widgets/unsaved_changes_guard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -69,6 +70,15 @@ class _CouponEditScreenState extends ConsumerState<CouponEditScreen> {
   final _note = TextEditingController();
   bool _saving = false;
 
+  /// Saisie au chargement, pour savoir si quelque chose a changé (lot 27).
+  String? _baseline;
+  String _signature() => [
+        _title.text,
+        _note.text,
+        for (final s in _sels ?? const <_Sel>[]) '${s.matchId}:${s.key}'
+      ].join('\u0001');
+  bool _dirty() => _baseline != null && _signature() != _baseline;
+
   @override
   void dispose() {
     _title.dispose();
@@ -83,6 +93,7 @@ class _CouponEditScreenState extends ConsumerState<CouponEditScreen> {
         _Sel(s.match.id, s.key, s.match.home, s.match.away, s.match.kickoffAt)
     ];
     _title.text = c.title;
+    _baseline = _signature();
   }
 
   Future<void> _addMatch() async {
@@ -195,31 +206,33 @@ class _CouponEditScreenState extends ConsumerState<CouponEditScreen> {
       );
     }
     final coupon = ref.watch(couponProvider(widget.couponId));
-    return Scaffold(
-      appBar: AppBar(title: Text(tr('Modifier le coupon'))),
-      body: coupon.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => InfoMessage(
-            icon: Icons.cloud_off_outlined,
-            title: tr('Coupon indisponible'),
-            body: userMessageFor(e)),
-        data: (c) {
-          if (c == null) {
-            return InfoMessage(
-                icon: Icons.help_outline, title: tr('Coupon introuvable'));
-          }
-          if (!['pending_review', 'ready'].contains(c.status)) {
-            return InfoMessage(
-                icon: Icons.lock_outline,
-                title: tr('Coupon non modifiable'),
-                body: tr(
-                    'Un coupon publié est immuable : retirez-le, puis « Dupliquer et modifier ».'));
-          }
-          _init(c);
-          return _form(context);
-        },
-      ),
-    );
+    return UnsavedChangesGuard(
+        isDirty: _dirty,
+        child: Scaffold(
+          appBar: AppBar(title: Text(tr('Modifier le coupon'))),
+          body: coupon.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => InfoMessage(
+                icon: Icons.cloud_off_outlined,
+                title: tr('Coupon indisponible'),
+                body: userMessageFor(e)),
+            data: (c) {
+              if (c == null) {
+                return InfoMessage(
+                    icon: Icons.help_outline, title: tr('Coupon introuvable'));
+              }
+              if (!['pending_review', 'ready'].contains(c.status)) {
+                return InfoMessage(
+                    icon: Icons.lock_outline,
+                    title: tr('Coupon non modifiable'),
+                    body: tr(
+                        'Un coupon publié est immuable : retirez-le, puis « Dupliquer et modifier ».'));
+              }
+              _init(c);
+              return _form(context);
+            },
+          ),
+        ));
   }
 
   Widget _form(BuildContext context) {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/router/navigation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/theme/brand_colors.dart';
 import '../matches/data/sports_format.dart';
@@ -37,7 +37,7 @@ class RenewalBanner extends ConsumerWidget {
               : tr('Renouvelez en un geste : la durée s’ajoute à la fin.')),
           trailing: FilledButton(
             style: FilledButton.styleFrom(backgroundColor: color),
-            onPressed: () => context.push(r.route),
+            onPressed: () => context.openRoute(r.route),
             child: Text(tr('Renouveler')),
           ),
         ),

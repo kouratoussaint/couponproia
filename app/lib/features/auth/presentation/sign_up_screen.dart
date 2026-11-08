@@ -55,7 +55,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             displayName: _name.text,
           );
       if (!mounted) return;
-      if (needsCode) context.go(AppRoutes.verifyEmailFor(_email.text.trim()));
+      if (needsCode) context.push(AppRoutes.verifyEmailFor(_email.text.trim()));
     } catch (e) {
       if (mounted) showMessage(context, userMessageFor(e), error: true);
     } finally {

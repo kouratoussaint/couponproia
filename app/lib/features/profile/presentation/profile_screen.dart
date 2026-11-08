@@ -1,4 +1,5 @@
 import '../../system/update_prompt.dart';
+import 'package:coupon_pro_ia/features/auth/data/sign_out.dart';
 import '../data/language_sync.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,9 +15,7 @@ import '../../../core/theme/solid_buttons.dart';
 import '../../../core/theme/text_scale_controller.dart';
 import '../../../core/theme/theme_mode_controller.dart';
 import '../../../core/widgets/form_widgets.dart';
-import '../../auth/data/auth_repository.dart';
 import '../../billing/billing_repository.dart';
-import '../../notifications/data/push_service.dart';
 import '../../onboarding/data/preferences_repository.dart';
 import '../../onboarding/presentation/onboarding_sheet.dart';
 import 'responsible_gaming_screen.dart';
@@ -365,8 +364,7 @@ class ProfileScreen extends ConsumerWidget {
                   minimumSize:
                       const WidgetStatePropertyAll(Size.fromHeight(48))),
               onPressed: () async {
-                await ref.read(pushServiceProvider).stop();
-                await ref.read(authRepositoryProvider).signOut();
+                await signOutEverywhere(ref);
               },
               icon: const Icon(Icons.logout),
               label: Text(tr('Se déconnecter')),

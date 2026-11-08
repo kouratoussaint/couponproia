@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/router/navigation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -179,7 +180,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen>
         IconButton(
           tooltip: tr('Mes coupons'),
           icon: const Icon(Icons.bookmarks_outlined),
-          onPressed: () => context.push(AppRoutes.myCoupons),
+          onPressed: () => context.openRoute(AppRoutes.assistantMyCoupons),
         ),
       IconButton(
           tooltip: tr('Historique'),

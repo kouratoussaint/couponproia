@@ -1,4 +1,5 @@
 import '../system/update_prompt.dart';
+import 'package:coupon_pro_ia/core/router/navigation.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -295,16 +296,16 @@ class _StatusTiles extends ConsumerWidget {
     return Row(
       children: [
         tile(ready ? '${split.toPlay.length}' : '–', tr('à jouer'),
-            () => context.go(AppRoutes.coupons),
+            () => context.openRoute(AppRoutes.coupons),
             accent: split.toPlay.isNotEmpty),
         const SizedBox(width: 10),
         tile(ready ? '${split.live.length}' : '–', tr('en cours'),
-            () => context.go(AppRoutes.coupons)),
+            () => context.openRoute(AppRoutes.coupons)),
         const SizedBox(width: 10),
         tile(
             upcoming.isEmpty ? '–' : timeLabel(upcoming.first),
             upcoming.isEmpty ? tr('plus de match') : tr('1er match'),
-            () => context.go(AppRoutes.matches)),
+            () => context.openRoute(AppRoutes.matches)),
       ],
     );
   }
@@ -330,7 +331,7 @@ class _CouponOfTheDay extends ConsumerWidget {
             highlight: true,
             radius: 20,
             padding: const EdgeInsets.all(18),
-            onTap: () => context.go(AppRoutes.coupons),
+            onTap: () => context.openRoute(AppRoutes.coupons),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -479,17 +480,17 @@ class _Shortcuts extends StatelessWidget {
       (
         Icons.smart_toy_outlined,
         tr('Assistant'),
-        () => context.go(AppRoutes.assistant)
+        () => context.openRoute(AppRoutes.assistant)
       ),
       (
         Icons.bookmarks_outlined,
         tr('Mes coupons'),
-        () => context.push(AppRoutes.myCoupons)
+        () => context.openRoute(AppRoutes.assistantMyCoupons)
       ),
       (
         Icons.science_outlined,
         tr('Laboratoire'),
-        () => context.push(AppRoutes.lab)
+        () => context.openRoute(AppRoutes.assistantLab)
       ),
       (
         Icons.palette_outlined,
@@ -716,7 +717,7 @@ class _MatchesBlockState extends ConsumerState<_MatchesBlock> {
                       ?.copyWith(fontWeight: FontWeight.w800)),
             ),
             TextButton(
-              onPressed: () => context.go(AppRoutes.matches),
+              onPressed: () => context.openRoute(AppRoutes.matches),
               child: Text(tr('Tout voir')),
             ),
           ],
@@ -942,7 +943,7 @@ class _LastCoupons extends ConsumerWidget {
     final lost = week.where((c) => c.result == 'lost').length;
     void openAll() {
       ref.read(couponsTabRequestProvider.notifier).state = 2;
-      context.go(AppRoutes.coupons);
+      context.openRoute(AppRoutes.coupons);
     }
 
     return Column(
@@ -1134,7 +1135,7 @@ class _LiveBlockState extends ConsumerState<_LiveBlock> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () => context.go(AppRoutes.matches),
+                  onPressed: () => context.openRoute(AppRoutes.matches),
                   child: Text(trf('+ {0} autre{1}', [
                     live.length - shown.length,
                     live.length - shown.length > 1 ? 's' : ''

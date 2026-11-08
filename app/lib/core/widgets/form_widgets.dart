@@ -22,7 +22,10 @@ class AuthScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: showBack ? AppBar() : null,
+      // Flèche retour seulement s'il y a un écran précédent (sinon, barre vide).
+      appBar: showBack && (ModalRoute.of(context)?.canPop ?? false)
+          ? AppBar()
+          : null,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

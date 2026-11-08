@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/router/navigation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -159,12 +160,7 @@ class HelpArticleScreen extends ConsumerWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: FilledButton.tonal(
-                  onPressed: () => route.contains('?') ||
-                          route == AppRoutes.coupons ||
-                          route == AppRoutes.assistant ||
-                          route == AppRoutes.profile
-                      ? context.go(route)
-                      : context.push(route),
+                  onPressed: () => context.openRoute(route),
                   child: Text(label)),
             ),
           ],
@@ -178,8 +174,7 @@ class HelpArticleScreen extends ConsumerWidget {
                 contentPadding: EdgeInsets.zero,
                 title: Text(r.title),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () =>
-                    context.pushReplacement(AppRoutes.helpArticleFor(r.id)),
+                onTap: () => context.push(AppRoutes.helpArticleFor(r.id)),
               ),
           ],
         ],

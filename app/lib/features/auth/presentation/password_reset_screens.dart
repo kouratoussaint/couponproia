@@ -36,7 +36,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     try {
       await ref.read(authRepositoryProvider).sendPasswordResetCode(_email.text);
       if (!mounted) return;
-      context.go(AppRoutes.resetPasswordFor(_email.text.trim()));
+      context.push(AppRoutes.resetPasswordFor(_email.text.trim()));
     } catch (e) {
       if (mounted) showMessage(context, userMessageFor(e), error: true);
     } finally {
@@ -127,6 +127,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     final missingEmail = widget.email.isEmpty;
     return AuthScaffold(
       title: tr('Nouveau mot de passe'),
+      showBack: true,
       subtitle: missingEmail
           ? tr('Adresse inconnue : recommencez depuis « Mot de passe oublié ».')
           : trf('Code envoyé à {0}. Il expire dans une heure.', [widget.email]),

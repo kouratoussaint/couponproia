@@ -42,7 +42,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     } on AuthException catch (e) {
       if (!mounted) return;
       if (e.code == 'email_not_confirmed') {
-        context.go(AppRoutes.verifyEmailFor(_email.text.trim()));
+        context.push(AppRoutes.verifyEmailFor(_email.text.trim()));
         return;
       }
       showMessage(context, userMessageFor(e), error: true);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/widgets/unsaved_changes_guard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -67,6 +68,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   bool _loaded = false;
   bool _busy = false;
 
+  /// Saisie au chargement, pour savoir si quelque chose a changé (lot 27).
+  String? _baseline;
+  String _signature() =>
+      [_name.text, _country, _timezone, _avatar, _level?.name].join('\u0001');
+  bool _dirty() => _baseline != null && _signature() != _baseline;
+
   @override
   void dispose() {
     _name.dispose();
@@ -84,6 +91,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         : 'Africa/Ouagadougou';
     _avatar = p.avatarUrl;
     _level = prefs?.level;
+    _baseline = _signature();
   }
 
   Future<void> _pickPhoto() async {
@@ -152,157 +160,163 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final profile = ref.watch(myProfileProvider);
     final prefs = ref.watch(myPreferencesProvider).valueOrNull;
     final email = ref.watch(currentUserProvider)?.email ?? '';
-    return Scaffold(
-      appBar: AppBar(title: Text(tr('Modifier le profil'))),
-      body: profile.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(userMessageFor(e))),
-        data: (p) {
-          if (p == null) return const SizedBox.shrink();
-          _load(p, prefs);
-          return Form(
-            key: _key,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-              children: [
-                Center(
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 44,
-                        backgroundColor: scheme.primary.withValues(alpha: 0.15),
-                        foregroundImage:
-                            _avatar == null ? null : NetworkImage(_avatar!),
-                        child: Text(p.initials,
-                            style: theme.textTheme.headlineSmall
-                                ?.copyWith(color: scheme.primary)),
+    return UnsavedChangesGuard(
+        isDirty: _dirty,
+        child: Scaffold(
+          appBar: AppBar(title: Text(tr('Modifier le profil'))),
+          body: profile.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text(userMessageFor(e))),
+            data: (p) {
+              if (p == null) return const SizedBox.shrink();
+              _load(p, prefs);
+              return Form(
+                key: _key,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                  children: [
+                    Center(
+                      child: Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 44,
+                            backgroundColor:
+                                scheme.primary.withValues(alpha: 0.15),
+                            foregroundImage:
+                                _avatar == null ? null : NetworkImage(_avatar!),
+                            child: Text(p.initials,
+                                style: theme.textTheme.headlineSmall
+                                    ?.copyWith(color: scheme.primary)),
+                          ),
+                          Positioned(
+                            right: -4,
+                            bottom: -4,
+                            child: IconButton.filled(
+                              tooltip: tr('Changer la photo'),
+                              onPressed: _busy ? null : _pickPhoto,
+                              icon: const Icon(Icons.photo_camera_outlined,
+                                  size: 20),
+                            ),
+                          ),
+                        ],
                       ),
-                      Positioned(
-                        right: -4,
-                        bottom: -4,
-                        child: IconButton.filled(
-                          tooltip: tr('Changer la photo'),
-                          onPressed: _busy ? null : _pickPhoto,
-                          icon:
-                              const Icon(Icons.photo_camera_outlined, size: 20),
+                    ),
+                    if (_avatar != null)
+                      Center(
+                        child: TextButton(
+                          onPressed: _busy
+                              ? null
+                              : () => setState(() => _avatar = null),
+                          child: Text(tr('Retirer la photo')),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                if (_avatar != null)
-                  Center(
-                    child: TextButton(
-                      onPressed:
-                          _busy ? null : () => setState(() => _avatar = null),
-                      child: Text(tr('Retirer la photo')),
+                    const SizedBox(height: 12),
+                    _Section(tr('Identité')),
+                    TextFormField(
+                      controller: _name,
+                      decoration: InputDecoration(labelText: tr('Pseudo')),
+                      textInputAction: TextInputAction.next,
+                      validator: Validators.displayName,
                     ),
-                  ),
-                const SizedBox(height: 12),
-                _Section(tr('Identité')),
-                TextFormField(
-                  controller: _name,
-                  decoration: InputDecoration(labelText: tr('Pseudo')),
-                  textInputAction: TextInputAction.next,
-                  validator: Validators.displayName,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _country,
-                  isExpanded: true,
-                  decoration: InputDecoration(labelText: tr('Pays')),
-                  items: [
-                    for (final e in profileCountries.entries)
-                      DropdownMenuItem(value: e.key, child: Text(e.value)),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _country,
+                      isExpanded: true,
+                      decoration: InputDecoration(labelText: tr('Pays')),
+                      items: [
+                        for (final e in profileCountries.entries)
+                          DropdownMenuItem(value: e.key, child: Text(e.value)),
+                      ],
+                      onChanged: (v) =>
+                          setState(() => _country = v ?? _country),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _timezone,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                          labelText: tr('Fuseau horaire'),
+                          helperText: tr(
+                              'Heure des matchs, des notifications et des heures calmes')),
+                      items: [
+                        for (final e in profileTimezones.entries)
+                          DropdownMenuItem(
+                              value: e.key,
+                              child: Text(e.value,
+                                  overflow: TextOverflow.ellipsis)),
+                      ],
+                      onChanged: (v) =>
+                          setState(() => _timezone = v ?? _timezone),
+                    ),
+                    const SizedBox(height: 20),
+                    _Section(tr('Mon niveau')),
+                    SegmentedButton<UserLevel>(
+                      emptySelectionAllowed: true,
+                      segments: [
+                        for (final l in UserLevel.values)
+                          ButtonSegment(value: l, label: Text(l.label)),
+                      ],
+                      selected: {if (_level != null) _level!},
+                      onSelectionChanged: (s) =>
+                          setState(() => _level = s.isEmpty ? _level : s.first),
+                    ),
+                    const SizedBox(height: 8),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.emoji_events_outlined),
+                      title: Text(tr('Compétitions suivies')),
+                      subtitle: Text(() {
+                        final n = prefs?.favoriteCompetitions.length ?? 0;
+                        return n == 0
+                            ? tr('Aucune')
+                            : trf('{0} compétition{1}', [n, n > 1 ? 's' : '']);
+                      }()),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => showOnboarding(context, fromProfile: true),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.star_outline),
+                      title: Text(tr('Équipes suivies')),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push(AppRoutes.favoriteTeams),
+                    ),
+                    const SizedBox(height: 12),
+                    _Section(tr('Connexion')),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.alternate_email),
+                      title: Text(tr('Adresse e-mail')),
+                      subtitle: Text(email),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _changeEmail(context),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.lock_outline),
+                      title: Text('Mot de passe'),
+                      subtitle: Text(tr('Changer le mot de passe')),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _changePassword(context),
+                    ),
+                    const SizedBox(height: 20),
+                    FilledButton(
+                      onPressed: _busy ? null : _save,
+                      style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48)),
+                      child: _busy
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : Text(tr('Enregistrer')),
+                    ),
                   ],
-                  onChanged: (v) => setState(() => _country = v ?? _country),
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _timezone,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                      labelText: tr('Fuseau horaire'),
-                      helperText: tr(
-                          'Heure des matchs, des notifications et des heures calmes')),
-                  items: [
-                    for (final e in profileTimezones.entries)
-                      DropdownMenuItem(
-                          value: e.key,
-                          child:
-                              Text(e.value, overflow: TextOverflow.ellipsis)),
-                  ],
-                  onChanged: (v) => setState(() => _timezone = v ?? _timezone),
-                ),
-                const SizedBox(height: 20),
-                _Section(tr('Mon niveau')),
-                SegmentedButton<UserLevel>(
-                  emptySelectionAllowed: true,
-                  segments: [
-                    for (final l in UserLevel.values)
-                      ButtonSegment(value: l, label: Text(l.label)),
-                  ],
-                  selected: {if (_level != null) _level!},
-                  onSelectionChanged: (s) =>
-                      setState(() => _level = s.isEmpty ? _level : s.first),
-                ),
-                const SizedBox(height: 8),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.emoji_events_outlined),
-                  title: Text(tr('Compétitions suivies')),
-                  subtitle: Text(() {
-                    final n = prefs?.favoriteCompetitions.length ?? 0;
-                    return n == 0
-                        ? tr('Aucune')
-                        : trf('{0} compétition{1}', [n, n > 1 ? 's' : '']);
-                  }()),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => showOnboarding(context, fromProfile: true),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.star_outline),
-                  title: Text(tr('Équipes suivies')),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push(AppRoutes.favoriteTeams),
-                ),
-                const SizedBox(height: 12),
-                _Section(tr('Connexion')),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.alternate_email),
-                  title: Text(tr('Adresse e-mail')),
-                  subtitle: Text(email),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _changeEmail(context),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.lock_outline),
-                  title: Text('Mot de passe'),
-                  subtitle: Text(tr('Changer le mot de passe')),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _changePassword(context),
-                ),
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: _busy ? null : _save,
-                  style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48)),
-                  child: _busy
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : Text(tr('Enregistrer')),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
+              );
+            },
+          ),
+        ));
   }
 
   Future<void> _changeEmail(BuildContext context) async {

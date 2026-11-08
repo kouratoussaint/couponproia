@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/widgets/sub_tab_back.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/error_messages.dart';
@@ -268,10 +269,13 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
     return DefaultTabController(
       length: 2,
       initialIndex: widget.initialTab.clamp(0, 1),
-      child: Scaffold(
-        appBar: appBar,
-        body: TabBarView(
-          children: [calendar, const CompetitionsList()],
+      child: SubTabBackScope(
+        shellTab: 1,
+        child: Scaffold(
+          appBar: appBar,
+          body: TabBarView(
+            children: [calendar, const CompetitionsList()],
+          ),
         ),
       ),
     );

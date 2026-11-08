@@ -23,7 +23,6 @@ import '../../features/coupons/coupons_screen.dart';
 import '../../features/coupons/presentation/coupon_detail_screen.dart';
 import '../../features/coupons/presentation/generations_admin_screen.dart';
 import '../../features/home/home_screen.dart';
-import '../../features/lab/presentation/lab_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/help/help_screens.dart';
 import '../../features/matches/presentation/competitions_screen.dart';
@@ -57,6 +56,7 @@ import '../../features/system/missing_config_screen.dart';
 import '../monitoring/error_reporter.dart';
 import '../providers.dart';
 import 'app_routes.dart';
+import 'navigation.dart';
 
 /// Décide où envoyer l'utilisateur. Fonction pure : testée unitairement.
 String? resolveRedirect({
@@ -145,9 +145,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => MatchDetailScreen(
             matchId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
       ),
+      // Anciennes adresses : redirigées vers l'onglet ou l'écran actuel (lot 27).
+      for (final old in const [
+        AppRoutes.oldCompetitions,
+        AppRoutes.oldLab,
+        AppRoutes.oldMyCoupons,
+        AppRoutes.oldLegal,
+      ])
+        GoRoute(
+          path: old,
+          redirect: (context, state) => normalizeLocation(state.uri.toString()),
+        ),
       GoRoute(
-        path: AppRoutes.competitions,
-        builder: (context, state) => const CompetitionsScreen(),
+        path: AppRoutes.legal,
+        builder: (context, state) => const LegalScreen(),
       ),
       GoRoute(
         path: AppRoutes.standings,
@@ -313,15 +324,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SearchScreen(),
       ),
       GoRoute(
-        path: AppRoutes.lab,
-        builder: (context, state) =>
-            LabScreen(initialCouponId: state.uri.queryParameters['coupon']),
-      ),
-      GoRoute(
-        path: AppRoutes.myCoupons,
-        builder: (context, state) => const MyCouponsScreen(),
-      ),
-      GoRoute(
         path: AppRoutes.myCouponDetail,
         builder: (context, state) =>
             MyCouponDetailScreen(couponId: state.pathParameters['id'] ?? ''),
@@ -369,19 +371,15 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(
                 path: AppRoutes.assistant,
                 builder: (context, state) => AssistantHubScreen(
-                    key: ValueKey(state.uri.queryParameters['onglet']),
+                    key: ValueKey(state.uri.query),
                     initialTab:
-                        assistantTabFrom(state.uri.queryParameters['onglet']))),
+                        assistantTabFrom(state.uri.queryParameters['onglet']),
+                    labCouponId: state.uri.queryParameters['coupon'])),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
               path: AppRoutes.profile,
               builder: (context, state) => const ProfileScreen(),
-              routes: [
-                GoRoute(
-                    path: 'mentions',
-                    builder: (context, state) => const LegalScreen()),
-              ],
             ),
           ]),
         ],

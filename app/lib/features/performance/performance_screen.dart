@@ -1,3 +1,4 @@
+import 'package:coupon_pro_ia/core/widgets/sub_tab_back.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -51,7 +52,8 @@ class PerformanceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
+      child: SubTabBackScope(
+          child: Scaffold(
         appBar: AppBar(
           title: Text(tr('Performances')),
           bottom: TabBar(tabs: [
@@ -60,7 +62,7 @@ class PerformanceScreen extends StatelessWidget {
           ]),
         ),
         body: const TabBarView(children: [_PlatformTab(), _MineTab()]),
-      ),
+      )),
     );
   }
 }

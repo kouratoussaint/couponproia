@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/router/navigation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -370,7 +371,7 @@ void _openAssistantTab(BuildContext context, int index, String route) {
   if (tabs != null && tabs.length == 3) {
     tabs.animateTo(index);
   } else {
-    context.go(route);
+    context.openRoute(route);
   }
 }
 
@@ -438,7 +439,7 @@ Future<void> showMyCouponActions(
   if (action == null || !context.mounted) return;
   switch (action) {
     case 'lab':
-      context.push(AppRoutes.labFor(c.id));
+      context.openRoute(AppRoutes.labFor(c.id));
     case 'simulate':
       showStakeSimulator(context, [userCouponSim(c)]);
     case 'journal':
@@ -658,7 +659,8 @@ class MyCouponDetailScreen extends ConsumerWidget {
                           label: Text(tr('Enregistrer')),
                         ),
                       OutlinedButton.icon(
-                        onPressed: () => context.push(AppRoutes.labFor(c.id)),
+                        onPressed: () =>
+                            context.openRoute(AppRoutes.labFor(c.id)),
                         icon: const Icon(Icons.science_outlined),
                         label: Text(tr('Laboratoire')),
                       ),

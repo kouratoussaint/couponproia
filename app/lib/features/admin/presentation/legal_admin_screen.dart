@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/widgets/unsaved_changes_guard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/form_widgets.dart';
@@ -95,6 +96,11 @@ class _LegalEditorState extends ConsumerState<_LegalEditor> {
   late final _version = TextEditingController(text: _today());
   bool _busy = false;
 
+  /// Saisie au chargement, pour savoir si quelque chose a changé (lot 27).
+  String? _baseline;
+  String _signature() => [_title.text, _body.text].join('\u0001');
+  bool _dirty() => _baseline != null && _signature() != _baseline;
+
   static String _today() {
     final d = DateTime.now();
     String two(int v) => v.toString().padLeft(2, '0');
@@ -153,41 +159,45 @@ class _LegalEditorState extends ConsumerState<_LegalEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(legalTitles[widget.code]!)),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
-          TextField(
-            controller: _version,
-            decoration: InputDecoration(
-                labelText: tr('Version'),
-                helperText: tr('AAAA-MM-JJ (ou AAAA-MM-JJ.2)')),
+    _baseline ??= _signature();
+    return UnsavedChangesGuard(
+        isDirty: _dirty,
+        child: Scaffold(
+          appBar: AppBar(title: Text(legalTitles[widget.code]!)),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            children: [
+              TextField(
+                controller: _version,
+                decoration: InputDecoration(
+                    labelText: tr('Version'),
+                    helperText: tr('AAAA-MM-JJ (ou AAAA-MM-JJ.2)')),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                  controller: _title,
+                  decoration: InputDecoration(labelText: tr('Titre'))),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _body,
+                minLines: 12,
+                maxLines: null,
+                keyboardType: TextInputType.multiline,
+                decoration: InputDecoration(
+                  labelText: tr('Texte'),
+                  alignLabelWithHint: true,
+                  helperText: tr(
+                      '« ## » titre, « - » puce, **gras**. Champs : {{editeur}}, {{forme}}, {{adresse}}, {{pays}}, {{immatriculation}}, {{contact}}.'),
+                  helperMaxLines: 3,
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                  onPressed: _busy ? null : _publish,
+                  child: Text(tr('Publier'))),
+            ],
           ),
-          const SizedBox(height: 8),
-          TextField(
-              controller: _title,
-              decoration: InputDecoration(labelText: tr('Titre'))),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _body,
-            minLines: 12,
-            maxLines: null,
-            keyboardType: TextInputType.multiline,
-            decoration: InputDecoration(
-              labelText: tr('Texte'),
-              alignLabelWithHint: true,
-              helperText: tr(
-                  '« ## » titre, « - » puce, **gras**. Champs : {{editeur}}, {{forme}}, {{adresse}}, {{pays}}, {{immatriculation}}, {{contact}}.'),
-              helperMaxLines: 3,
-            ),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-              onPressed: _busy ? null : _publish, child: Text(tr('Publier'))),
-        ],
-      ),
-    );
+        ));
   }
 }
 
@@ -209,6 +219,11 @@ class _EnglishEditorState extends ConsumerState<_EnglishEditor> {
   late final _body =
       TextEditingController(text: widget.document.english?.body ?? '');
   bool _busy = false;
+
+  /// Saisie au chargement, pour savoir si quelque chose a changé (lot 27).
+  String? _baseline;
+  String _signature() => [_title.text, _body.text].join('\u0001');
+  bool _dirty() => _baseline != null && _signature() != _baseline;
 
   @override
   void dispose() {
@@ -237,40 +252,45 @@ class _EnglishEditorState extends ConsumerState<_EnglishEditor> {
 
   @override
   Widget build(BuildContext context) {
+    _baseline ??= _signature();
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: AppBar(title: Text(tr('Traduction anglaise'))),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
-          Text(
-              trf('Version {0}. La version française fait foi : c’est elle que les utilisateurs acceptent.',
-                  [widget.document.version]),
-              style: theme.textTheme.bodySmall),
-          const SizedBox(height: 12),
-          TextField(
-              controller: _title,
-              decoration: InputDecoration(labelText: tr('Titre en anglais'))),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _body,
-            minLines: 12,
-            maxLines: null,
-            keyboardType: TextInputType.multiline,
-            decoration: InputDecoration(
-              labelText: tr('Texte en anglais'),
-              alignLabelWithHint: true,
-              helperText: tr(
-                  'Même mise en forme et mêmes champs {{…}} que la version française.'),
-              helperMaxLines: 2,
-            ),
+    return UnsavedChangesGuard(
+        isDirty: _dirty,
+        child: Scaffold(
+          appBar: AppBar(title: Text(tr('Traduction anglaise'))),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            children: [
+              Text(
+                  trf('Version {0}. La version française fait foi : c’est elle que les utilisateurs acceptent.',
+                      [widget.document.version]),
+                  style: theme.textTheme.bodySmall),
+              const SizedBox(height: 12),
+              TextField(
+                  controller: _title,
+                  decoration:
+                      InputDecoration(labelText: tr('Titre en anglais'))),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _body,
+                minLines: 12,
+                maxLines: null,
+                keyboardType: TextInputType.multiline,
+                decoration: InputDecoration(
+                  labelText: tr('Texte en anglais'),
+                  alignLabelWithHint: true,
+                  helperText: tr(
+                      'Même mise en forme et mêmes champs {{…}} que la version française.'),
+                  helperMaxLines: 2,
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                  onPressed: _busy ? null : _save,
+                  child: Text(tr('Enregistrer'))),
+            ],
           ),
-          const SizedBox(height: 16),
-          FilledButton(
-              onPressed: _busy ? null : _save, child: Text(tr('Enregistrer'))),
-        ],
-      ),
-    );
+        ));
   }
 }
 

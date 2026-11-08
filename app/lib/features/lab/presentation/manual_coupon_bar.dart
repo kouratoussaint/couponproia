@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/router/navigation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
 import '../../analysis/data/analysis_format.dart';
@@ -20,7 +20,7 @@ class ManualCouponBar extends ConsumerWidget {
       child: Material(
         color: scheme.primaryContainer,
         child: InkWell(
-          onTap: () => context.push(AppRoutes.lab),
+          onTap: () => context.openRoute(AppRoutes.assistantLab),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(

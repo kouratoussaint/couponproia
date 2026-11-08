@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/router/navigation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/errors/error_messages.dart';
@@ -368,7 +368,7 @@ class _AlertCard extends StatelessWidget {
             ? IconButton(
                 tooltip: tr('Ouvrir'),
                 icon: const Icon(Icons.chevron_right),
-                onPressed: () => context.push(a.route!),
+                onPressed: () => context.openRoute(a.route!),
               )
             : null,
       ),

@@ -65,6 +65,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     final missingEmail = widget.email.isEmpty;
     return AuthScaffold(
       title: tr('Confirmez votre adresse e-mail'),
+      showBack: true,
       subtitle: missingEmail
           ? tr('Adresse inconnue : recommencez depuis la connexion.')
           : trf(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/widgets/sub_tab_back.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -74,7 +75,8 @@ class _MatchTabs extends ConsumerWidget {
 
     return DefaultTabController(
       length: 4,
-      child: NestedScrollView(
+      child: SubTabBackScope(
+          child: NestedScrollView(
         headerSliverBuilder: (context, _) => [
           SliverToBoxAdapter(child: MatchHeader(match: match)),
           SliverPersistentHeader(
@@ -107,7 +109,7 @@ class _MatchTabs extends ConsumerWidget {
             RefreshIndicator(onRefresh: refresh, child: StatsTab(match: match)),
           ],
         ),
-      ),
+      )),
     );
   }
 }

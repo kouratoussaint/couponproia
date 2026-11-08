@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/features/auth/data/sign_out.dart';
+import 'package:coupon_pro_ia/core/router/navigation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,9 +10,7 @@ import '../../core/theme/solid_buttons.dart';
 import '../../core/widgets/app_logo.dart';
 import '../assistant/data/assistant_models.dart';
 import '../assistant/data/assistant_repository.dart';
-import '../auth/data/auth_repository.dart';
 import '../billing/credit_costs.dart';
-import '../notifications/data/push_service.dart';
 import '../profile/presentation/responsible_gaming_screen.dart';
 import '../profile/data/profile_repository.dart';
 import '../system/system_providers.dart';
@@ -60,7 +60,7 @@ class AppDrawer extends ConsumerWidget {
 
     void go(String location) {
       _close();
-      context.go(location);
+      context.openRoute(location);
     }
 
     void tab(int index) {
@@ -138,7 +138,7 @@ class AppDrawer extends ConsumerWidget {
               contactSupport(context, ref);
             }),
             item(Icons.gavel_outlined, tr('Mentions légales et documents'),
-                () => go(AppRoutes.legal)),
+                () => open(AppRoutes.legal)),
             if (team) ...[
               const Divider(),
               DrawerSectionTitle(tr('Administration')),
@@ -172,8 +172,7 @@ class AppDrawer extends ConsumerWidget {
                     style: TextStyle(color: red, fontWeight: FontWeight.w700)),
                 onTap: () async {
                   _close();
-                  await ref.read(pushServiceProvider).stop();
-                  await ref.read(authRepositoryProvider).signOut();
+                  await signOutEverywhere(ref);
                 },
               );
             }),

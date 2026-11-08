@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/widgets/unsaved_changes_guard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -69,6 +70,12 @@ class _FormState extends ConsumerState<_Form> {
   bool _busy = false;
 
   bool get _create => widget.initial == null;
+
+  /// Saisie au chargement, pour savoir si quelque chose a changé (lot 27).
+  String? _baseline;
+  String _signature() =>
+      [_handle.text, _name.text, _bio.text, _avatar].join('\u0001');
+  bool _dirty() => _baseline != null && _signature() != _baseline;
 
   @override
   void dispose() {
@@ -144,6 +151,7 @@ class _FormState extends ConsumerState<_Form> {
 
   @override
   Widget build(BuildContext context) {
+    _baseline ??= _signature();
     final theme = Theme.of(context);
     final preview = TipsterProfile(
       userId: widget.initial?.userId ?? '',
@@ -151,64 +159,66 @@ class _FormState extends ConsumerState<_Form> {
       displayName: _name.text.isEmpty ? '?' : _name.text,
       avatarPath: _avatar,
     );
-    return Form(
-      key: _key,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
-          if (_busy) const LinearProgressIndicator(),
-          Center(
-            child: Stack(
-              children: [
-                TipsterAvatar(profile: preview, radius: 44),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: IconButton.filledTonal(
-                    tooltip: tr('Changer la photo'),
-                    onPressed: _busy ? null : _pickAvatar,
-                    icon: const Icon(Icons.photo_camera_outlined, size: 18),
-                  ),
+    return UnsavedChangesGuard(
+        isDirty: _dirty,
+        child: Form(
+          key: _key,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            children: [
+              if (_busy) const LinearProgressIndicator(),
+              Center(
+                child: Stack(
+                  children: [
+                    TipsterAvatar(profile: preview, radius: 44),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: IconButton.filledTonal(
+                        tooltip: tr('Changer la photo'),
+                        onPressed: _busy ? null : _pickAvatar,
+                        icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _handle,
+                maxLength: 20,
+                decoration: InputDecoration(
+                    labelText: tr('Identifiant'), prefixText: '@'),
+                validator: validateHandle,
+                onChanged: (_) => setState(() {}),
+              ),
+              TextFormField(
+                controller: _name,
+                maxLength: 40,
+                decoration: InputDecoration(labelText: tr('Nom affiché')),
+                validator: Validators.displayName,
+                onChanged: (_) => setState(() {}),
+              ),
+              TextFormField(
+                controller: _bio,
+                maxLength: 280,
+                maxLines: 4,
+                minLines: 2,
+                decoration:
+                    InputDecoration(labelText: tr('Présentation (facultatif)')),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                tr('Vos statistiques sont calculées par Coupon Pro IA à partir des résultats réels de vos coupons publiés : elles ne se saisissent pas et ne se modifient pas. Un coupon publié reste visible, pertes comprises.'),
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                  onPressed: _busy ? null : _save,
+                  child: Text(
+                      _create ? tr('Créer mon profil') : tr('Enregistrer'))),
+            ],
           ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _handle,
-            maxLength: 20,
-            decoration:
-                InputDecoration(labelText: tr('Identifiant'), prefixText: '@'),
-            validator: validateHandle,
-            onChanged: (_) => setState(() {}),
-          ),
-          TextFormField(
-            controller: _name,
-            maxLength: 40,
-            decoration: InputDecoration(labelText: tr('Nom affiché')),
-            validator: Validators.displayName,
-            onChanged: (_) => setState(() {}),
-          ),
-          TextFormField(
-            controller: _bio,
-            maxLength: 280,
-            maxLines: 4,
-            minLines: 2,
-            decoration:
-                InputDecoration(labelText: tr('Présentation (facultatif)')),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            tr('Vos statistiques sont calculées par Coupon Pro IA à partir des résultats réels de vos coupons publiés : elles ne se saisissent pas et ne se modifient pas. Un coupon publié reste visible, pertes comprises.'),
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-              onPressed: _busy ? null : _save,
-              child:
-                  Text(_create ? tr('Créer mon profil') : tr('Enregistrer'))),
-        ],
-      ),
-    );
+        ));
   }
 }

@@ -1,5 +1,5 @@
 import 'package:coupon_pro_ia/core/theme/text_scale_controller.dart';
-import 'package:coupon_pro_ia/features/shell/home_shell.dart';
+import 'package:coupon_pro_ia/core/router/navigation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

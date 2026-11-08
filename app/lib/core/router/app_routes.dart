@@ -17,7 +17,15 @@ abstract final class AppRoutes {
   static const assistant = '/assistant';
   static const profile = '/profil';
   static const profileEdit = '/profil/modifier';
-  static const legal = '/profil/mentions';
+
+  /// Mentions légales et documents : plein écran (lot 27).
+  static const legal = '/mentions';
+
+  /// Anciennes adresses, redirigées (notifications déjà envoyées).
+  static const oldLegal = '/profil/mentions';
+  static const oldLab = '/laboratoire';
+  static const oldMyCoupons = '/mes-coupons';
+  static const oldCompetitions = '/competitions';
 
   /// Documents légaux : lisibles connecté ou non.
   static const legalDocument = '/documents/:code';
@@ -27,7 +35,6 @@ abstract final class AppRoutes {
 
   // Écrans plein écran (au-dessus des onglets)
   static const matchDetail = '/match/:id';
-  static const competitions = '/competitions';
   static const standings = '/competitions/:id';
   static const sportsAdmin = '/admin/donnees';
   static const engineAdmin = '/admin/moteur';
@@ -37,7 +44,6 @@ abstract final class AppRoutes {
   static String couponDetailFor(String id) => '/coupon/$id';
   static const couponEdit = '/coupon/:id/modifier';
   static String couponEditFor(String id) => '/coupon/$id/modifier';
-  static const lab = '/laboratoire';
   static const performance = '/performances';
   static const billing = '/abonnement';
   static const studio = '/studio';
@@ -85,12 +91,17 @@ abstract final class AppRoutes {
 
   static String adminUserFor(String id) => '/admin/utilisateurs/$id';
   static String postFor(int id) => '/publication/$id';
-  static const myCoupons = '/mes-coupons';
   static const myCouponDetail = '/mes-coupons/:id';
 
   static String myCouponFor(String id) => '/mes-coupons/$id';
-  static String labFor(String couponId) =>
-      Uri(path: lab, queryParameters: {'coupon': couponId}).toString();
+
+  /// Laboratoire (onglet de l'Assistant IA), éventuellement sur un coupon enregistré.
+  static String labFor(String? couponId) => couponId == null
+      ? assistantLab
+      : Uri(
+          path: assistant,
+          queryParameters: {'onglet': 'laboratoire', 'coupon': couponId},
+        ).toString();
 
   static String matchDetailFor(int id) => '/match/$id';
   static String standingsFor(int id) => '/competitions/$id';

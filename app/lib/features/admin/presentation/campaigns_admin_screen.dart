@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/widgets/unsaved_changes_guard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -91,6 +92,12 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
   final _bodyEn = TextEditingController();
   bool _sending = false;
 
+  /// Saisie au chargement, pour savoir si quelque chose a changé (lot 27).
+  String? _baseline;
+  String _signature() =>
+      [_title.text, _body.text, _titleEn.text, _bodyEn.text].join('\u0001');
+  bool _dirty() => _baseline != null && _signature() != _baseline;
+
   @override
   void dispose() {
     _title.dispose();
@@ -172,6 +179,7 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _baseline ??= _signature();
     final perms =
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
     if (!perms.contains('campaigns.send')) {
@@ -186,154 +194,156 @@ class _CampaignsAdminScreenState extends ConsumerState<CampaignsAdminScreen> {
     final audience = ref.watch(campaignAudienceProvider(_segment));
     final history = ref.watch(campaignsProvider);
     final problem = _problem;
-    return Scaffold(
-      appBar: AppBar(title: Text(tr('Notifications ciblées'))),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
-        children: [
-          SectionTitle(tr('Destinataires')),
-          Card(
-            child: RadioGroup<String>(
-              groupValue: _segment,
-              onChanged: (v) => setState(() => _segment = v ?? 'all'),
-              child: Column(
-                children: [
-                  for (final (code, label, desc) in campaignSegments)
-                    RadioListTile<String>(
-                      value: code,
-                      title: Text(label),
-                      subtitle: Text(desc),
-                      dense: true,
-                    ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-            child: Text(
-                audience.when(
-                    loading: () => tr('Calcul de l’audience…'),
-                    error: (e, _) => userMessageFor(e),
-                    data: (n) => trf('Audience : {0} utilisateur{1}',
-                        [n, n > 1 ? 's' : ''])),
-                style: theme.textTheme.titleSmall),
-          ),
-          SectionTitle(tr('Message')),
-          TextField(
-            controller: _title,
-            maxLength: 80,
-            decoration: InputDecoration(
-                labelText: tr('Titre'), border: OutlineInputBorder()),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _body,
-            maxLength: 300,
-            maxLines: 3,
-            decoration: InputDecoration(
-                labelText: tr('Message'), border: OutlineInputBorder()),
-            onChanged: (_) => setState(() {}),
-          ),
-          SectionTitle(tr('Version anglaise (facultative)')),
-          Text(
-              tr('Envoyée aux utilisateurs dont l’application est en anglais ; sans elle, ils reçoivent le français.'),
-              style: theme.textTheme.bodySmall),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _titleEn,
-            maxLength: 80,
-            decoration: InputDecoration(
-                labelText: tr('Titre en anglais'),
-                border: OutlineInputBorder()),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _bodyEn,
-            maxLength: 300,
-            maxLines: 3,
-            decoration: InputDecoration(
-                labelText: tr('Message en anglais'),
-                border: OutlineInputBorder()),
-            onChanged: (_) => setState(() {}),
-          ),
-          DropdownButtonFormField<String>(
-            initialValue: _route,
-            decoration: InputDecoration(
-                labelText: tr('Écran ouvert au toucher'),
-                border: OutlineInputBorder()),
-            items: [
-              for (final (path, label) in campaignRoutes)
-                DropdownMenuItem(value: path, child: Text(label)),
-            ],
-            onChanged: (v) => setState(() => _route = v ?? '/accueil'),
-          ),
-          const SizedBox(height: 12),
-          if (_title.text.trim().isNotEmpty || _body.text.trim().isNotEmpty)
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.campaign_outlined),
-                title: Text(_title.text.trim()),
-                subtitle: Text(_body.text.trim()),
-              ),
-            ),
-          if (problem != null &&
-              (_title.text.isNotEmpty || _body.text.isNotEmpty))
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(problem,
-                  style: TextStyle(color: theme.colorScheme.error)),
-            ),
-          FilledButton.icon(
-            onPressed: _sending ||
-                    problem != null ||
-                    audience.valueOrNull == null ||
-                    audience.valueOrNull == 0
-                ? null
-                : () => _send(audience.valueOrNull!),
-            icon: const Icon(Icons.send_outlined),
-            label: Text(tr('Envoyer')),
-          ),
-          const SizedBox(height: 6),
-          Text(
-              tr('Reçue dans la boîte de l’app et sur le téléphone (heures calmes respectées), sauf pour les utilisateurs qui ont coupé « Annonces et offres ». Chaque envoi est inscrit au journal d’audit.'),
-              style: theme.textTheme.bodySmall),
-          SectionTitle(tr('Derniers envois')),
-          ...history.when(
-            loading: () => [const LinearProgressIndicator()],
-            error: (e, _) => [Text(userMessageFor(e))],
-            data: (list) => list.isEmpty
-                ? [Text(tr('Aucun envoi pour le moment.'))]
-                : [
-                    for (final c in list)
-                      Card(
-                        child: ListTile(
-                          title: Text('${c['title']}'),
-                          subtitle:
-                              Text(trf('{0}\n{1} · {2} destinataires · {3}', [
-                            c['body'],
-                            campaignSegments
-                                .firstWhere((s) => s.$1 == c['segment'],
-                                    orElse: () => (
-                                          c['segment'] as String,
-                                          c['segment'] as String,
-                                          ''
-                                        ))
-                                .$2,
-                            c['audience'],
-                            _when(DateTime.parse(c['created_at'] as String)
-                                .toLocal())
-                          ])),
-                          isThreeLine: true,
+    return UnsavedChangesGuard(
+        isDirty: _dirty,
+        child: Scaffold(
+          appBar: AppBar(title: Text(tr('Notifications ciblées'))),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
+            children: [
+              SectionTitle(tr('Destinataires')),
+              Card(
+                child: RadioGroup<String>(
+                  groupValue: _segment,
+                  onChanged: (v) => setState(() => _segment = v ?? 'all'),
+                  child: Column(
+                    children: [
+                      for (final (code, label, desc) in campaignSegments)
+                        RadioListTile<String>(
+                          value: code,
+                          title: Text(label),
+                          subtitle: Text(desc),
+                          dense: true,
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                child: Text(
+                    audience.when(
+                        loading: () => tr('Calcul de l’audience…'),
+                        error: (e, _) => userMessageFor(e),
+                        data: (n) => trf('Audience : {0} utilisateur{1}',
+                            [n, n > 1 ? 's' : ''])),
+                    style: theme.textTheme.titleSmall),
+              ),
+              SectionTitle(tr('Message')),
+              TextField(
+                controller: _title,
+                maxLength: 80,
+                decoration: InputDecoration(
+                    labelText: tr('Titre'), border: OutlineInputBorder()),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _body,
+                maxLength: 300,
+                maxLines: 3,
+                decoration: InputDecoration(
+                    labelText: tr('Message'), border: OutlineInputBorder()),
+                onChanged: (_) => setState(() {}),
+              ),
+              SectionTitle(tr('Version anglaise (facultative)')),
+              Text(
+                  tr('Envoyée aux utilisateurs dont l’application est en anglais ; sans elle, ils reçoivent le français.'),
+                  style: theme.textTheme.bodySmall),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _titleEn,
+                maxLength: 80,
+                decoration: InputDecoration(
+                    labelText: tr('Titre en anglais'),
+                    border: OutlineInputBorder()),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _bodyEn,
+                maxLength: 300,
+                maxLines: 3,
+                decoration: InputDecoration(
+                    labelText: tr('Message en anglais'),
+                    border: OutlineInputBorder()),
+                onChanged: (_) => setState(() {}),
+              ),
+              DropdownButtonFormField<String>(
+                initialValue: _route,
+                decoration: InputDecoration(
+                    labelText: tr('Écran ouvert au toucher'),
+                    border: OutlineInputBorder()),
+                items: [
+                  for (final (path, label) in campaignRoutes)
+                    DropdownMenuItem(value: path, child: Text(label)),
+                ],
+                onChanged: (v) => setState(() => _route = v ?? '/accueil'),
+              ),
+              const SizedBox(height: 12),
+              if (_title.text.trim().isNotEmpty || _body.text.trim().isNotEmpty)
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.campaign_outlined),
+                    title: Text(_title.text.trim()),
+                    subtitle: Text(_body.text.trim()),
+                  ),
+                ),
+              if (problem != null &&
+                  (_title.text.isNotEmpty || _body.text.isNotEmpty))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(problem,
+                      style: TextStyle(color: theme.colorScheme.error)),
+                ),
+              FilledButton.icon(
+                onPressed: _sending ||
+                        problem != null ||
+                        audience.valueOrNull == null ||
+                        audience.valueOrNull == 0
+                    ? null
+                    : () => _send(audience.valueOrNull!),
+                icon: const Icon(Icons.send_outlined),
+                label: Text(tr('Envoyer')),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                  tr('Reçue dans la boîte de l’app et sur le téléphone (heures calmes respectées), sauf pour les utilisateurs qui ont coupé « Annonces et offres ». Chaque envoi est inscrit au journal d’audit.'),
+                  style: theme.textTheme.bodySmall),
+              SectionTitle(tr('Derniers envois')),
+              ...history.when(
+                loading: () => [const LinearProgressIndicator()],
+                error: (e, _) => [Text(userMessageFor(e))],
+                data: (list) => list.isEmpty
+                    ? [Text(tr('Aucun envoi pour le moment.'))]
+                    : [
+                        for (final c in list)
+                          Card(
+                            child: ListTile(
+                              title: Text('${c['title']}'),
+                              subtitle: Text(
+                                  trf('{0}\n{1} · {2} destinataires · {3}', [
+                                c['body'],
+                                campaignSegments
+                                    .firstWhere((s) => s.$1 == c['segment'],
+                                        orElse: () => (
+                                              c['segment'] as String,
+                                              c['segment'] as String,
+                                              ''
+                                            ))
+                                    .$2,
+                                c['audience'],
+                                _when(DateTime.parse(c['created_at'] as String)
+                                    .toLocal())
+                              ])),
+                              isThreeLine: true,
+                            ),
+                          ),
+                      ],
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        ));
   }
 
   static String _when(DateTime d) =>

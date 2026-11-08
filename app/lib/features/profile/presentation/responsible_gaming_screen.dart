@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coupon_pro_ia/core/router/navigation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -110,7 +111,7 @@ class ResponsibleGamingScreen extends StatelessWidget {
                   title: Text(tr('Supprimer mon compte')),
                   subtitle: Text(tr('Depuis l’écran Profil, à tout moment')),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.go(AppRoutes.profile),
+                  onTap: () => context.openRoute(AppRoutes.profile),
                 ),
               ],
             ),

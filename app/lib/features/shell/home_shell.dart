@@ -1,17 +1,18 @@
 import '../system/app_updater.dart';
+import 'package:coupon_pro_ia/features/auth/data/sign_out.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/theme_mode_controller.dart';
-import '../auth/data/auth_repository.dart';
 import '../legal/legal_repository.dart';
 import '../legal/legal_screens.dart';
 import '../notifications/data/push_service.dart';
 import '../system/maintenance_screen.dart';
 import '../system/system_providers.dart';
 import '../system/update_prompt.dart';
+import '../../core/router/navigation.dart';
+import '../../core/router/shell_back.dart';
 import 'app_drawer.dart';
 import 'live_scope.dart';
 import '../widget/home_widget_sync.dart';
@@ -28,44 +29,8 @@ class HomeShell extends ConsumerStatefulWidget {
   ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
-/// Retour depuis un onglet : revient à l'onglet précédent, puis à l'Accueil ;
-/// sur l'Accueil, un premier appui prévient, un second (dans les 2 s) quitte l'app.
-class TabBackHistory {
-  final List<int> _visited = [];
-  DateTime? _lastExitRequest;
-
-  void visited(int from, int to) {
-    if (from == to) return;
-    _visited
-      ..remove(to)
-      ..add(from);
-  }
-
-  /// Onglet où revenir, ou null si l'utilisateur est sur l'Accueil sans historique.
-  int? back(int current) {
-    while (_visited.isNotEmpty) {
-      final previous = _visited.removeLast();
-      if (previous != current) return previous;
-    }
-    return current == 0 ? null : 0;
-  }
-
-  /// true si ce second appui doit quitter l'app.
-  bool confirmExit(DateTime now) {
-    final last = _lastExitRequest;
-    if (last != null && now.difference(last) < const Duration(seconds: 2)) {
-      _lastExitRequest = null;
-      return true;
-    }
-    _lastExitRequest = now;
-    return false;
-  }
-}
-
 class _HomeShellState extends ConsumerState<HomeShell>
     with WidgetsBindingObserver {
-  final _history = TabBackHistory();
-  bool _goingBack = false;
   DateTime _lastUpdateCheck = DateTime.now();
 
   /// Retour dans l'app : nouvelle vérification de version, au plus toutes les 15 minutes
@@ -89,46 +54,13 @@ class _HomeShellState extends ConsumerState<HomeShell>
     super.dispose();
   }
 
-  @override
-  void didUpdateWidget(covariant HomeShell oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final from = oldWidget.navigationShell.currentIndex;
-    final to = widget.navigationShell.currentIndex;
-    if (!_goingBack) _history.visited(from, to);
-    _goingBack = false;
-  }
-
-  void _onBack() {
-    final scaffold = shellScaffoldKey.currentState;
-    if (scaffold?.isDrawerOpen ?? false) {
-      scaffold!.closeDrawer();
-      return;
-    }
-    final target = _history.back(widget.navigationShell.currentIndex);
-    if (target != null) {
-      _goingBack = true;
-      widget.navigationShell.goBranch(target);
-      return;
-    }
-    if (_history.confirmExit(DateTime.now())) {
-      SystemNavigator.pop();
-      return;
-    }
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(tr('Appuyez encore sur Retour pour quitter')),
-        duration: Duration(seconds: 2),
-      ));
-  }
-
   /// Notifications sur le téléphone (si le projet Firebase est configuré).
   Future<void> _startPush() async {
     final version = ref.read(installedPackageProvider).valueOrNull?.version;
     await ref.read(pushServiceProvider).start(
           appVersion: version,
           onOpen: (route) {
-            if (mounted) context.push(route);
+            if (mounted) context.openRoute(route);
           },
           onForeground: (title, route) {
             if (!mounted) return;
@@ -140,7 +72,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
                     ? null
                     : SnackBarAction(
                         label: tr('Voir'),
-                        onPressed: () => context.push(route)),
+                        onPressed: () => context.openRoute(route)),
               ));
           },
         );
@@ -185,8 +117,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
       return LegalAcceptanceScreen(
         pending: pendingLegal,
         onSignOut: () async {
-          await ref.read(pushServiceProvider).stop();
-          await ref.read(authRepositoryProvider).signOut();
+          await signOutEverywhere(ref);
         },
       );
     }
@@ -194,11 +125,9 @@ class _HomeShellState extends ConsumerState<HomeShell>
     final scheme = Theme.of(context).colorScheme;
     return LiveUpdatesScope(
         child: HomeWidgetSync(
-            child: PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _onBack();
-      },
+            child: ShellBackScope(
+      navigationShell: widget.navigationShell,
+      scaffoldKey: shellScaffoldKey,
       child: Scaffold(
         key: shellScaffoldKey,
         drawer: AppDrawer(

@@ -1,3 +1,4 @@
+import 'package:coupon_pro_ia/core/widgets/sub_tab_back.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,7 +21,8 @@ class CommunityScreen extends ConsumerWidget {
     final rights = ref.watch(communityRightsProvider).valueOrNull;
     return DefaultTabController(
       length: 3,
-      child: Scaffold(
+      child: SubTabBackScope(
+          child: Scaffold(
         appBar: AppBar(
           title: Text(tr('Communauté')),
           actions: [
@@ -62,7 +64,7 @@ class CommunityScreen extends ConsumerWidget {
                 _Feed(scope: 'all'),
                 _Directory(),
               ]),
-      ),
+      )),
     );
   }
 }
