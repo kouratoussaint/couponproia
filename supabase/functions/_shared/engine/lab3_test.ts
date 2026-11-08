@@ -1,5 +1,5 @@
 import { assert, assertAlmostEquals, assertEquals } from "jsr:@std/assert@1";
-import { blend, calibrate, fitCalibration, fitGlobalStrengths, globalProbabilities, IDENTITY, type LabMatch, marketFromOdds, runExperiment } from "./lab3.ts";
+import { blend, calibrate, fitCalibration, fitGlobalStrengths, fitLeagueStrengths, globalProbabilities, IDENTITY, type LabMatch, marketFromOdds, runExperiment } from "./lab3.ts";
 import { DEFAULT_OPTIONS_2, fitStrengths } from "./poisson2.ts";
 
 // Générateur déterministe.
@@ -95,7 +95,7 @@ Deno.test("expérience complète : mêmes matchs, B ≥ A quand les compétition
     prior: all.filter((m) => m.competitionId === c && m.season === s - 1).map((m) => ({ ...m, weight: 0.5 })),
   })));
   const t0 = performance.now();
-  const r = runExperiment(groups, all, new Map(), 10);
+  const r = runExperiment(groups, all, new Map(), 10, undefined, { leagues: new Set([1, 2]) });
   const ms = performance.now() - t0;
   assert(r.matches > 100);
   assertEquals(r.oneXTwo.A.matches, r.oneXTwo.B.matches);
@@ -104,4 +104,27 @@ Deno.test("expérience complète : mêmes matchs, B ≥ A quand les compétition
   const cup = r.per_competition_logloss["3:2025"];
   if (cup) assert(cup.B <= cup.A + 0.02, JSON.stringify(cup));
   console.log(`expérience synthétique : ${r.matches} matchs en ${Math.round(ms)} ms`);
+});
+
+Deno.test("variante C : championnat seul = B ; niveau du championnat le plus fort > 1", () => {
+  const all = synthetic();
+  const at = Date.parse("2026-01-01T00:00:00Z");
+  const one = all.filter((m) => m.competitionId === 1);
+  // C fait 4 itérations de plus (niveau des championnats) : B réglé pareil pour comparer.
+  const b = fitGlobalStrengths(one, at, { ...DEFAULT_OPTIONS_2, iterations: DEFAULT_OPTIONS_2.iterations + 4 });
+  const c = fitLeagueStrengths(one, at, new Set([1]));
+  for (const t of [1, 5, 10]) assertAlmostEquals(c.attack.get(t)!, b.attack.get(t)!, 1e-9);
+  // Les deux championnats + la coupe : le championnat 1 (plus fort par construction) a S > 1.
+  const lv = fitLeagueStrengths(all, at, new Set([1, 2])).leagueLevel;
+  assert(lv.get(1)! > lv.get(2)!, JSON.stringify([...lv]));
+});
+
+Deno.test("variante C : un club dominant d'un championnat faible n'est pas surestimé en coupe", () => {
+  const all = synthetic();
+  const at = Date.parse("2026-01-01T00:00:00Z");
+  const b = fitGlobalStrengths(all, at);
+  const c = fitLeagueStrengths(all, at, new Set([1, 2]));
+  // Meilleur club du championnat 2 (le plus faible) contre un club moyen du championnat 1.
+  const pb = globalProbabilities(b, 3, 20, 6), pc = globalProbabilities(c, 3, 20, 6);
+  assert(pc["1X2.HOME"] < pb["1X2.HOME"], `${pc["1X2.HOME"]} < ${pb["1X2.HOME"]}`);
 });

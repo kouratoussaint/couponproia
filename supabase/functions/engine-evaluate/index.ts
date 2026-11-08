@@ -76,11 +76,14 @@ Deno.serve(async (req) => {
 
     // Laboratoire « Moteur 3.0 » : comparaison de variantes, rien n'est enregistré.
     if (body?.experiment === "moteur-3") {
-      // Options : `only` (identifiants de compétitions), `refit` ("week" par défaut, ou "day").
+      // Options : `only` (identifiants de compétitions), `refit` ("week" par défaut, ou "day"),
+      // `with_b` (variante B, oui par défaut), `variant_c` (niveau des championnats).
       const only = Array.isArray(body?.only) ? new Set(body.only.map(Number)) : null;
       const refit = body?.refit === "day" ? "day" : "week";
+      const withB = body?.with_b !== false;
+      const variantC = body?.variant_c === true;
       const chosen = only ? groups.filter((g) => only.has(g.competitionId)) : groups;
-      return json({ experiment: "moteur-3", refit, labels, ...await moteur3(db, chosen, refit) });
+      return json({ experiment: "moteur-3", refit, labels, ...await moteur3(db, chosen, { refit, withB, variantC }) });
     }
 
     const { evaluation, perCompetition } = evaluate(groups, { warmupMatches });
@@ -138,7 +141,7 @@ async function moteur3(
   // deno-lint-ignore no-explicit-any
   db: any,
   groups: { name: string; competitionId: number; season: number; prior: PlayedMatch[] }[],
-  refit: "week" | "day",
+  opts: { refit: "week" | "day"; withB: boolean; variantC: boolean },
 ) {
   const all: LabMatch[] = [];
   for (let from = 0;; from += PAGE) {
@@ -195,6 +198,12 @@ async function moteur3(
     if (o.home && o.draw && o.away) odds.set(id, { home: o.home, draw: o.draw, away: o.away });
   }
   const t0 = performance.now();
-  const result = runExperiment(labGroups, all, odds, 30, undefined, refit);
+  let leagues: Set<number> | null = null;
+  if (opts.variantC) {
+    const { data, error } = await db.from("competitions").select("id, type");
+    if (error) throw new Error(error.message);
+    leagues = new Set((data ?? []).filter((c: { type: string }) => c.type === "league").map((c: { id: number }) => c.id));
+  }
+  const result = runExperiment(labGroups, all, odds, 30, undefined, { refit: opts.refit, withB: opts.withB, leagues });
   return { all_matches: all.length, matches_with_odds: odds.size, compute_ms: Math.round(performance.now() - t0), ...result };
 }

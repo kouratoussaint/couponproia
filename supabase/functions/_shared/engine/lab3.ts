@@ -124,6 +124,150 @@ export function fitGlobalStrengths(
   return { homeAvg, awayAvg, attack, defense };
 }
 
+/**
+ * Variante C : comme B, plus un niveau par championnat national. Chaque équipe est rattachée
+ * au championnat (type « league ») où elle a le plus joué ; ses forces sont relatives à ce
+ * championnat (rétrécies vers 1 = la moyenne du championnat), et le niveau S du championnat
+ * multiplie l'attaque et divise la défense. Dans un match de championnat, S s'annule ; il
+ * n'est estimé que sur les matchs entre équipes de championnats différents (coupes
+ * continentales), rétréci vers 1 avec `leagueShrink` buts fictifs. Une équipe sans
+ * championnat suivi (sélections, clubs de championnats non suivis) garde S = 1.
+ */
+export function fitLeagueStrengths(
+  history: (PlayedMatch & { competitionId: number })[],
+  at: number,
+  leagues: Set<number>,
+  o: Model2Options = DEFAULT_OPTIONS_2,
+  weightOf: (m: PlayedMatch & { competitionId: number }) => number = (m) => m.weight ?? 1,
+  leagueShrink = 10,
+): GlobalStrengths & { leagueLevel: Map<number, number> } {
+  const n = history.length;
+  const w = new Float64Array(n);
+  const comp = new Map<number, { w: number; h: number; a: number }>();
+  const played = new Map<number, Map<number, number>>();
+  for (let r = 0; r < n; r++) {
+    const m = history[r];
+    const age = Math.max(0, (at - Date.parse(m.kickoffAt)) / DAY);
+    w[r] = weightOf(m) * 0.5 ** (age / o.halfLifeDays);
+    const c = comp.get(m.competitionId) ?? { w: 0, h: 0, a: 0 };
+    c.w += w[r];
+    c.h += w[r] * m.homeGoals;
+    c.a += w[r] * m.awayGoals;
+    comp.set(m.competitionId, c);
+    if (leagues.has(m.competitionId)) {
+      for (const t of [m.homeId, m.awayId]) {
+        const byComp = played.get(t) ?? played.set(t, new Map()).get(t)!;
+        byComp.set(m.competitionId, (byComp.get(m.competitionId) ?? 0) + 1);
+      }
+    }
+  }
+  const p = o.leaguePriorMatches;
+  const homeAvg = new Map<number, number>(), awayAvg = new Map<number, number>();
+  for (const [id, c] of comp) {
+    homeAvg.set(id, (c.h + p * o.priorHomeGoals) / (c.w + p));
+    awayAvg.set(id, (c.a + p * o.priorAwayGoals) / (c.w + p));
+  }
+  // Championnat de rattachement (-1 : aucun championnat suivi).
+  const leagueOfTeam = new Map<number, number>();
+  for (const [t, byComp] of played) {
+    let best = -1, most = 0;
+    for (const [c, k] of byComp) if (k > most) [best, most] = [c, k];
+    leagueOfTeam.set(t, best);
+  }
+  const index = new Map<number, number>();
+  const idx = (id: number) => {
+    let i = index.get(id);
+    if (i === undefined) index.set(id, i = index.size);
+    return i;
+  };
+  const leagueIndex = new Map<number, number>();
+  const hi = new Int32Array(n), ai = new Int32Array(n), hl = new Int32Array(n), al = new Int32Array(n);
+  const bh = new Float64Array(n), ba = new Float64Array(n);
+  let goals = 0, weightSum = 0;
+  const lidx = (team: number) => {
+    const l = leagueOfTeam.get(team) ?? -1;
+    if (l < 0) return -1;
+    let i = leagueIndex.get(l);
+    if (i === undefined) leagueIndex.set(l, i = leagueIndex.size);
+    return i;
+  };
+  for (let r = 0; r < n; r++) {
+    const m = history[r];
+    hi[r] = idx(m.homeId);
+    ai[r] = idx(m.awayId);
+    hl[r] = lidx(m.homeId);
+    al[r] = lidx(m.awayId);
+    bh[r] = homeAvg.get(m.competitionId)!;
+    ba[r] = awayAvg.get(m.competitionId)!;
+    goals += w[r] * (bh[r] + ba[r]);
+    weightSum += w[r];
+  }
+  const k = o.shrinkK * (weightSum > 0 ? goals / weightSum / 2 : (o.priorHomeGoals + o.priorAwayGoals) / 2);
+  const T = index.size, L = leagueIndex.size;
+  const att = new Float64Array(T).fill(1), def = new Float64Array(T).fill(1);
+  const lv = new Float64Array(L).fill(1);
+  const S = (l: number) => (l < 0 ? 1 : lv[l]);
+  const sc = new Float64Array(T), es = new Float64Array(T), co = new Float64Array(T), ec = new Float64Array(T);
+  const lsc = new Float64Array(L), les = new Float64Array(L), lco = new Float64Array(L), lec = new Float64Array(L);
+  for (let it = 0; it < o.iterations + 4; it++) {
+    sc.fill(0);
+    es.fill(0);
+    co.fill(0);
+    ec.fill(0);
+    for (let r = 0; r < n; r++) {
+      const h = hi[r], a = ai[r], x = w[r], m = history[r];
+      const ratio = S(hl[r]) / S(al[r]); // 1 dans un match de championnat
+      sc[h] += x * m.homeGoals;
+      es[h] += x * bh[r] * ratio * def[a];
+      sc[a] += x * m.awayGoals;
+      es[a] += x * ba[r] / ratio * def[h];
+      co[h] += x * m.awayGoals;
+      ec[h] += x * ba[r] / ratio * att[a];
+      co[a] += x * m.homeGoals;
+      ec[a] += x * bh[r] * ratio * att[h];
+    }
+    for (let t = 0; t < T; t++) {
+      att[t] = (sc[t] + k) / (es[t] + k);
+      def[t] = (co[t] + k) / (ec[t] + k);
+    }
+    // Niveau des championnats : matchs entre championnats différents seulement.
+    lsc.fill(0);
+    les.fill(0);
+    lco.fill(0);
+    lec.fill(0);
+    for (let r = 0; r < n; r++) {
+      if (hl[r] === al[r]) continue;
+      const h = hi[r], a = ai[r], x = w[r], m = history[r];
+      const ratio = S(hl[r]) / S(al[r]);
+      const eh = bh[r] * att[h] * def[a] * ratio, ea = ba[r] * att[a] * def[h] / ratio;
+      if (hl[r] >= 0) {
+        lsc[hl[r]] += x * m.homeGoals;
+        les[hl[r]] += x * eh;
+        lco[hl[r]] += x * m.awayGoals;
+        lec[hl[r]] += x * ea;
+      }
+      if (al[r] >= 0) {
+        lsc[al[r]] += x * m.awayGoals;
+        les[al[r]] += x * ea;
+        lco[al[r]] += x * m.homeGoals;
+        lec[al[r]] += x * eh;
+      }
+    }
+    for (let l = 0; l < L; l++) {
+      const factor = Math.sqrt(((lsc[l] + leagueShrink) / (les[l] + leagueShrink)) * ((lec[l] + leagueShrink) / (lco[l] + leagueShrink)));
+      lv[l] = clamp(lv[l] * factor, 0.3, 3);
+    }
+  }
+  const attack = new Map<number, number>(), defense = new Map<number, number>(), leagueLevel = new Map<number, number>();
+  for (const [id, t] of index) {
+    const l = S(lidx(id));
+    attack.set(id, att[t] * l);
+    defense.set(id, def[t] / l);
+  }
+  for (const [c, l] of leagueIndex) leagueLevel.set(c, round(lv[l], 3));
+  return { homeAvg, awayAvg, attack, defense, leagueLevel };
+}
+
 export function globalProbabilities(
   s: GlobalStrengths,
   competitionId: number,
@@ -246,8 +390,8 @@ interface Prediction {
   homeGoals: number;
   awayGoals: number;
   base: number[];
-  a: Record<string, number>;
-  b: Record<string, number>;
+  /** Probabilités par variante de modèle (A, B, C). */
+  model: Record<string, Record<string, number>>;
   competitionId: number;
   season: number;
   homeId: number;
@@ -267,9 +411,18 @@ export function marketFromOdds(odds: { home: number; draw: number; away: number 
 export const blend = (model: number[], market: number[], marketWeight: number) =>
   model.map((p, k) => (1 - marketWeight) * p + marketWeight * market[k]);
 
+export interface ExperimentOptions {
+  /** Fréquence de calcul des forces reliées : chaque semaine (léger) ou chaque jour. */
+  refit?: "week" | "day";
+  /** Variante B (compétitions reliées sans niveau de championnat). Par défaut : oui. */
+  withB?: boolean;
+  /** Compétitions de type championnat : active la variante C. */
+  leagues?: Set<number> | null;
+}
+
 /**
  * Expérience complète. `all` : tous les matchs terminés connus (toutes compétitions suivies),
- * pour la variante B. `odds` : cotes 1X2 du dernier relevé avant le coup d'envoi, par match.
+ * pour les variantes B et C. `odds` : cotes 1X2 du dernier relevé avant le coup d'envoi.
  */
 export function runExperiment(
   groups: LabGroup[],
@@ -277,15 +430,18 @@ export function runExperiment(
   odds: Map<number, { home: number; draw: number; away: number }> = new Map(),
   warmupMatches = 30,
   o: Model2Options = DEFAULT_OPTIONS_2,
-  /** Fréquence de calcul des forces reliées : chaque semaine (léger) ou chaque jour. */
-  refit: "week" | "day" = "week",
+  options: ExperimentOptions = {},
 ) {
+  const refit = options.refit ?? "week";
+  const withB = options.withB ?? true;
+  const leagues = options.leagues ?? null;
+  const models = ["A", ...(withB ? ["B"] : []), ...(leagues ? ["C"] : [])];
   const allSorted = [...all].sort((x, y) => x.kickoffAt.localeCompare(y.kickoffAt));
-  // 1. Prédictions A et B, sur les matchs notés par l'évaluation officielle.
+
+  // 1. Prédictions A (production) sur les matchs notés par l'évaluation officielle.
   const predictions: Prediction[] = [];
   for (const g of groups) {
     const sorted = [...g.matches].sort((x, y) => x.kickoffAt.localeCompare(y.kickoffAt));
-    const priorAll = g.prior.map((p) => ({ ...p }));
     const byDay = new Map<string, ReturnType<typeof fitStrengths>>();
     const counts = [0, 0, 0];
     for (let i = 0; i < sorted.length; i++) {
@@ -298,7 +454,7 @@ export function runExperiment(
         const day = m.kickoffAt.slice(0, 10);
         let s = byDay.get(day);
         if (!s) {
-          const before = [...priorAll, ...history.filter((h) => h.kickoffAt.slice(0, 10) < day)].map((h) => ({ ...h, weight: 1 }));
+          const before = [...g.prior, ...history.filter((h) => h.kickoffAt.slice(0, 10) < day)].map((h) => ({ ...h, weight: 1 }));
           s = fitStrengths(before, Date.parse(`${day}T00:00:00Z`), o);
           byDay.set(day, s);
         }
@@ -310,8 +466,7 @@ export function runExperiment(
           homeGoals: m.homeGoals,
           awayGoals: m.awayGoals,
           base: counts.map((c) => (c + 1) / (n + 3)),
-          a: runModel2FromStrengths(s, m.homeId, m.awayId, o).probabilities,
-          b: {},
+          model: { A: runModel2FromStrengths(s, m.homeId, m.awayId, o).probabilities },
           competitionId: g.competitionId,
           season: g.season,
           homeId: m.homeId,
@@ -323,60 +478,65 @@ export function runExperiment(
   }
   predictions.sort((x, y) => x.kickoffAt.localeCompare(y.kickoffAt));
 
-  // Variante B : forces reliées calculées au lundi 00:00 (UTC) de la semaine du match, avec les
-  // seuls matchs antérieurs ; une semaine à la fois, rien n'est gardé en mémoire ensuite.
-  const weekStart = (iso: string) => {
+  // 2. Variantes B et C : forces calculées au début de la semaine (ou du jour) du match, avec les
+  // seuls matchs antérieurs ; une période à la fois, rien n'est gardé en mémoire ensuite.
+  const periodStart = (iso: string) => {
     const t = Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
     const dow = refit === "day" ? 0 : (new Date(t).getUTCDay() + 6) % 7;
     return new Date(t - dow * DAY).toISOString();
   };
-  const byWeek = new Map<string, Prediction[]>();
+  const byPeriod = new Map<string, Prediction[]>();
   for (const p of predictions) {
-    const k = `${weekStart(p.kickoffAt)}|${p.season}`;
-    (byWeek.get(k) ?? byWeek.set(k, []).get(k)!).push(p);
+    const k = `${periodStart(p.kickoffAt)}|${p.season}`;
+    (byPeriod.get(k) ?? byPeriod.set(k, []).get(k)!).push(p);
   }
   let cut = 0;
-  for (const k of [...byWeek.keys()].sort()) {
+  const levels: Record<string, Record<string, number>> = {};
+  for (const k of [...byPeriod.keys()].sort()) {
     const [at, seasonText] = k.split("|");
     const season = Number(seasonText);
     while (cut < allSorted.length && allSorted[cut].kickoffAt < at) cut++;
-    const s = fitGlobalStrengths(allSorted.slice(0, cut), Date.parse(at), o, (m) => ((m as LabMatch).season < season ? 0.5 : 1));
-    for (const p of byWeek.get(k)!) p.b = globalProbabilities(s, p.competitionId, p.homeId, p.awayId, o);
+    const history = allSorted.slice(0, cut);
+    const weightOf = (m: PlayedMatch) => ((m as LabMatch).season < season ? 0.5 : 1);
+    const b = withB ? fitGlobalStrengths(history, Date.parse(at), o, weightOf) : null;
+    const c = leagues ? fitLeagueStrengths(history, Date.parse(at), leagues, o, weightOf) : null;
+    if (c) levels[at.slice(0, 10)] = Object.fromEntries(c.leagueLevel);
+    for (const p of byPeriod.get(k)!) {
+      if (b) p.model.B = globalProbabilities(b, p.competitionId, p.homeId, p.awayId, o);
+      if (c) p.model.C = globalProbabilities(c, p.competitionId, p.homeId, p.awayId, o);
+    }
   }
 
-  // 2. Recalibrage marche avant : réglages refaits au début de chaque mois.
-  const calA = new Map<string, Calibration>(), calB = new Map<string, Calibration>();
+  // 3. Recalibrage marche avant : réglages refaits au début de chaque mois.
+  const outcomeOf = (p: Prediction) => (p.homeGoals > p.awayGoals ? 0 : p.homeGoals === p.awayGoals ? 1 : 2);
   const monthOf = (k: string) => k.slice(0, 7);
+  const cal: Record<string, Map<string, Calibration>> = Object.fromEntries(models.map((v) => [v, new Map()]));
   for (const month of [...new Set(predictions.map((p) => monthOf(p.kickoffAt)))]) {
     const past = predictions.filter((p) => monthOf(p.kickoffAt) < month);
-    const outcomeOf = (p: Prediction) => (p.homeGoals > p.awayGoals ? 0 : p.homeGoals === p.awayGoals ? 1 : 2);
-    calA.set(month, fitCalibration(past.map((p) => ({ p: x12(p.a), outcome: outcomeOf(p) }))));
-    calB.set(month, fitCalibration(past.map((p) => ({ p: x12(p.b), outcome: outcomeOf(p) }))));
+    for (const v of models) {
+      cal[v].set(month, fitCalibration(past.map((p) => ({ p: x12(p.model[v]), outcome: outcomeOf(p) }))));
+    }
   }
 
-  // 3. Mesures.
-  const variants = ["baseline", "A", "B", "A+cal", "B+cal"] as const;
-  type V = typeof variants[number];
-  const m1x2 = Object.fromEntries(variants.map((v) => [v, new Metric()])) as Record<V, Metric>;
-  const mDnb = Object.fromEntries(variants.map((v) => [v, new Metric()])) as Record<V, Metric>;
-  const bins = Object.fromEntries(variants.map((v) => [v, new Bins()])) as Record<V, Bins>;
-  const goals = { A: { ou: new Metric(), btts: new Metric() }, B: { ou: new Metric(), btts: new Metric() } };
-  const perComp: Record<string, Record<V, Metric>> = {};
+  // 4. Mesures.
+  const variants = ["baseline", ...models.flatMap((v) => [v, `${v}+cal`])];
+  const metrics = () => Object.fromEntries(variants.map((v) => [v, new Metric()])) as Record<string, Metric>;
+  const m1x2 = metrics(), mDnb = metrics();
+  const bins = Object.fromEntries(variants.map((v) => [v, new Bins()])) as Record<string, Bins>;
+  const goals = Object.fromEntries(models.map((v) => [v, { ou: new Metric(), btts: new Metric() }]));
+  const perComp: Record<string, Record<string, Metric>> = {};
   const marketWeights = [0, 0.3, 0.5, 0.7, 0.85, 1];
   const market: Record<string, Metric> = {};
-  const mk = (name: string) => (market[name] ??= new Metric());
 
   for (const p of predictions) {
-    const outcome = p.homeGoals > p.awayGoals ? 0 : p.homeGoals === p.awayGoals ? 1 : 2;
+    const outcome = outcomeOf(p);
     const month = monthOf(p.kickoffAt);
-    const probs: Record<V, number[]> = {
-      baseline: p.base,
-      A: x12(p.a),
-      B: x12(p.b),
-      "A+cal": calibrate(x12(p.a), calA.get(month)!),
-      "B+cal": calibrate(x12(p.b), calB.get(month)!),
-    };
-    perComp[p.key] ??= Object.fromEntries(variants.map((v) => [v, new Metric()])) as Record<V, Metric>;
+    const probs: Record<string, number[]> = { baseline: p.base };
+    for (const v of models) {
+      probs[v] = x12(p.model[v]);
+      probs[`${v}+cal`] = calibrate(probs[v], cal[v].get(month)!);
+    }
+    perComp[p.key] ??= metrics();
     for (const v of variants) {
       m1x2[v].add(probs[v], outcome);
       bins[v].add(probs[v], outcome);
@@ -388,38 +548,40 @@ export function runExperiment(
     }
     const over = p.homeGoals + p.awayGoals > 2.5 ? 0 : 1;
     const btts = p.homeGoals > 0 && p.awayGoals > 0 ? 0 : 1;
-    for (const [name, q] of [["A", p.a], ["B", p.b]] as const) {
-      goals[name].ou.add([q["OU.OVER.2.5"], 1 - q["OU.OVER.2.5"]], over);
-      goals[name].btts.add([q["BTTS.YES"], 1 - q["BTTS.YES"]], btts);
+    for (const v of models) {
+      const q = p.model[v];
+      goals[v].ou.add([q["OU.OVER.2.5"], 1 - q["OU.OVER.2.5"]], over);
+      goals[v].btts.add([q["BTTS.YES"], 1 - q["BTTS.YES"]], btts);
     }
     const o1x2 = odds.get(p.matchId);
     const mkt = o1x2 ? marketFromOdds(o1x2) : null;
     if (mkt) {
-      for (const w of marketWeights) {
-        mk(`A+cal / marché ${w}`).add(blend(probs["A+cal"], mkt, w), outcome);
-        mk(`B+cal / marché ${w}`).add(blend(probs["B+cal"], mkt, w), outcome);
+      for (const v of models) {
+        for (const w of marketWeights) (market[`${v}+cal / marché ${w}`] ??= new Metric()).add(blend(probs[`${v}+cal`], mkt, w), outcome);
       }
     }
   }
 
-  const res = (r: Record<V, Metric>) => Object.fromEntries(variants.map((v) => [v, r[v].result()]));
+  const res = (r: Record<string, Metric>) => Object.fromEntries(variants.map((v) => [v, r[v].result()]));
   const lastMonth = monthOf(predictions.at(-1)?.kickoffAt ?? "");
+  const lastLevels = Object.keys(levels).sort().at(-1);
   return {
     matches: predictions.length,
     oneXTwo: res(m1x2),
     dnb: res(mDnb),
     goals: {
-      over_2_5: { A: goals.A.ou.result(), B: goals.B.ou.result() },
-      btts: { A: goals.A.btts.result(), B: goals.B.btts.result() },
+      over_2_5: Object.fromEntries(models.map((v) => [v, goals[v].ou.result()])),
+      btts: Object.fromEntries(models.map((v) => [v, goals[v].btts.result()])),
     },
     calibration: Object.fromEntries(variants.filter((v) => v !== "baseline").map((v) => [v, bins[v].result()])),
-    calibration_settings_latest: { A: calA.get(lastMonth), B: calB.get(lastMonth) },
+    calibration_settings_latest: Object.fromEntries(models.map((v) => [v, cal[v].get(lastMonth)])),
+    league_levels_latest: lastLevels ? levels[lastLevels] : null,
     per_competition_logloss: Object.fromEntries(
       Object.entries(perComp).map(([k, r]) => [k, {
         matches: r.A.n,
         ...Object.fromEntries(variants.map((v) => [v, r[v].result().logloss])),
       }]),
-    ) as Record<string, { matches: number } & Record<V, number>>,
+    ) as Record<string, { matches: number } & Record<string, number>>,
     market: Object.fromEntries(Object.entries(market).map(([k, v]) => [k, v.result()])),
   };
 }
