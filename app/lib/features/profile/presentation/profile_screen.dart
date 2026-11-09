@@ -1,4 +1,4 @@
-import '../../system/update_prompt.dart';
+import 'app_settings_section.dart';
 import 'package:coupon_pro_ia/features/auth/data/sign_out.dart';
 import '../data/language_sync.dart';
 import 'package:flutter/material.dart';
@@ -12,8 +12,6 @@ import '../../../core/errors/error_messages.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/solid_buttons.dart';
-import '../../../core/theme/text_scale_controller.dart';
-import '../../../core/theme/theme_mode_controller.dart';
 import '../../../core/widgets/form_widgets.dart';
 import '../../billing/billing_repository.dart';
 import '../../onboarding/data/preferences_repository.dart';
@@ -23,7 +21,6 @@ import '../../assistant/data/assistant_repository.dart';
 import '../../system/system_providers.dart';
 import '../data/profile_repository.dart';
 import '../../shell/app_drawer.dart';
-import '../../widget/home_widget_sync.dart';
 import 'package:coupon_pro_ia/core/i18n/tr.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -36,7 +33,6 @@ class ProfileScreen extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     final permissions =
         ref.watch(myPermissionsProvider).valueOrNull ?? const <String>{};
-    final themeMode = ref.watch(themeModeProvider);
     final version = ref.watch(installedPackageProvider).valueOrNull;
 
     return Scaffold(
@@ -102,53 +98,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            _GroupTitle(tr('Mon jeu')),
-            Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.menu_book_outlined),
-                    title: Text(tr('Mon carnet de paris')),
-                    subtitle: Text(tr('Vos mises notées et votre bilan réel')),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(AppRoutes.journal),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.star_outline),
-                    title: Text(tr('Équipes suivies')),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(AppRoutes.favoriteTeams),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.tune),
-                    title: Text(tr('Mes préférences')),
-                    subtitle: Text(() {
-                      final p = ref.watch(myPreferencesProvider).valueOrNull;
-                      final n = p?.favoriteCompetitions.length ?? 0;
-                      return [
-                        n == 0
-                            ? tr('Aucune compétition suivie')
-                            : trf('{0} compétition{1} suivie{2}',
-                                [n, n > 1 ? 's' : '', n > 1 ? 's' : '']),
-                        if (p?.level != null)
-                          trf('niveau {0}', [p!.level!.label.toLowerCase()]),
-                      ].join(' · ');
-                    }()),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => showOnboarding(context, fromProfile: true),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.health_and_safety_outlined),
-                    title: Text(tr('Jeu responsable')),
-                    subtitle:
-                        Text(tr('Budget mensuel, plafond par pari, conseils')),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(AppRoutes.responsibleGaming),
-                  ),
-                ],
-              ),
-            ),
-            _GroupTitle(tr('Mon compte')),
+            _GroupTitle(tr('Mon abonnement')),
             Card(
               child: Column(
                 children: [
@@ -189,113 +139,56 @@ class ProfileScreen extends ConsumerWidget {
                             error: (_, __) => tr('Solde indisponible'),
                           ),
                     ),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.notifications_none),
-                    title: Text(tr('Notifications')),
-                    subtitle: Text(tr('Ce que je reçois, heures calmes')),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(AppRoutes.notificationSettings),
+                    onTap: () => context.push(AppRoutes.billing),
                   ),
-                  if (permissions.contains('admin.access'))
-                    ListTile(
-                      leading: const Icon(Icons.admin_panel_settings_outlined),
-                      title: Text(tr('Console d’administration')),
-                      subtitle: Text(
-                          tr('Utilisateurs, coupons, paiements, réglages')),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push(AppRoutes.adminConsole),
-                    ),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
+            _GroupTitle(tr('Mon jeu')),
             Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(tr('Apparence'), style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 12),
-                    Text(tr('Langue'), style: theme.textTheme.titleSmall),
-                    const SizedBox(height: 8),
-                    const LanguageSelector(),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: SegmentedButton<ThemeMode>(
-                        segments: [
-                          ButtonSegment(
-                            value: ThemeMode.system,
-                            label: Text(tr('Système')),
-                            icon: Icon(Icons.brightness_auto_outlined),
-                          ),
-                          ButtonSegment(
-                            value: ThemeMode.light,
-                            label: Text(tr('Clair')),
-                            icon: Icon(Icons.light_mode_outlined),
-                          ),
-                          ButtonSegment(
-                            value: ThemeMode.dark,
-                            label: Text(tr('Sombre')),
-                            icon: Icon(Icons.dark_mode_outlined),
-                          ),
-                        ],
-                        selected: {themeMode},
-                        onSelectionChanged: (s) => ref
-                            .read(themeModeProvider.notifier)
-                            .setMode(s.first),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(tr('Taille du texte'),
-                        style: theme.textTheme.titleSmall),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: SegmentedButton<TextSize>(
-                        showSelectedIcon: false,
-                        segments: [
-                          for (final t in TextSize.values)
-                            ButtonSegment(
-                              value: t,
-                              label: Text('A',
-                                  style: TextStyle(
-                                      fontSize: 14 * t.factor,
-                                      fontWeight: FontWeight.w700)),
-                              tooltip: t.label,
-                            ),
-                        ],
-                        selected: {ref.watch(textSizeProvider)},
-                        onSelectionChanged: (s) =>
-                            ref.read(textSizeProvider.notifier).set(s.first),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      trf('{0} : voici à quoi ressemble le texte de l’app.',
-                          [ref.watch(textSizeProvider).label]),
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    const ErrorReportsSwitch(),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.widgets_outlined),
-                      title: Text(tr('Widget sur l’écran d’accueil')),
-                      subtitle: Text(tr(
-                          'Coupon du jour, matchs du jour et en direct, sans ouvrir l’app')),
-                      onTap: () async {
-                        final ok = await requestHomeWidget();
-                        if (!ok && context.mounted) {
-                          showMessage(context,
-                              tr('Ajout manuel : appui long sur l’écran d’accueil → Widgets → Coupon Pro IA.'));
-                        }
-                      },
-                    ),
-                  ],
-                ),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.menu_book_outlined),
+                    title: Text(tr('Mon carnet de paris')),
+                    subtitle: Text(tr('Vos mises notées et votre bilan réel')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.journal),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.star_outline),
+                    title: Text(tr('Équipes suivies')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.favoriteTeams),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.tune),
+                    title: Text(tr('Compétitions et niveau')),
+                    subtitle: Text(() {
+                      final p = ref.watch(myPreferencesProvider).valueOrNull;
+                      final n = p?.favoriteCompetitions.length ?? 0;
+                      return [
+                        n == 0
+                            ? tr('Aucune compétition suivie')
+                            : trf('{0} compétition{1} suivie{2}',
+                                [n, n > 1 ? 's' : '', n > 1 ? 's' : '']),
+                        if (p?.level != null)
+                          trf('niveau {0}', [p!.level!.label.toLowerCase()]),
+                      ].join(' · ');
+                    }()),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => showOnboarding(context, fromProfile: true),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.health_and_safety_outlined),
+                    title: Text(tr('Jeu responsable')),
+                    subtitle:
+                        Text(tr('Budget mensuel, plafond par pari, conseils')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.responsibleGaming),
+                  ),
+                ],
               ),
             ),
             _GroupTitle(tr('Communauté')),
@@ -317,7 +210,25 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const UpdateSettingsSlot(),
+            _GroupTitle(tr('Réglages de l’application')),
+            const AppSettingsSection(),
+            if (permissions.contains('admin.access')) ...[
+              _GroupTitle(tr('Administration')),
+              Card(
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.admin_panel_settings_outlined),
+                      title: Text(tr('Console d’administration')),
+                      subtitle: Text(
+                          tr('Utilisateurs, coupons, paiements, réglages')),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push(AppRoutes.adminConsole),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             _GroupTitle(tr('Aide')),
             Card(
               child: Column(
@@ -403,7 +314,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-/// Titre d'un groupe du profil (Mon jeu, Mon compte, Communauté, Aide).
+/// Titre d'un groupe du profil (Mon abonnement, Mon jeu, Communauté, Réglages, Aide…).
 class _GroupTitle extends StatelessWidget {
   const _GroupTitle(this.text);
 
@@ -548,7 +459,11 @@ class _LanguageSelectorState extends ConsumerState<LanguageSelector> {
 
 /// Rapports d'erreurs : plantages et lenteurs envoyés sans contenu personnel (activé par défaut).
 class ErrorReportsSwitch extends ConsumerStatefulWidget {
-  const ErrorReportsSwitch({super.key});
+  const ErrorReportsSwitch(
+      {super.key, this.contentPadding = EdgeInsets.zero, this.icon});
+
+  final EdgeInsetsGeometry contentPadding;
+  final Widget? icon;
 
   @override
   ConsumerState<ErrorReportsSwitch> createState() => _ErrorReportsSwitchState();
@@ -564,7 +479,8 @@ class _ErrorReportsSwitchState extends ConsumerState<ErrorReportsSwitch> {
       return const SizedBox.shrink();
     }
     return SwitchListTile(
-      contentPadding: EdgeInsets.zero,
+      contentPadding: widget.contentPadding,
+      secondary: widget.icon,
       title: Text(tr('Rapports d’erreurs')),
       subtitle: Text(tr(
           'Envoyer les plantages et lenteurs pour nous aider à corriger l’app. Aucun contenu personnel.')),

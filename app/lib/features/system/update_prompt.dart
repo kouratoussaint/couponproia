@@ -229,19 +229,7 @@ class UpdateSettingsSlot extends ConsumerWidget {
     final s = ref.watch(updateControllerProvider);
     final mode = ref.watch(autoDownloadProvider);
     final version = ref.watch(installedPackageProvider).valueOrNull?.version;
-    final status = switch (s.phase) {
-      UpdatePhase.downloading => s.waitingForWifi
-          ? trf('version {0} en attente du Wi-Fi', [s.latest?.versionName])
-          : trf('téléchargement de la version {0}', [s.latest?.versionName]),
-      UpdatePhase.ready ||
-      UpdatePhase.installing =>
-        trf('version {0} prête', [s.latest?.versionName]),
-      UpdatePhase.offer ||
-      UpdatePhase.browser ||
-      UpdatePhase.failed =>
-        trf('version {0} disponible', [s.latest?.versionName]),
-      UpdatePhase.idle => s.latest == null ? tr('à jour') : null,
-    };
+    final status = updateStatusText(s);
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: UpdateSettingsCard(
@@ -254,3 +242,18 @@ class UpdateSettingsSlot extends ConsumerWidget {
     );
   }
 }
+
+/// État des mises à jour en quelques mots (« à jour », « version 0.35.0 prête »…).
+String? updateStatusText(UpdateState s) => switch (s.phase) {
+      UpdatePhase.downloading => s.waitingForWifi
+          ? trf('version {0} en attente du Wi-Fi', [s.latest?.versionName])
+          : trf('téléchargement de la version {0}', [s.latest?.versionName]),
+      UpdatePhase.ready ||
+      UpdatePhase.installing =>
+        trf('version {0} prête', [s.latest?.versionName]),
+      UpdatePhase.offer ||
+      UpdatePhase.browser ||
+      UpdatePhase.failed =>
+        trf('version {0} disponible', [s.latest?.versionName]),
+      UpdatePhase.idle => s.latest == null ? tr('à jour') : null,
+    };
