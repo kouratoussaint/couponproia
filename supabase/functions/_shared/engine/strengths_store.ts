@@ -10,10 +10,10 @@ export const SNAPSHOT_MAX_AGE_MS = 3 * 3600_000;
 
 /** Tous les matchs terminés avant `before` (toutes compétitions) et les championnats nationaux. */
 export async function loadModelInputs(db: SupabaseClient, before: Date) {
-  const matches: Match3[] = [];
+  const matches: (Match3 & { season: number })[] = [];
   for (let from = 0;; from += PAGE) {
     const { data, error } = await db.from("matches")
-      .select("competition_id, kickoff_at, home_team_id, away_team_id, home_goals, away_goals")
+      .select("competition_id, season, kickoff_at, home_team_id, away_team_id, home_goals, away_goals")
       .in("status", PLAYED).lt("kickoff_at", before.toISOString())
       .not("home_goals", "is", null).not("away_goals", "is", null)
       .order("kickoff_at").order("id").range(from, from + PAGE - 1);
@@ -21,6 +21,7 @@ export async function loadModelInputs(db: SupabaseClient, before: Date) {
     for (const r of data ?? []) {
       matches.push({
         competitionId: r.competition_id,
+        season: r.season,
         kickoffAt: r.kickoff_at,
         homeId: r.home_team_id,
         awayId: r.away_team_id,

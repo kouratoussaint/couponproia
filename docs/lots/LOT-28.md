@@ -46,8 +46,14 @@ fait mieux que la référence naïve sur ce marché.
 
 ## Limites connues
 
-- Temps de calcul de l'évaluation hebdomadaire : environ 0,6 s aujourd'hui, environ 1,5 s
-  estimées avec 30 compétitions (limite d'un appel serveur : environ 2 s). Au-delà, découper
-  l'évaluation en plusieurs appels.
+- ~~Temps de calcul de l'évaluation hebdomadaire~~ : la limite a été atteinte le 16/11
+  (28 compétitions, 13 000 matchs : 3,2 s, évaluation non enregistrée, 17 compétitions sans
+  verdict donc exclues des coupons automatiques). **Corrigé le 20/11** : l'évaluation est
+  découpée en lots d'au plus 120 jours de calcul (`planEvaluation3`, `evaluate3Part`,
+  `combineEvaluation3`). Chaque lot est un appel séparé qui enregistre ses totaux dans
+  `engine_evaluation_parts` (migration 57) et lance le lot suivant ; le dernier additionne,
+  enregistre l'évaluation (`scope.run`, `scope.parts`) et efface les lots. La console attend la
+  fin (jusqu'à 2 min 15) ; la tâche du lundi lance la chaîne et rend la main. Un lot en échec
+  laisse une ligne avec `error`.
 - Mélange moteur / marché des coupons (70 % marché) inchangé ; à remesurer vers 500 matchs
   avec cotes relevées.

@@ -2,7 +2,7 @@
 // Appelée par un administrateur (JWT + ai.configure) ou par pg_cron (en-tête x-cron-secret).
 // Rejoue chaque match terminé de la saison avec les seuls matchs antérieurs, compare
 // au résultat réel et enregistre les scores dans engine_evaluations (lisibles par tous).
-import { evaluate, evaluate3 } from "../_shared/engine/evaluate.ts";
+import { combineEvaluation3, evaluate, evaluate3, type Evaluation3Part, evaluate3Part, planEvaluation3 } from "../_shared/engine/evaluate.ts";
 import { ENGINE_VERSION_3 } from "../_shared/engine/poisson3.ts";
 import { loadModelInputs, refreshStrengths } from "../_shared/engine/strengths_store.ts";
 import { type LabGroup, type LabMatch, runExperiment } from "../_shared/engine/lab3.ts";
@@ -45,6 +45,25 @@ Deno.serve(async (req) => {
 
     const priorWeight = Number.isFinite(Number(body?.prior_weight)) ? Number(body.prior_weight) : PRIOR_SEASON_WEIGHT;
     const dryRun = body?.dry_run === true;
+
+    // poisson-3.0 : évaluation officielle découpée en lots enchaînés (limite de calcul du serveur,
+    // dépassée le 16/11 avec 28 compétitions). Un administrateur attend le résultat ; la tâche
+    // du lundi lance la chaîne et rend la main.
+    if (engine === ENGINE_VERSION_3 && body?.experiment !== "moteur-3" && !dryRun) {
+      if (!cronSecret) return json({ error: "server_misconfigured" }, 500);
+      if (body?.run) {
+        if (!fromCron) return json({ error: "forbidden" }, 403);
+        runInBackground(evaluationPart(db, competitions ?? [], body as PartBody, cronSecret));
+        return json({ accepted: true, run: body.run, part: body.part }, 202);
+      }
+      return json(
+        await startEvaluation3(db, competitions ?? [], season, cronSecret, {
+          actorId: caller?.id ?? null,
+          source: fromCron ? "cron" : "admin",
+          wait: !fromCron,
+        }),
+      );
+    }
 
     const load = async (competitionId: number, season: number) => {
       const matches: PlayedMatch[] = [];
@@ -104,45 +123,18 @@ Deno.serve(async (req) => {
         return evaluate3(groups, matches, leagues, { warmupMatches });
       })()
       : evaluate(groups, { warmupMatches });
-    const e = evaluation.oneXTwo;
     if (dryRun) return json({ dry_run: true, prior_weight: priorWeight, evaluation, perCompetition, labels });
-    const { data: saved, error: saveError } = await db.from("engine_evaluations").insert({
-      engine_version: engine,
-      scope: {
-        season: Number.isInteger(season) ? season : "précédente et en cours",
-        competitions: groups.map((g) => labels[g.name] ?? g.name),
-        warmup_matches: warmupMatches,
-        prior_season_weight: priorWeight,
-        method: engine === ENGINE_VERSION_3
-          ? "Chaque match est prédit avec les seuls matchs antérieurs, toutes compétitions (forces de la veille)"
-          : "Chaque match est prédit avec les seuls matchs antérieurs de sa compétition",
-      },
-      matches_evaluated: e.matches,
-      brier_model: e.brierModel,
-      brier_baseline: e.brierBaseline,
-      logloss_model: e.loglossModel,
-      logloss_baseline: e.loglossBaseline,
-      accuracy_model: e.accuracyModel,
-      calibration: evaluation.calibration,
-      details: {
-        accuracy_baseline: e.accuracyBaseline,
-        over_2_5: evaluation.over25,
-        btts: evaluation.btts,
-        dnb: evaluation.dnb,
-        team_totals: evaluation.teamTotals,
-        // Affichage (nom affiché + saison) et qualité par identifiant (« 5:2025 »), lue par le moteur.
-        per_competition: Object.fromEntries(Object.entries(perCompetition).map(([k, v]) => [labels[k] ?? k, v])),
-        per_competition_ids: perCompetition,
-      },
-    }).select().single();
-    if (saveError) throw new Error(saveError.message);
-
-    await db.from("audit_logs").insert({
-      actor_id: caller?.id ?? null,
-      action: "engine.evaluate",
-      target_type: "engine_evaluation",
-      target_id: String(saved.id),
-      details: { engine_version: engine, matches: e.matches, source: fromCron ? "cron" : "admin" },
+    const saved = await saveEvaluation(db, {
+      engine,
+      evaluation,
+      perCompetition,
+      labels,
+      names: groups.map((g) => g.name),
+      season,
+      warmupMatches,
+      priorWeight,
+      actorId: caller?.id ?? null,
+      source: fromCron ? "cron" : "admin",
     });
     return json(saved);
   } catch (err) {
@@ -225,4 +217,193 @@ async function moteur3(
   }
   const result = runExperiment(labGroups, all, odds, 30, undefined, { refit: opts.refit, withB: opts.withB, leagues });
   return { all_matches: all.length, matches_with_odds: odds.size, compute_ms: Math.round(performance.now() - t0), ...result };
+}
+
+// ---------------------------------------------------------------- enregistrement
+
+interface SaveInput {
+  engine: string;
+  evaluation: ReturnType<typeof evaluate>["evaluation"];
+  perCompetition: ReturnType<typeof evaluate>["perCompetition"];
+  labels: Record<string, string>;
+  names: string[];
+  season: number;
+  warmupMatches: number;
+  priorWeight: number;
+  actorId: string | null;
+  source: string;
+  run?: string;
+  parts?: number;
+}
+
+// deno-lint-ignore no-explicit-any
+async function saveEvaluation(db: any, x: SaveInput) {
+  const e = x.evaluation.oneXTwo;
+  const { data: saved, error: saveError } = await db.from("engine_evaluations").insert({
+    engine_version: x.engine,
+    scope: {
+      season: Number.isInteger(x.season) ? x.season : "précédente et en cours",
+      competitions: x.names.map((n) => x.labels[n] ?? n),
+      warmup_matches: x.warmupMatches,
+      prior_season_weight: x.priorWeight,
+      ...(x.run ? { run: x.run, parts: x.parts } : {}),
+      method: x.engine === ENGINE_VERSION_3
+        ? "Chaque match est prédit avec les seuls matchs antérieurs, toutes compétitions (forces de la veille)"
+        : "Chaque match est prédit avec les seuls matchs antérieurs de sa compétition",
+    },
+    matches_evaluated: e.matches,
+    brier_model: e.brierModel,
+    brier_baseline: e.brierBaseline,
+    logloss_model: e.loglossModel,
+    logloss_baseline: e.loglossBaseline,
+    accuracy_model: e.accuracyModel,
+    calibration: x.evaluation.calibration,
+    details: {
+      accuracy_baseline: e.accuracyBaseline,
+      over_2_5: x.evaluation.over25,
+      btts: x.evaluation.btts,
+      dnb: x.evaluation.dnb,
+      team_totals: x.evaluation.teamTotals,
+      // Affichage (nom affiché + saison) et qualité par identifiant (« 5:2025 »), lue par le moteur.
+      per_competition: Object.fromEntries(Object.entries(x.perCompetition).map(([k, v]) => [x.labels[k] ?? k, v])),
+      per_competition_ids: x.perCompetition,
+    },
+  }).select().single();
+  if (saveError) throw new Error(saveError.message);
+
+  await db.from("audit_logs").insert({
+    actor_id: x.actorId,
+    action: "engine.evaluate",
+    target_type: "engine_evaluation",
+    target_id: String(saved.id),
+    details: { engine_version: x.engine, matches: e.matches, source: x.source, ...(x.run ? { run: x.run, parts: x.parts } : {}) },
+  });
+  return saved;
+}
+
+// ---------------------------------------------------------------- poisson-3.0 par lots
+
+/** Jours de calcul distincts par lot : environ 0,3 s de calcul par lot avec 13 000 matchs. */
+const DAYS_PER_PART = 120;
+const WARMUP = 30;
+
+type Competition = { id: number; name: string; display_name: string | null; current_season: number | null };
+type PartBody = { run: string; part: number; plan: string[][]; at: string; season: number | null; actor: string | null; source: string };
+
+function runInBackground(task: Promise<unknown>): void {
+  // deno-lint-ignore no-explicit-any
+  const runtime = (globalThis as any).EdgeRuntime;
+  if (runtime?.waitUntil) runtime.waitUntil(task);
+}
+
+/** Compétitions-saisons évaluées (saison demandée, ou précédente + en cours), depuis les matchs chargés. */
+function groups3(competitions: Competition[], matches: (PlayedMatch & { competitionId: number; season: number })[], season: number | null) {
+  const byKey = new Map<string, PlayedMatch[]>();
+  for (const m of matches) {
+    const k = `${m.competitionId}:${m.season}`;
+    (byKey.get(k) ?? byKey.set(k, []).get(k)!).push(m);
+  }
+  const groups: { name: string; competitionId: number; matches: PlayedMatch[] }[] = [];
+  const labels: Record<string, string> = {};
+  for (const c of competitions) {
+    const seasons = Number.isInteger(season) ? [season!] : c.current_season ? [c.current_season - 1, c.current_season] : [];
+    for (const s of seasons) {
+      const ms = byKey.get(`${c.id}:${s}`) ?? [];
+      if (ms.length === 0) continue;
+      groups.push({ name: `${c.id}:${s}`, competitionId: c.id, matches: ms });
+      labels[`${c.id}:${s}`] = `${c.display_name ?? c.name} ${s}`;
+    }
+  }
+  return { groups, labels };
+}
+
+async function callPart(secret: string, body: PartBody) {
+  const res = await fetch(`${env("SUPABASE_URL")}/functions/v1/engine-evaluate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-cron-secret": secret },
+    body: JSON.stringify({ engine: ENGINE_VERSION_3, ...body }),
+  });
+  if (res.status !== 202) throw new Error(`lot ${body.part} non lancé (${res.status})`);
+}
+
+async function startEvaluation3(
+  // deno-lint-ignore no-explicit-any
+  db: any,
+  competitions: Competition[],
+  season: number,
+  secret: string,
+  opts: { actorId: string | null; source: string; wait: boolean },
+) {
+  const at = new Date().toISOString();
+  const { matches } = await loadModelInputs(db, new Date(at));
+  const seasonOrNull = Number.isInteger(season) ? season : null;
+  const { groups } = groups3(competitions, matches, seasonOrNull);
+  const plan = planEvaluation3(groups, DAYS_PER_PART, WARMUP);
+  if (plan.length === 0) return { error: "no_data" };
+  const run = crypto.randomUUID();
+  await callPart(secret, { run, part: 0, plan, at, season: seasonOrNull, actor: opts.actorId, source: opts.source });
+  if (!opts.wait) return { accepted: true, run, parts: plan.length };
+  // Administrateur (console) : attendre l'évaluation complète, comme avant le découpage.
+  for (let i = 0; i < 45; i++) {
+    await new Promise((r) => setTimeout(r, 3000));
+    const { data: saved } = await db.from("engine_evaluations").select("*").eq("scope->>run", run).maybeSingle();
+    if (saved) return saved;
+    const { data: failed } = await db.from("engine_evaluation_parts").select("part, error").eq("run_id", run)
+      .not("error", "is", null).limit(1).maybeSingle();
+    if (failed) throw new Error(`évaluation interrompue au lot ${failed.part + 1} : ${failed.error}`);
+  }
+  throw new Error("évaluation encore en cours : résultat visible dans quelques minutes");
+}
+
+// deno-lint-ignore no-explicit-any
+async function evaluationPart(db: any, competitions: Competition[], body: PartBody, secret: string) {
+  const parts = body.plan.length;
+  try {
+    const { matches, leagues } = await loadModelInputs(db, new Date(body.at));
+    const names = new Set(body.plan[body.part] ?? []);
+    const { groups, labels } = groups3(competitions, matches, body.season);
+    const payload = evaluate3Part(groups.filter((g) => names.has(g.name)), matches, leagues, { warmupMatches: WARMUP });
+    const { error } = await db.from("engine_evaluation_parts").upsert({
+      run_id: body.run,
+      part: body.part,
+      parts,
+      engine_version: ENGINE_VERSION_3,
+      payload,
+    });
+    if (error) throw new Error(error.message);
+    if (body.part + 1 < parts) {
+      await callPart(secret, { ...body, part: body.part + 1 });
+      return;
+    }
+    // Dernier lot : additionner, enregistrer l'évaluation, effacer les lots.
+    const { data: rows, error: readError } = await db.from("engine_evaluation_parts").select("part, payload")
+      .eq("run_id", body.run).order("part");
+    if (readError) throw new Error(readError.message);
+    if ((rows ?? []).length !== parts) throw new Error(`lots manquants (${(rows ?? []).length}/${parts})`);
+    const { evaluation, perCompetition } = combineEvaluation3((rows ?? []).map((r: { payload: Evaluation3Part }) => r.payload));
+    await saveEvaluation(db, {
+      engine: ENGINE_VERSION_3,
+      evaluation,
+      perCompetition,
+      labels,
+      names: body.plan.flat(),
+      season: body.season ?? NaN,
+      warmupMatches: WARMUP,
+      priorWeight: PRIOR_SEASON_WEIGHT,
+      actorId: body.actor,
+      source: body.source,
+      run: body.run,
+      parts,
+    });
+    await db.from("engine_evaluation_parts").delete().eq("run_id", body.run);
+  } catch (err) {
+    console.error("engine-evaluate lot", body.part, err);
+    await db.from("engine_evaluation_parts").upsert({
+      run_id: body.run,
+      part: body.part,
+      parts,
+      engine_version: ENGINE_VERSION_3,
+      error: String((err as Error).message ?? err).slice(0, 300),
+    });
+  }
 }

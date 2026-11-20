@@ -46,6 +46,16 @@ export interface Evaluation {
 const EPS = 1e-12;
 const ll = (p: number) => -Math.log(Math.max(p, EPS));
 
+export interface AccState {
+  n: number;
+  brierM: number;
+  brierB: number;
+  llM: number;
+  llB: number;
+  hitM: number;
+  hitB: number;
+}
+
 class Acc {
   n = 0;
   brierM = 0;
@@ -62,6 +72,13 @@ class Acc {
     this.llB += ll(base[outcome]);
     if (argmax(model) === outcome) this.hitM++;
     if (argmax(base) === outcome) this.hitB++;
+  }
+  /** Totaux bruts (évaluation découpée en lots : additionnés à la fin). */
+  state(): AccState {
+    return { n: this.n, brierM: this.brierM, brierB: this.brierB, llM: this.llM, llB: this.llB, hitM: this.hitM, hitB: this.hitB };
+  }
+  static from(x: AccState): Acc {
+    return Object.assign(new Acc(), x);
   }
   scores(): Scores {
     const d = Math.max(this.n, 1);
@@ -234,6 +251,13 @@ function report(engineVersion: string, all: Accs, bins: number[][], perCompetiti
   return { evaluation, perCompetition };
 }
 
+/** Totaux bruts d'un lot de l'évaluation poisson-3.0 (enregistrés entre deux appels). */
+export interface Evaluation3Part {
+  total: Record<keyof Accs, AccState>;
+  bins: number[][];
+  perGroup: Record<string, AccState>;
+}
+
 /**
  * Évaluation officielle de poisson-3.0 : mêmes matchs notés et même référence que poisson-2.0
  * (par compétition-saison, après 30 matchs), mais chaque match est prédit avec les forces
@@ -246,6 +270,69 @@ export function evaluate3(
   leagues: Set<number>,
   options: EvaluationOptions = { warmupMatches: 30 },
 ) {
+  return combineEvaluation3([evaluate3Part(groups, all, leagues, options)]);
+}
+
+/** Jours où au moins un match de la compétition-saison est noté (coût de calcul d'un lot). */
+export function evaluationDays(matches: PlayedMatch[], warmupMatches = 30): Set<string> {
+  const sorted = [...matches].sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt));
+  const days = new Set<string>();
+  for (let i = 0; i < sorted.length; i++) {
+    let j = i;
+    while (j > 0 && sorted[j - 1].kickoffAt === sorted[i].kickoffAt) j--;
+    if (j >= warmupMatches) days.add(sorted[i].kickoffAt.slice(0, 10));
+  }
+  return days;
+}
+
+/**
+ * Répartit les compétitions-saisons en lots d'au plus `maxDays` jours de calcul distincts
+ * (une compétition-saison n'est jamais coupée ; ordre conservé).
+ */
+export function planEvaluation3(groups: { name: string; matches: PlayedMatch[] }[], maxDays = 150, warmupMatches = 30): string[][] {
+  const plan: string[][] = [];
+  let current: string[] = [];
+  let days = new Set<string>();
+  for (const g of groups) {
+    const d = evaluationDays(g.matches, warmupMatches);
+    if (d.size === 0) continue;
+    const merged = new Set([...days, ...d]);
+    if (current.length > 0 && merged.size > maxDays) {
+      plan.push(current);
+      current = [];
+      days = new Set(d);
+    } else {
+      days = merged;
+    }
+    current.push(g.name);
+  }
+  if (current.length > 0) plan.push(current);
+  return plan;
+}
+
+/** Additionne les lots et produit l'évaluation (même forme que l'évaluation d'un seul tenant). */
+export function combineEvaluation3(parts: Evaluation3Part[]) {
+  const total = newAccs();
+  const bins: number[][] = Array.from({ length: 10 }, () => [0, 0, 0]);
+  const perCompetition: Record<string, Scores> = {};
+  for (const p of parts) {
+    for (const k of Object.keys(total) as (keyof Accs)[]) merge(total[k], Acc.from(p.total[k]));
+    p.bins.forEach((b, i) => b.forEach((x, j) => bins[i][j] += x));
+    for (const [name, st] of Object.entries(p.perGroup)) {
+      const a = Acc.from(st);
+      if (a.n > 0) perCompetition[name] = a.scores();
+    }
+  }
+  return report(ENGINE_VERSION_3, total, bins, perCompetition);
+}
+
+/** Un lot de l'évaluation poisson-3.0 : totaux bruts, à additionner avec `combineEvaluation3`. */
+export function evaluate3Part(
+  groups: { name: string; competitionId: number; matches: PlayedMatch[] }[],
+  all: Match3[],
+  leagues: Set<number>,
+  options: EvaluationOptions = { warmupMatches: 30 },
+): Evaluation3Part {
   type Point = { day: string; m: PlayedMatch; competitionId: number; group: string; counts: Counts; n: number };
   const points: Point[] = [];
   for (const g of groups) {
@@ -281,7 +368,11 @@ export function evaluate3(
     scoreMatch(pt.m, p, pt.counts, pt.n, g, bins);
     scoreMatch(pt.m, p, pt.counts, pt.n, total, Array.from({ length: 10 }, () => [0, 0, 0]));
   }
-  const perCompetition: Record<string, Scores> = {};
-  for (const [name, a] of perGroup) if (a.r1x2.n > 0) perCompetition[name] = a.r1x2.scores();
-  return report(ENGINE_VERSION_3, total, bins, perCompetition);
+  const state = (a: Accs) =>
+    Object.fromEntries((Object.keys(a) as (keyof Accs)[]).map((k) => [k, a[k].state()])) as Record<keyof Accs, AccState>;
+  return {
+    total: state(total),
+    bins,
+    perGroup: Object.fromEntries([...perGroup].map(([name, a]) => [name, a.r1x2.state()])),
+  };
 }
