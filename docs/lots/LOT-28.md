@@ -55,5 +55,12 @@ fait mieux que la référence naïve sur ce marché.
   enregistre l'évaluation (`scope.run`, `scope.parts`) et efface les lots. La console attend la
   fin (jusqu'à 2 min 15) ; la tâche du lundi lance la chaîne et rend la main. Un lot en échec
   laisse une ligne avec `error`.
+  Le 20/11, GitHub Actions était bloqué (paiement du compte) : la table a été créée et la
+  fonction `engine-evaluate` déployée directement (module du Laboratoire allégé dans ce
+  déploiement). Évaluation du 20/11 : 29 lots en moins de 45 s, 8 801 matchs, 1X2 log loss
+  0,9988 (réf. 1,0650), toutes les nouvelles compétitions avec verdict sauf « League Cup »
+  (47 matchs). Plus de 2,5 buts repasse au-dessus de la référence (Brier 0,4959 contre
+  0,4940) : exclu de nouveau par le garde-fou. Le prochain déploiement GitHub remet la version
+  complète du dépôt (migration 57 rejouable sans erreur).
 - Mélange moteur / marché des coupons (70 % marché) inchangé ; à remesurer vers 500 matchs
   avec cotes relevées.
